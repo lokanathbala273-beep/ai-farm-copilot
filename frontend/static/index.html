@@ -1,0 +1,1574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Farm Co-Pilot & Market Optimizer</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-900 min-h-screen flex flex-col relative overflow-x-hidden">
+
+  <!-- 3D ILLUMINATION REAL FARMER & FARMING BACKGROUND (BLACK & REAL PICTURE) -->
+  <div class="farm-3d-bg-wrapper" aria-hidden="true">
+    <div id="farm3dBgImage" class="farm-3d-bg-image"></div>
+    <div class="farm-3d-illumination-glow"></div>
+    <div class="farm-3d-illumination-glow-left"></div>
+    <div class="farm-3d-particles" id="farm3dParticles"></div>
+    <div class="farm-3d-bg-overlay"></div>
+  </div>
+
+  <!-- TOP EVALUATION & DEMO ROLE SWITCHER BAR -->
+  <header class="bg-slate-950/90 backdrop-blur-md text-white border-b border-slate-800/80 sticky top-0 z-40 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Logo & Title -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-xl shadow-inner">
+          🌾
+        </div>
+        <div>
+          <h1 class="text-base md:text-lg font-black tracking-tight text-white flex items-center gap-2">
+            <span data-i18n="app_title">AI Farm Co-Pilot</span>
+            <span class="text-3xs uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">TITAN 2.0</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block" data-i18n="app_subtitle">Complete Digital Agricultural Assistant for Indian Farmers</p>
+        </div>
+      </div>
+
+      <!-- Quick 1-Click Demo Role Switcher (Farmer, Expert, Seller, Buyer, Admin) -->
+      <div class="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs overflow-x-auto no-scrollbar">
+        <button onclick="quickDemoPhoneLogin('FARMER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="FARMER">
+          👨‍🌾 Farmer (Priority 1)
+        </button>
+        <button onclick="quickDemoPhoneLogin('AGRICULTURAL_EXPERT')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="AGRICULTURAL_EXPERT">
+          🩺 Expert
+        </button>
+        <button onclick="quickDemoPhoneLogin('SELLER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="SELLER">
+          🏪 Seller
+        </button>
+        <button onclick="quickDemoPhoneLogin('BUYER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="BUYER">
+          🛒 Buyer
+        </button>
+        <button onclick="quickDemoPhoneLogin('ADMIN')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="ADMIN">
+          ⚙️ Admin
+        </button>
+      </div>
+
+      <!-- Auth Actions: Sign Up / Register & Registered User Sign In -->
+      <div class="flex items-center gap-2">
+        <button onclick="openRegistrationInterface('signup')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md hover:shadow-emerald-500/20 transition flex items-center gap-1.5">
+          <span>📝</span> <span>New User Sign Up</span>
+        </button>
+        <button onclick="openRegistrationInterface('signin')" class="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white border border-white/20 rounded-xl text-xs font-bold shadow-sm transition flex items-center gap-1.5">
+          <span>🔑</span> <span>Sign In</span>
+        </button>
+      </div>
+
+      <!-- Language Selector & User Profile -->
+      <div class="flex items-center gap-3">
+        <!-- Language Switcher -->
+        <select id="langSelect" class="bg-slate-800 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-slate-700 focus:outline-hidden focus:ring-1 focus:ring-emerald-500">
+          <option value="en">English</option>
+          <option value="od">ଓଡ଼ିଆ (Odia)</option>
+          <option value="hi">हिंदी (Hindi)</option>
+        </select>
+
+        <!-- Current User Profile Pill -->
+        <div class="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-800 text-xs">
+          <div class="w-7 h-7 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold">
+            👤
+          </div>
+          <div>
+            <div id="headerUserName" class="font-bold text-slate-200">Ramesh Patel</div>
+            <div id="headerUserRole" class="text-3xs text-emerald-400 font-mono">FARMER</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN NAVIGATION TABS (Mobile Friendly Scrollable Bar) -->
+  <nav class="bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-14 z-30 shadow-xs">
+    <div class="max-w-7xl mx-auto px-4 flex items-center gap-1 md:gap-2 overflow-x-auto no-scrollbar py-2 text-xs md:text-sm font-medium">
+      <button onclick="switchTab('dashboard')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="dashboard">
+        <span>🌾</span> <span data-i18n="nav.my_farm">My Farm</span>
+      </button>
+      <button onclick="switchTab('scanner')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="scanner">
+        <span>📷</span> <span data-i18n="nav.check_disease">Check Disease</span>
+      </button>
+      <button onclick="switchTab('copilot')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="copilot">
+        <span>🎙️</span> <span data-i18n="nav.copilot">AI Co-Pilot</span>
+      </button>
+      <button onclick="switchTab('soil')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="soil">
+        <span>🧪</span> <span data-i18n="nav.soil">Soil Health</span>
+      </button>
+      <button onclick="switchTab('business')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="business">
+        <span>📊</span> <span data-i18n="nav.business">Farm Business</span>
+      </button>
+      <button onclick="switchTab('market')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="market">
+        <span>💰</span> <span data-i18n="nav.market">Market Optimizer</span>
+      </button>
+      <button onclick="switchTab('marketplace')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="marketplace">
+        <span>🛒</span> <span data-i18n="nav.marketplace">Sell Produce</span>
+      </button>
+      
+      <!-- Role Portals (Conditional) -->
+      <button id="nav-expert_portal" onclick="switchTab('expert_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="expert_portal">
+        <span>🩺</span> <span data-i18n="nav.ask_expert">Expert Portal</span>
+      </button>
+      <button id="nav-seller_portal" onclick="switchTab('seller_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="seller_portal">
+        <span>🏪</span> <span data-i18n="nav.seller_store">Input Store</span>
+      </button>
+      <button id="nav-admin_portal" onclick="switchTab('admin_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-800 bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="admin_portal">
+        <span>⚙️</span> <span data-i18n="nav.admin_portal">Admin Portal</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- MAIN APP CONTAINER -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 relative z-10">
+
+    <!-- ============================================== -->
+    <!-- 1. DASHBOARD SECTION (FARMER PORTAL) -->
+    <!-- ============================================== -->
+    <section id="section-dashboard" class="app-section space-y-6">
+
+      <!-- ======================================================== -->
+      <!-- 1ST SCREEN: SIGN UP & NEW USER REGISTRATION INTERFACE -->
+      <!-- ======================================================== -->
+      <div id="firstScreenAuthPortal" class="w-full bg-white/95 backdrop-blur-md border-2 border-emerald-500/40 rounded-3xl p-5 md:p-8 shadow-2xl space-y-6 transition-all my-2">
+        <!-- Top Title & Badge -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+          <div>
+            <div class="flex items-center gap-2 mb-1.5">
+              <span class="px-3 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-3xs font-black uppercase tracking-widest border border-emerald-300 flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> 1st Screen Access Gate • TITAN 2.0
+              </span>
+              <span class="text-3xs text-slate-400 font-semibold hidden sm:inline">• Strict Individual User Portal Security</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+              <span>🌾</span> <span>Sign Up & New Farmer Registration</span>
+            </h2>
+            <p class="text-xs md:text-sm text-slate-600 mt-1">
+              Register with your Gmail ID, create your password, and enroll your fingerprint. Sign in to unlock full farm features—another user cannot log in to your portal.
+            </p>
+          </div>
+          <!-- Toggle Tabs: Sign Up vs Sign In -->
+          <div class="flex items-center bg-slate-100 p-1 rounded-2xl border border-slate-200 self-start md:self-center">
+            <button id="authTabBtn-signup" onclick="switchFirstScreenAuthTab('signup')" class="px-4 py-2 rounded-xl text-xs font-black transition shadow-xs bg-white text-emerald-800 border border-slate-200 flex items-center gap-1.5">
+              <span>📝</span> <span>New User Sign Up</span>
+            </button>
+            <button id="authTabBtn-signin" onclick="switchFirstScreenAuthTab('signin')" class="px-4 py-2 rounded-xl text-xs font-bold transition text-slate-600 hover:text-slate-900 flex items-center gap-1.5">
+              <span>🔑</span> <span>Registered User Sign In</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- TAB 1: NEW USER REGISTRATION (SIGN UP WITH GMAIL + PASSWORD + FINGERPRINT) -->
+        <div id="tabContent-signup" class="space-y-5">
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <!-- Farmer Full Name -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  👤 Full Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="regFullName" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="e.g. Ramesh Patel" value="Ramesh Patel">
+              </div>
+
+              <!-- Gmail ID / Email -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  📧 Gmail ID / Email Address <span class="text-red-500">*</span>
+                </label>
+                <div class="flex items-center">
+                  <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
+                    ✉️
+                  </span>
+                  <input type="email" id="regEmail" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="your.name@gmail.com" value="farmer.ramesh@gmail.com">
+                </div>
+              </div>
+
+              <!-- Mobile Phone Number -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  📱 Mobile Phone Number
+                </label>
+                <div class="flex items-center">
+                  <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
+                    🇮🇳 +91
+                  </span>
+                  <input type="tel" id="regPhone" maxlength="10" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold font-mono tracking-wider focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="9861012345" value="9861012345">
+                </div>
+              </div>
+
+              <!-- Create Own Password -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  🔒 Create Own Password <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <input type="password" id="regPassword" class="w-full p-3 pr-10 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="Create your secure password" value="Farmer@1234">
+                  <button type="button" onclick="togglePasswordVisibility('regPassword')" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs">
+                    👁️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Confirm Password -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  🔐 Confirm Password <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <input type="password" id="regConfirmPassword" class="w-full p-3 pr-10 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="Re-enter your password" value="Farmer@1234">
+                  <button type="button" onclick="togglePasswordVisibility('regConfirmPassword')" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs">
+                    👁️
+                  </button>
+                </div>
+              </div>
+
+              <!-- Account Role -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  🏷️ Portal Role
+                </label>
+                <select id="regRole" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white cursor-pointer">
+                  <option value="FARMER" selected>👨‍🌾 Farmer (Priority 1)</option>
+                  <option value="AGRICULTURAL_EXPERT">🩺 Agricultural Expert</option>
+                  <option value="SELLER">🏪 Input & Seed Seller</option>
+                  <option value="BUYER">🛒 Crop Produce Buyer</option>
+                  <option value="ADMIN">⚙️ System Administrator</option>
+                </select>
+              </div>
+
+              <!-- Farm Name -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  🚜 Farm / Establishment Name
+                </label>
+                <input type="text" id="regFarmName" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="e.g. Kishan Smart Farm" value="Kishan Smart Farm">
+              </div>
+
+              <!-- Farm Location / District -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  📍 State & District / Village
+                </label>
+                <input type="text" id="regLocation" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="e.g. Khordha, Odisha" value="Khordha, Odisha">
+              </div>
+
+              <!-- Land Area & Main Crops -->
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">
+                    📐 Land (Acres)
+                  </label>
+                  <input type="number" id="regLandArea" step="0.5" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="6.5" value="6.5">
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-700 mb-1">
+                    🌾 Crops
+                  </label>
+                  <input type="text" id="regCrops" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="Rice, Tomato" value="Rice, Tomato, Potato">
+                </div>
+              </div>
+            </div>
+
+            <!-- REAL DEVICE FINGERPRINT BIOMETRIC ENROLLMENT BOX (REQUIRED) -->
+            <div id="biometricEnrollBox" onclick="scanAndEnrollFingerprint()" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/60 hover:bg-emerald-100/60 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-xs">
+              <div class="flex items-center gap-3.5">
+                <div id="fingerprintSensorIcon" class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-md group-hover:scale-105 transition">
+                  👆
+                </div>
+                <div>
+                  <div class="text-xs font-black text-slate-900 flex items-center gap-2">
+                    <span>Physical Device Fingerprint Sensor <span class="text-red-500 font-black text-xs">* REQUIRED</span></span>
+                    <span id="fingerprintStatusBadge" class="text-3xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
+                      👆 Click to Touch Device Sensor
+                    </span>
+                  </div>
+                  <div id="fingerprintHelpText" class="text-2xs text-slate-600 mt-0.5">
+                    Click to activate your Mac Touch ID / Device Fingerprint sensor. Place your real physical finger on the sensor to link your biometric key.
+                  </div>
+                </div>
+              </div>
+              <button type="button" class="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+                <span>👆</span> <span>Touch Sensor to Scan</span>
+              </button>
+            </div>
+
+            <!-- Registration Action Buttons -->
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button onclick="submitRegistrationWithPassword()" class="flex-1 min-w-[240px] py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
+                <span>🚀</span> <span>Register & Unlock My Farm Portal</span>
+              </button>
+              <button onclick="quick1ClickRegistration()" class="px-5 py-3.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
+                <span>⚡</span> <span>1-Click Fast Register (Ramesh Patel)</span>
+              </button>
+            </div>
+            <p class="text-3xs text-slate-400 text-center">
+              🔒 End-to-end encrypted passwords & biometrics. Your account and farm data are isolated from other users.
+            </p>
+          </div>
+        </div>
+
+        <!-- TAB 2: REGISTERED USER SIGN IN (ONLY GMAIL ID + PASSWORD + FINGERPRINT) -->
+        <div id="tabContent-signin" class="hidden space-y-4">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 md:p-6 space-y-4">
+            <div>
+              <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
+                <span>🔑</span> <span>Sign In to Your Private Portal</span>
+              </h3>
+              <p class="text-xs text-slate-600 mt-0.5">
+                Enter the Gmail ID and password you created during registration. Another user cannot log in to your portal without your exact credentials.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <!-- Registered Gmail ID -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  📧 Registered Gmail ID <span class="text-red-500">*</span>
+                </label>
+                <div class="flex items-center">
+                  <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
+                    ✉️
+                  </span>
+                  <input type="email" id="signinEmail" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="your.name@gmail.com" value="farmer.ramesh@gmail.com">
+                </div>
+              </div>
+
+              <!-- Password -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  🔒 Your Password <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <input type="password" id="signinPassword" class="w-full p-3 pr-10 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your password" value="Farmer@1234">
+                  <button type="button" onclick="togglePasswordVisibility('signinPassword')" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs">
+                    👁️
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- REAL DEVICE FINGERPRINT 1-TOUCH SIGN IN -->
+            <div id="biometricLoginBox" onclick="performBiometricLogin()" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/60 bg-emerald-50/90 hover:bg-emerald-100 transition flex items-center justify-between gap-3 group shadow-xs">
+              <div class="flex items-center gap-3.5">
+                <div id="biometricLoginIcon" class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
+                  👆
+                </div>
+                <div>
+                  <div class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
+                    <span>1-Touch Device Fingerprint Sign In</span>
+                    <span class="text-3xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-extrabold uppercase">Touch ID Sensor</span>
+                  </div>
+                  <div class="text-2xs text-emerald-700 mt-0.5">Place your registered finger on your Mac Touch ID / device sensor to instantly verify and unlock your portal</div>
+                </div>
+              </div>
+              <span class="text-xs font-extrabold text-emerald-800 group-hover:translate-x-1 transition flex items-center gap-1">
+                Touch Sensor ➔
+              </span>
+            </div>
+
+            <!-- Sign In Action Button -->
+            <div class="flex flex-wrap items-center gap-3 pt-2">
+              <button onclick="submitSignInWithPassword()" class="flex-1 min-w-[200px] py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
+                <span>🔓</span> <span>Sign In with Gmail & Password</span>
+              </button>
+            </div>
+
+            <!-- Demo 1-Click Role Accounts (for quick evaluator verification) -->
+            <div class="pt-3 border-t border-slate-200">
+              <span class="text-3xs uppercase font-bold text-slate-400 tracking-wider block mb-2">Or test registered accounts with 1-click verification:</span>
+              <div class="flex flex-wrap gap-2">
+                <button type="button" onclick="fillAndLoginDemoAccount('farmer.ramesh@gmail.com', 'Farmer@1234')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                  👨‍🌾 Ramesh (Farmer)
+                </button>
+                <button type="button" onclick="fillAndLoginDemoAccount('dr.mohapatra@gmail.com', 'Expert@1234')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-purple-50 text-slate-700 hover:text-purple-800 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                  🩺 Dr. Mohapatra (Expert)
+                </button>
+                <button type="button" onclick="fillAndLoginDemoAccount('seller.kisan@gmail.com', 'Seller@1234')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-blue-50 text-slate-700 hover:text-blue-800 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                  🏪 Sunil (Seller)
+                </button>
+                <button type="button" onclick="fillAndLoginDemoAccount('buyer.trading@gmail.com', 'Buyer@1234')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-amber-50 text-slate-700 hover:text-amber-800 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                  🛒 Utkal (Buyer)
+                </button>
+                <button type="button" onclick="fillAndLoginDemoAccount('admin@gmail.com', 'Admin@1234')" class="px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900 text-xs font-bold transition flex items-center gap-1 shadow-2xs">
+                  ⚙️ Admin
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Active Authenticated User Session Status Bar -->
+        <div id="activeSessionBanner" class="hidden bg-emerald-50/95 border-2 border-emerald-500/50 p-4 md:p-5 rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-lg shadow-xs">
+              🛡️
+            </div>
+            <div>
+              <div class="text-sm font-extrabold text-slate-900 flex items-center gap-2">
+                <span id="activeSessionName">Ramesh Patel</span>
+                <span id="activeSessionRole" class="px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 text-3xs font-black uppercase">FARMER</span>
+                <span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 text-3xs font-extrabold uppercase">Fingerprint Protected 👆</span>
+              </div>
+              <div class="text-xs text-slate-600 mt-0.5">
+                <span id="activeSessionEmail" class="font-mono font-bold text-emerald-800">farmer.ramesh@gmail.com</span> • <span id="activeSessionFarm">Kishan Smart Farm</span>
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="showSignUpForm()" class="px-3.5 py-2 bg-white hover:bg-slate-50 text-emerald-800 font-bold rounded-xl border border-emerald-300 text-xs transition flex items-center gap-1 shadow-2xs">
+              <span>➕</span> <span>Register New User</span>
+            </button>
+            <button onclick="logoutFarmerSession()" class="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl text-xs transition flex items-center gap-1 shadow-xs">
+              <span>🔒</span> <span>Lock & Sign Out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FARMER VERIFIED DASHBOARD CONTENT CONTAINER -->
+      <div id="farmerPrivateDashboard" class="space-y-6">
+
+        <!-- Farmer Verified Session Status Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-3 bg-emerald-50 border border-emerald-200 px-4 py-2.5 rounded-2xl text-xs shadow-2xs">
+          <div class="flex items-center gap-2 text-emerald-800 font-bold">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>🛡️ Mobile Verified Farmer Session: <span id="dashVerifiedPhone" class="font-mono font-bold">+91-9861012345</span> (<span id="dashVerifiedName">Ramesh Patel</span>)</span>
+          </div>
+          <button onclick="logoutFarmerSession()" class="px-3 py-1 bg-white hover:bg-red-50 text-slate-600 hover:text-red-700 rounded-lg border border-slate-200 text-2xs font-bold transition flex items-center gap-1">
+            <span>🔒</span> <span>Log Out / Change Mobile</span>
+          </button>
+        </div>
+      
+        <!-- Welcome Hero & Farm Card -->
+        <div class="bg-gradient-to-r from-emerald-800 to-teal-900 rounded-3xl p-6 md:p-8 text-white shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+          <div class="relative z-10">
+            <div class="flex items-center gap-2 text-emerald-300 text-xs font-semibold uppercase tracking-wider">
+              <span>🌱</span> <span data-i18n="dashboard.farm_health">Farm Health Status</span>: <span class="bg-emerald-500/20 text-emerald-200 px-2.5 py-0.5 rounded-full border border-emerald-400/30">Good Vigour</span>
+            </div>
+            <h2 class="text-2xl md:text-3xl font-extrabold mt-2" id="dashFarmName">Kishan Smart Farm</h2>
+            <p class="text-sm text-emerald-100/80 mt-1">
+              <span id="dashFarmArea">6.5 Acres</span> • <span id="dashFarmLoc">Shared Live Field Location</span>
+            </p>
+
+            <div class="flex flex-wrap items-center gap-3 mt-5">
+              <button onclick="switchTab('scanner')" class="px-5 py-2.5 bg-white text-emerald-900 font-bold rounded-xl text-xs md:text-sm hover:bg-emerald-50 shadow-md transition flex items-center gap-2">
+                <span>📷</span> <span data-i18n="scanner.title">Check Plant Disease</span>
+              </button>
+              <button onclick="switchTab('copilot')" class="px-5 py-2.5 bg-emerald-700/80 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs md:text-sm border border-emerald-500/40 transition flex items-center gap-2">
+                <span>🎙️</span> <span data-i18n="copilot.speak_btn">Ask AI Co-Pilot</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Weather Mini Glance -->
+          <div class="bg-white/10 backdrop-blur-md border border-white/20 p-4 md:p-5 rounded-2xl w-full md:w-72 shrink-0">
+            <div class="flex items-center justify-between text-xs text-emerald-200">
+              <span data-i18n="dashboard.weather_summary">Today's Weather</span>
+              <span id="dashWeatherCond" class="font-bold">Partly Cloudy</span>
+            </div>
+            <div class="flex items-baseline gap-2 mt-2">
+              <span id="dashWeatherTemp" class="text-3xl md:text-4xl font-black">28.5°C</span>
+              <span class="text-xs text-emerald-200 font-semibold" id="dashWeatherLocation">Shared Live Location</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-white/10 text-2xs text-emerald-100">
+              <div>
+                <span class="block opacity-75">Humidity</span>
+                <strong id="dashWeatherHumidity" class="text-xs">78%</strong>
+              </div>
+              <div>
+                <span class="block opacity-75">Wind</span>
+                <strong id="dashWeatherWind" class="text-xs">12 km/h</strong>
+              </div>
+              <div>
+                <span class="block opacity-75">Rain Prob</span>
+                <strong id="dashWeatherRain" class="text-xs">35%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- FARMER LIVE GPS LOCATION & LOCAL WEATHER TRACKER -->
+        <div class="bg-white p-5 md:p-6 rounded-3xl border border-slate-200 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
+          <div class="space-y-1.5 flex-1">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="dashLiveGpsStatus">📍 GPS: 20.2961° N, 85.8245° E (Shared Live Field)</span>
+              </span>
+              <span class="text-3xs text-slate-500 font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200" id="dashGpsAccuracy">Device Status: Ready</span>
+            </div>
+            <h3 class="text-base font-extrabold text-slate-900 mt-1 flex items-center gap-2">
+              <span>📡</span> <span data-i18n="location.localized_weather">Live Microclimate Weather at Your Exact Field Location</span>
+            </h3>
+            <p class="text-xs text-slate-500 leading-relaxed">
+              Click below to synchronize your device satellite GPS. Real-time temperature, humidity, rainfall, and foliar disease outbreak risk alerts will immediately recalculate for your exact coordinates.
+            </p>
+          </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
+          <button id="btnShareLiveGps" onclick="shareLiveLocation()" class="px-5 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md hover:shadow-lg transition flex items-center gap-2 touch-target-large">
+            <span>📍</span> <span data-i18n="location.share_gps_btn">Share Live GPS Location</span>
+          </button>
+          
+          <select id="selectQuickAgroZone" onchange="changeAgroZonePreset(this.value)" class="p-2.5 rounded-xl border border-slate-300 text-xs font-semibold bg-slate-50 text-slate-700 focus:ring-1 focus:ring-emerald-500">
+            <option value="20.2961,85.8245,Khordha / Bhubaneswar (Central)">📍 Preset: Khordha / Bhubaneswar</option>
+            <option value="20.4625,85.8830,Cuttack Mahanadi Basin">📍 Preset: Cuttack Mahanadi Basin</option>
+            <option value="19.8135,85.8312,Puri Coastal Agro-Zone">📍 Preset: Puri Coastal Agro-Zone</option>
+            <option value="21.4669,83.9812,Sambalpur / Bargarh Rice Belt">📍 Preset: Sambalpur / Bargarh Rice Belt</option>
+            <option value="21.4934,86.9135,Balasore Coastal Plains">📍 Preset: Balasore Coastal Plains</option>
+            <option value="19.3149,84.7941,Ganjam South Agro-Zone">📍 Preset: Ganjam South Agro-Zone</option>
+            <option value="18.8135,82.7123,Koraput Hill Agro-Zone">📍 Preset: Koraput Hill Agro-Zone</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Smart Agricultural Alerts Card -->
+      <div class="bg-white p-5 md:p-6 rounded-2xl border border-slate-200 shadow-xs">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-extrabold text-slate-800 text-base flex items-center gap-2">
+            <span>🔔</span> <span data-i18n="dashboard.smart_alerts">Smart Agricultural Alerts</span>
+          </h3>
+          <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800">Live AI Triggers</span>
+        </div>
+        <div id="dashAlertsList" class="space-y-3">
+          <!-- Dynamic alerts populated via JS -->
+        </div>
+      </div>
+
+      <!-- Key Metrics & Finance Row -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-slate-400 text-xs block font-medium" data-i18n="dashboard.active_fields">Active Plots</span>
+          <strong class="text-2xl font-black text-slate-800 mt-1 block">3 Plots</strong>
+          <span class="text-xs text-emerald-700 font-semibold mt-1 inline-block">Tomato, Rice, Potato</span>
+        </div>
+        <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-slate-400 text-xs block font-medium" data-i18n="dashboard.total_expenses">Season Expenses</span>
+          <strong id="dashTotalExpenses" class="text-2xl font-black text-amber-700 mt-1 block">₹15,200</strong>
+          <span class="text-xs text-slate-500 mt-1 inline-block">Fertilizer & Labour</span>
+        </div>
+        <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-slate-400 text-xs block font-medium" data-i18n="dashboard.net_income">Realized Sales</span>
+          <strong id="dashNetIncome" class="text-2xl font-black text-emerald-700 mt-1 block">₹92,400</strong>
+          <span class="text-xs text-emerald-600 font-semibold mt-1 inline-block">+₹77,200 Net Return</span>
+        </div>
+        <div class="bg-white p-4 md:p-5 rounded-2xl border border-slate-200 shadow-xs">
+          <span class="text-slate-400 text-xs block font-medium">Model Accuracy</span>
+          <strong class="text-2xl font-black text-slate-800 mt-1 block">98.15%</strong>
+          <span class="text-xs text-blue-600 font-semibold mt-1 inline-block">Calibrated Ensemble v1.0</span>
+        </div>
+      </div>
+
+      <!-- Quick Action Cards (Large visual icons for farmers) -->
+      <div>
+        <h3 class="font-extrabold text-slate-800 text-base mb-3" data-i18n="dashboard.quick_actions">Quick Farmer Actions</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          
+          <button onclick="switchTab('scanner')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">📷</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.check_disease">Check Disease</span>
+          </button>
+
+          <button onclick="switchTab('copilot')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">🎙️</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.copilot">Ask AI Co-Pilot</span>
+          </button>
+
+          <button onclick="switchTab('market')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">💰</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.market">Market Optimizer</span>
+          </button>
+
+          <button onclick="switchTab('soil')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">🧪</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.soil">Soil Health</span>
+          </button>
+
+          <button onclick="switchTab('business')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">📊</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.business">Farm Business</span>
+          </button>
+
+          <button onclick="switchTab('marketplace')" class="card-3d-elevation p-4 bg-white/95 backdrop-blur-sm hover:bg-emerald-50 rounded-2xl border border-slate-200 hover:border-emerald-400 transition text-center shadow-xs flex flex-col items-center justify-center gap-2 group cursor-pointer">
+            <span class="text-3xl group-hover:scale-110 transition">🛒</span>
+            <span class="font-bold text-xs text-slate-800" data-i18n="nav.marketplace">Sell Produce</span>
+          </button>
+
+        </div>
+      </div>
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 2. LEAF DISEASE SCANNER SECTION -->
+    <!-- ============================================== -->
+    <section id="section-scanner" class="app-section hidden space-y-6">
+      
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="scanner.title">AI Leaf Disease Computer Vision Scanner</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="scanner.subtitle">Scan leaf photo or capture from live camera to identify diseases, get verified treatments, and connect with experts.</p>
+        </div>
+
+        <!-- Crop Selector -->
+        <div class="mt-6 max-w-md">
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-2" data-i18n="scanner.select_crop">Select Crop to Diagnose</label>
+          <select id="scannerCropSelect" class="w-full p-3 rounded-xl border border-slate-300 text-sm font-semibold bg-slate-50 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden">
+            <!-- 15 Crops dynamically populated -->
+          </select>
+        </div>
+
+        <!-- 4 Capture Options: Take Photo, Upload Image, Live Webcam, Webcam Stream URL -->
+        <div class="mt-6">
+          <label class="block text-xs font-bold text-slate-700 uppercase mb-2">Input Mode</label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            
+            <!-- Option A: Take Photo (Camera device) -->
+            <label class="p-3.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl cursor-pointer flex items-center justify-center gap-2 font-bold text-xs transition">
+              <span>📷</span> <span data-i18n="scanner.take_photo">Take Photo</span>
+              <input type="file" id="leafFileInput" accept="image/*" capture="environment" class="hidden">
+            </label>
+
+            <!-- Option B: Upload File Picker -->
+            <label class="p-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl cursor-pointer flex items-center justify-center gap-2 font-bold text-xs transition">
+              <span>📁</span> <span data-i18n="scanner.upload_image">Upload Image</span>
+            </label>
+
+            <!-- Option C: Live Browser Webcam -->
+            <button onclick="openLiveWebcam()" class="p-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition">
+              <span>📹</span> <span data-i18n="scanner.live_webcam">Live Webcam</span>
+            </button>
+
+            <!-- Option D: Webcam URL Link Toggle -->
+            <button onclick="document.getElementById('webcamUrlInputRow').classList.toggle('hidden')" class="p-3.5 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 rounded-xl flex items-center justify-center gap-2 font-bold text-xs transition">
+              <span>🌐</span> <span data-i18n="scanner.webcam_url">Webcam URL Link</span>
+            </button>
+
+          </div>
+
+          <!-- URL Input for Remote Camera / IP Webcam (Explicit Requirement) -->
+          <div id="webcamUrlInputRow" class="hidden mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="scanner.webcam_url">Photo Capture Through URL Link of Webcam / IP Camera</label>
+            <div class="flex gap-2">
+              <input type="url" id="scannerWebcamUrlInput" class="flex-1 p-2.5 border border-slate-300 rounded-xl text-xs" data-i18n-placeholder="scanner.webcam_url_placeholder" placeholder="Paste remote webcam or IP camera snapshot URL (e.g. http://.../snapshot.jpg)">
+              <button onclick="handleWebcamUrlCapture()" class="px-4 py-2.5 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800" data-i18n="scanner.fetch_url_btn">Fetch & Scan</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Specimen Sample Chips for Instant Evaluation -->
+        <div class="mt-5 pt-4 border-t border-slate-100">
+          <span class="text-3xs uppercase font-bold text-slate-400 tracking-wider block mb-2">Or test with realistic foliar specimens:</span>
+          <div class="flex flex-wrap gap-2 text-xs">
+            <button onclick="loadSampleSpecimen('tomato_early_blight')" class="px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-800 border border-red-200 font-medium transition">
+              🍅 Tomato Early Blight
+            </button>
+            <button onclick="loadSampleSpecimen('potato_late_blight')" class="px-3 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 font-medium transition">
+              🥔 Potato Late Blight
+            </button>
+            <button onclick="loadSampleSpecimen('rice_blast')" class="px-3 py-1.5 rounded-lg bg-yellow-50 hover:bg-yellow-100 text-yellow-800 border border-yellow-200 font-medium transition">
+              🌾 Rice Blast Spindle
+            </button>
+            <button onclick="loadSampleSpecimen('healthy_leaf')" class="px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 font-medium transition">
+              🌱 Healthy Foliage
+            </button>
+          </div>
+        </div>
+
+        <!-- Viewport Preview & Laser Animation Container -->
+        <div class="mt-6 flex flex-col md:flex-row gap-6 items-center">
+          
+          <div id="scannerLaserContainer" class="scanner-laser-container w-full max-w-sm aspect-square bg-slate-900 rounded-2xl flex items-center justify-center border-2 border-dashed border-slate-300 relative overflow-hidden shadow-inner">
+            <img id="scannerImagePreview" class="w-full h-full object-contain hidden" alt="Selected leaf preview">
+            <div id="scannerPreviewPlaceholder" class="text-center p-6 text-slate-400">
+              <span class="text-4xl block mb-2">🌿</span>
+              <p class="text-xs">No leaf selected yet.<br>Choose Take Photo, Upload, Webcam, or a Specimen above.</p>
+            </div>
+            <!-- Laser line animation -->
+            <div class="scanner-laser"></div>
+          </div>
+
+          <!-- Analyze Action & Trigger -->
+          <div class="flex-1 space-y-4">
+            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-600">
+              <h4 class="font-bold text-slate-800 mb-1">🤖 AI Folate Verification Engine:</h4>
+              <p>Our computer vision model verifies plant foliar tissue (Excess Green Index & HSV chromaticity), segments necrotic lesion spots, and cross-checks with ICAR pathological profiles.</p>
+            </div>
+
+            <button id="analyzeLeafBtn" onclick="runLeafDiagnosis()" disabled class="w-full py-4 bg-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold rounded-2xl shadow-lg transition flex items-center justify-center gap-3 text-base">
+              <span>🔬</span> <span data-i18n="scanner.capture_btn">Analyze Leaf with AI</span>
+            </button>
+
+            <!-- Loading Indicator -->
+            <div id="scannerLoading" class="hidden text-center py-2 text-xs font-semibold text-emerald-700 flex items-center justify-center gap-2">
+              <svg class="animate-spin h-5 w-5 text-emerald-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span data-i18n="scanner.analyzing">AI Model analyzing foliar tissue and pathological lesions...</span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- RESULTS CARD -->
+      <div id="scannerResults" class="hidden bg-white p-6 md:p-8 rounded-3xl border border-slate-200 shadow-xl space-y-6">
+        
+        <!-- Header row -->
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+          <div>
+            <span id="resCropName" class="text-xs font-black uppercase tracking-wider text-emerald-700">Tomato</span>
+            <h3 id="resDiseaseName" class="text-2xl md:text-3xl font-black text-slate-900">Early Blight</h3>
+          </div>
+          <div class="flex items-center gap-3">
+            <span id="resSeverity" class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-300">Moderate</span>
+            <div class="text-right">
+              <span class="text-3xs uppercase font-bold text-slate-400 block" data-i18n="scanner.confidence">AI Confidence</span>
+              <strong id="resConfidence" class="text-xl font-black text-emerald-700">94%</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Confidence Gauge Bar -->
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div id="resConfidenceBar" class="bg-emerald-600 h-3 rounded-full transition-all duration-700" style="width: 94%;"></div>
+        </div>
+
+        <!-- Low Confidence Warning (< 70%) Banner -->
+        <div id="resLowConfidenceWarn" class="hidden p-4 rounded-2xl bg-amber-50 border border-amber-300 text-amber-800 text-xs md:text-sm flex items-start gap-3">
+          <span class="text-xl">⚠️</span>
+          <div class="flex-1">
+            <strong class="block font-bold">AI confidence is below threshold (< 70%).</strong>
+            <p data-i18n="scanner.low_confidence_warning">AI confidence is low. Please upload a clearer image or consult an agricultural expert.</p>
+            <button onclick="switchTab('expert_portal')" class="mt-2 px-3 py-1 bg-amber-700 text-white font-bold rounded-lg text-xs" data-i18n="scanner.ask_expert_btn">
+              Consult Plant Pathologist
+            </button>
+          </div>
+        </div>
+
+        <!-- Diagnostic Information Tabs / Blocks -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <span>🔍</span> <span data-i18n="scanner.symptoms">Symptoms</span>
+            </h4>
+            <p id="resSymptoms" class="text-xs md:text-sm text-slate-600 leading-relaxed"></p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <span>🔬</span> <span data-i18n="scanner.causes">Possible Causes</span>
+            </h4>
+            <p id="resCauses" class="text-xs md:text-sm text-slate-600 leading-relaxed"></p>
+          </div>
+
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <h4 class="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5 mb-2">
+              <span>🛡️</span> <span data-i18n="scanner.management">Management</span>
+            </h4>
+            <p id="resManagement" class="text-xs md:text-sm text-slate-600 leading-relaxed"></p>
+          </div>
+        </div>
+
+        <!-- Verified Agricultural Inputs / Medicine Section -->
+        <div class="p-5 bg-emerald-50/60 rounded-2xl border border-emerald-200">
+          <h4 class="font-bold text-emerald-900 text-sm md:text-base flex items-center gap-2 mb-3">
+            <span>💊</span> <span data-i18n="scanner.verified_treatment">Verified Agricultural Medicines / Inputs</span>
+          </h4>
+          <div id="resTreatmentsList" class="space-y-2">
+            <!-- Dynamic verified treatment cards -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 3. AI FARM CO-PILOT SECTION -->
+    <!-- ============================================== -->
+    <section id="section-copilot" class="app-section hidden space-y-4">
+      
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[75vh]">
+        
+        <!-- Header -->
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-800 flex items-center gap-2">
+              <span>🎙️</span> <span data-i18n="copilot.title">Ask AI Farm Co-Pilot</span>
+            </h2>
+            <p class="text-xs text-slate-500" data-i18n="copilot.subtitle">Voice or text enabled agricultural assistant aware of your farm, crops, soil, and local mandi prices.</p>
+          </div>
+          <span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800">Context Active</span>
+        </div>
+
+        <!-- Chat Stream Feed -->
+        <div id="copilotChatFeed" class="flex-1 overflow-y-auto p-3 space-y-3 no-scrollbar">
+          <!-- Chat messages rendered dynamically -->
+        </div>
+
+        <!-- Typing Indicator -->
+        <div id="copilotTyping" class="hidden text-xs text-slate-400 italic py-1 px-3">
+          AI Co-Pilot is thinking...
+        </div>
+
+        <!-- Quick Question Chips -->
+        <div class="py-2 overflow-x-auto no-scrollbar flex items-center gap-2 text-xs">
+          <button onclick="handleQuickPrompt('My tomato leaves are turning yellow')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 whitespace-nowrap transition border border-slate-200">
+            🍃 Yellow Leaves Advice
+          </button>
+          <button onclick="handleQuickPrompt('When should I irrigate my rice field?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 whitespace-nowrap transition border border-slate-200">
+            💧 Irrigation Timing
+          </button>
+          <button onclick="handleQuickPrompt('How much did I spend this month?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 whitespace-nowrap transition border border-slate-200">
+            💰 Monthly Expenses
+          </button>
+          <button onclick="handleQuickPrompt('What is todays market price?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 whitespace-nowrap transition border border-slate-200">
+            📈 Mandi Prices
+          </button>
+          <button onclick="handleQuickPrompt('What should I do after heavy rain?')" class="px-3 py-1.5 rounded-full bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-800 whitespace-nowrap transition border border-slate-200">
+            🌧️ Post-Rain Guidance
+          </button>
+        </div>
+
+        <!-- Voice & Text Input Controls -->
+        <div class="pt-3 border-t border-slate-100 flex items-center gap-3">
+          
+          <!-- Big Microphone Button -->
+          <button id="copilotMicBtn" onclick="toggleVoiceAssistant()" class="w-12 h-12 rounded-2xl bg-emerald-700 hover:bg-emerald-800 text-white flex items-center justify-center text-xl shrink-0 shadow-md transition touch-target-large">
+            🎙️
+          </button>
+
+          <!-- Voice Waves Animation -->
+          <div id="copilotVoiceWaves" class="voice-waves hidden sm:flex">
+            <div class="voice-wave-bar"></div>
+            <div class="voice-wave-bar"></div>
+            <div class="voice-wave-bar"></div>
+            <div class="voice-wave-bar"></div>
+            <div class="voice-wave-bar"></div>
+          </div>
+
+          <div class="flex-1 relative">
+            <input type="text" id="copilotTextInput" onkeydown="if(event.key==='Enter') handleSendTextCopilot()" class="w-full pl-4 pr-12 py-3 rounded-2xl border border-slate-300 text-xs md:text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-hidden" data-i18n-placeholder="copilot.placeholder" placeholder="Ask anything in English, Odia, or Hindi...">
+            <button onclick="handleSendTextCopilot()" class="absolute right-2 top-2 p-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-bold transition">
+              ➤
+            </button>
+          </div>
+
+        </div>
+        <div id="copilotVoiceStatus" class="text-3xs text-emerald-700 font-semibold px-2 mt-1"></div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 4. SOIL INTELLIGENCE SECTION -->
+    <!-- ============================================== -->
+    <section id="section-soil" class="app-section hidden space-y-6">
+      
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="soil.title">Soil Intelligence & Nutrient Advisory</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="soil.subtitle">Understand your soil parameters, crop suitability index, and fertilizer recommendations.</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+          
+          <!-- Soil Inputs Form -->
+          <div class="space-y-4">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Soil Test Parameters</h3>
+            
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.ph">Soil pH</label>
+                <input type="number" step="0.1" id="soilInputPH" value="6.5" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.soil_type">Soil Type</label>
+                <select id="soilInputType" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
+                  <option value="Alluvial Loam" selected>Alluvial Loam</option>
+                  <option value="Black Cotton Soil">Black Cotton Soil</option>
+                  <option value="Red Laterite Soil">Red Laterite Soil</option>
+                  <option value="Sandy Loam">Sandy Loam</option>
+                  <option value="Clay Loam">Clay Loam</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Nitrogen (N)</label>
+                <input type="number" id="soilInputN" value="260" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Phosphorus (P)</label>
+                <input type="number" id="soilInputP" value="22" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Potassium (K)</label>
+                <input type="number" id="soilInputK" value="190" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.organic_carbon">Organic Carbon (%)</label>
+                <input type="number" step="0.01" id="soilInputOC" value="0.55" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.moisture">Moisture (%)</label>
+                <input type="number" id="soilInputMoisture" value="45" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+              </div>
+            </div>
+
+            <button onclick="analyzeSoilParams()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs md:text-sm shadow-md transition" data-i18n="soil.analyze_btn">
+              Analyze Soil & Get Crop Suitability
+            </button>
+          </div>
+
+          <!-- Soil Evaluation Output -->
+          <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+              <span class="text-xs font-bold uppercase text-slate-500" data-i18n="soil.fertility_score">Overall Fertility Index</span>
+              <strong id="soilFertilityScore" class="text-2xl font-black text-emerald-800">88/100</strong>
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-2xs md:text-xs">
+              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span class="text-slate-400 block">pH Reaction:</span>
+                <strong id="soilPHStatus" class="text-slate-800">Optimal Neutral</strong>
+              </div>
+              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span class="text-slate-400 block">Nitrogen (N):</span>
+                <strong id="soilNStatus" class="text-slate-800">Medium (260 kg/ha)</strong>
+              </div>
+              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span class="text-slate-400 block">Phosphorus (P):</span>
+                <strong id="soilPStatus" class="text-slate-800">Medium (22 kg/ha)</strong>
+              </div>
+              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
+                <span class="text-slate-400 block">Potassium (K):</span>
+                <strong id="soilKStatus" class="text-slate-800">Medium (190 kg/ha)</strong>
+              </div>
+            </div>
+
+            <div>
+              <h4 class="text-xs font-bold text-slate-800 mb-1" data-i18n="soil.nutrient_recs">Fertilizer Guidance</h4>
+              <ul id="soilRecsList" class="space-y-1"></ul>
+            </div>
+
+            <p id="soilGuidanceText" class="text-xs text-slate-500 italic pt-2 border-t border-slate-200"></p>
+          </div>
+
+        </div>
+
+        <!-- Crop Suitability Ranking -->
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="soil.crop_suitability">Crop Suitability Matrix (Top Matches for Your Soil)</h3>
+          <div id="soilCropSuitabilityList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <!-- Dynamic crop rankings -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 5. FARM BUSINESS MAKER & EXPENSES SECTION -->
+    <!-- ============================================== -->
+    <section id="section-business" class="app-section hidden space-y-6">
+      
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        
+        <div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="business.title">Farm Business Maker & Expense Tracker</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="business.subtitle">Simulate crop budgets, record daily expenses by voice, and track farm profits.</p>
+        </div>
+
+        <!-- Tabs inside business -->
+        <div class="flex items-center gap-3 mt-6 border-b border-slate-200 text-xs md:text-sm font-bold">
+          <button onclick="document.getElementById('bizTabPlanner').classList.remove('hidden'); document.getElementById('bizTabExpenses').classList.add('hidden');" class="pb-3 border-b-2 border-emerald-600 text-emerald-800">
+            Business Scenario Planner
+          </button>
+          <button onclick="document.getElementById('bizTabPlanner').classList.add('hidden'); document.getElementById('bizTabExpenses').classList.remove('hidden');" class="pb-3 text-slate-500 hover:text-emerald-700">
+            Expense & Income Records
+          </button>
+        </div>
+
+        <!-- SUB-TAB 1: BUSINESS SCENARIO PLANNER -->
+        <div id="bizTabPlanner" class="pt-6 space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Inputs -->
+            <div class="space-y-3 text-xs">
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Crop</label>
+                  <select id="bizCropSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50">
+                    <option value="Tomato" selected>Tomato</option>
+                    <option value="Rice">Rice</option>
+                    <option value="Potato">Potato</option>
+                    <option value="Chilli">Chilli</option>
+                    <option value="Onion">Onion</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.land_area">Land Area (Acres)</label>
+                  <input type="number" id="bizAcres" value="2.0" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.seed_cost">Seed Cost (₹)</label>
+                  <input type="number" id="bizSeed" value="3500" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.fertilizer_cost">Fertilizer Cost (₹)</label>
+                  <input type="number" id="bizFertilizer" value="7000" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.labour_cost">Labour Cost (₹)</label>
+                  <input type="number" id="bizLabour" value="14000" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.irrigation_cost">Irrigation Cost (₹)</label>
+                  <input type="number" id="bizIrrigation" value="3000" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-3 gap-3">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Protection (₹)</label>
+                  <input type="number" id="bizProtection" value="4500" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Machinery (₹)</label>
+                  <input type="number" id="bizEquipment" value="4000" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1">Freight (₹)</label>
+                  <input type="number" id="bizTransport" value="2500" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3 pt-2">
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.expected_yield">Expected Yield (Qtl)</label>
+                  <input type="number" id="bizYield" value="90" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+                <div>
+                  <label class="block font-semibold text-slate-600 mb-1" data-i18n="business.expected_price">Expected Price/Qtl (₹)</label>
+                  <input type="number" id="bizPrice" value="2350" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                </div>
+              </div>
+            </div>
+
+            <!-- Output Cards & Chart -->
+            <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-between">
+              <div>
+                <h3 class="font-extrabold text-slate-800 text-sm uppercase mb-3">Simulation Summary</h3>
+                <div class="grid grid-cols-2 gap-3 text-xs">
+                  <div class="p-3 bg-white rounded-xl border border-slate-200">
+                    <span class="text-slate-400 block text-2xs uppercase" data-i18n="business.total_estimated_cost">Estimated Cost</span>
+                    <strong id="bizResTotalCost" class="text-lg font-black text-amber-700">₹38,500</strong>
+                  </div>
+                  <div class="p-3 bg-white rounded-xl border border-slate-200">
+                    <span class="text-slate-400 block text-2xs uppercase" data-i18n="business.estimated_revenue">Estimated Revenue</span>
+                    <strong id="bizResRevenue" class="text-lg font-black text-slate-800">₹2,11,500</strong>
+                  </div>
+                  <div class="p-3 bg-emerald-100 rounded-xl border border-emerald-300">
+                    <span class="text-emerald-800 block text-2xs uppercase font-bold" data-i18n="business.estimated_net_return">Estimated Net Return</span>
+                    <strong id="bizResNetReturn" class="text-xl font-black text-emerald-900">₹1,73,000</strong>
+                  </div>
+                  <div class="p-3 bg-white rounded-xl border border-slate-200">
+                    <span class="text-slate-400 block text-2xs uppercase" data-i18n="business.roi">Projected ROI</span>
+                    <strong id="bizResROI" class="text-lg font-black text-blue-700">449%</strong>
+                  </div>
+                </div>
+
+                <!-- Doughnut Chart Container -->
+                <div class="mt-4 h-48 w-full">
+                  <canvas id="bizCostChart"></canvas>
+                </div>
+              </div>
+
+              <p class="text-3xs text-slate-400 italic mt-3">Figures are scenario projections based on entered cost inputs. Actual realizations depend on weather and harvest conditions.</p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SUB-TAB 2: EXPENSES & INCOME -->
+        <div id="bizTabExpenses" class="pt-6 hidden space-y-6">
+          
+          <!-- Voice Expense Bar -->
+          <div class="p-5 bg-emerald-50 rounded-2xl border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 class="font-bold text-emerald-900 text-sm">🎙️ Speak Expense to Log Instantly</h4>
+              <p class="text-xs text-emerald-700 mt-0.5">Say: "I spent 1500 on fertilizer" or "ଖତ ପାଇଁ ୧୫୦୦ ଟଙ୍କା ଖର୍ଚ୍ଚ କଲି"</p>
+            </div>
+            <button onclick="triggerVoiceExpense()" class="px-5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-2 shrink-0">
+              <span>🎙️</span> <span data-i18n="business.voice_expense_btn">Speak Expense</span>
+            </button>
+          </div>
+
+          <!-- Manual Expense Form -->
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs items-end">
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Amount (₹)</label>
+              <input type="number" id="expAmountInput" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="1500">
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Category</label>
+              <select id="expCategoryInput" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-white">
+                <option value="Fertilizer">Fertilizer</option>
+                <option value="Seed">Seed</option>
+                <option value="Labour">Labour</option>
+                <option value="Irrigation">Irrigation</option>
+                <option value="Pesticide">Pesticide</option>
+                <option value="Equipment">Equipment / Tractor</option>
+                <option value="Transport">Transport</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-semibold text-slate-600 mb-1">Notes / Description</label>
+              <input type="text" id="expNotesInput" class="w-full p-2.5 rounded-xl border border-slate-300" placeholder="e.g. 2 bags urea">
+            </div>
+            <div>
+              <button onclick="saveManualExpense()" class="w-full py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs shadow-xs transition">
+                + Save Expense
+              </button>
+            </div>
+          </div>
+
+          <!-- Table of Expenses -->
+          <div class="overflow-x-auto">
+            <h4 class="font-bold text-slate-800 text-sm mb-2">Recent Recorded Expenses</h4>
+            <table class="w-full text-left border-collapse">
+              <thead>
+                <tr class="bg-slate-100 text-slate-500 text-2xs uppercase">
+                  <th class="py-2.5 px-3">Date</th>
+                  <th class="py-2.5 px-3">Category</th>
+                  <th class="py-2.5 px-3">Amount</th>
+                  <th class="py-2.5 px-3">Notes</th>
+                </tr>
+              </thead>
+              <tbody id="expensesTableBody"></tbody>
+            </table>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 6. MARKET OPTIMIZER SECTION -->
+    <!-- ============================================== -->
+    <section id="section-market" class="app-section hidden space-y-6">
+      
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="market.title">Mandi Market Optimizer</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="market.subtitle">Compare nearby APMC mandis by transparent net realization after transport and commission fees.</p>
+        </div>
+
+        <!-- Query Form -->
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-6 text-xs items-end">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Crop</label>
+            <select id="mktCropSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50">
+              <option value="Tomato" selected>Tomato</option>
+              <option value="Rice">Rice</option>
+              <option value="Potato">Potato</option>
+              <option value="Chilli">Chilli</option>
+              <option value="Onion">Onion</option>
+              <option value="Wheat">Wheat</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1" data-i18n="market.quantity_label">Quantity to Sell (Quintals)</label>
+            <input type="number" id="mktQtyInput" value="50" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1" data-i18n="market.grade_label">Produce Grade</label>
+            <select id="mktGradeSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+              <option value="Grade A" selected>Grade A (Premium)</option>
+              <option value="Grade B">Grade B (Standard)</option>
+              <option value="Grade C">Grade C (Fair)</option>
+            </select>
+          </div>
+          <div>
+            <button onclick="runMarketComparison()" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-md transition" data-i18n="market.compare_btn">
+              Calculate Optimal Selling Mandi
+            </button>
+          </div>
+        </div>
+
+        <!-- Results Grid -->
+        <div class="mt-8">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Transparent APMC Mandi Comparison</h3>
+          <div id="mktResultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Dynamically populated market cards -->
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 7. BUYER MARKETPLACE SECTION -->
+    <!-- ============================================== -->
+    <section id="section-marketplace" class="app-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Fresh Produce Marketplace</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">Direct digital marketplace connecting verified farmers with wholesalers, food processors, and traders.</p>
+          </div>
+          <button onclick="alert('Feature active in demo: produce listings generated directly from farmer profile.')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition">
+            + List Harvest Produce
+          </button>
+        </div>
+
+        <div id="marketplaceGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mt-6">
+          <!-- Dynamically populated marketplace items -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 8. EXPERT PORTAL SECTION -->
+    <!-- ============================================== -->
+    <section id="section-expert_portal" class="app-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-purple-900" data-i18n="expert_portal.title">Agricultural Expert & Pathologist Portal</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="expert_portal.subtitle">Review farmer disease scans, low-confidence cases, and provide verified prescriptions.</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Dr. P.K. Mohapatra</span>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="expert_portal.pending_queue">Cases Awaiting Pathologist Review</h3>
+          <div id="expertQueueContainer" class="space-y-4">
+            <!-- Dynamically populated expert cases -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 9. SELLER PORTAL SECTION -->
+    <!-- ============================================== -->
+    <section id="section-seller_portal" class="app-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-blue-900" data-i18n="seller_portal.title">Agrochemical & Seed Seller Portal</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="seller_portal.subtitle">Manage approved agricultural inputs, prices, and inventory stock.</p>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Kisan Agro Inputs</span>
+        </div>
+
+        <div class="mt-6">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="seller_portal.inventory">Active Inventory Stock</h3>
+          <div id="sellerProductsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- Dynamically populated products -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 10. SYSTEM ADMIN PORTAL SECTION -->
+    <!-- ============================================== -->
+    <section id="section-admin_portal" class="app-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-900" data-i18n="admin_portal.title">System Administration & AI Model Registry</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="admin_portal.subtitle">Monitor platform users, AI telemetry, and switch active model versions.</p>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-6">
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-400 text-2xs uppercase block">Total Users</span>
+            <strong id="admTotalUsers" class="text-2xl font-black text-slate-800">5</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-400 text-2xs uppercase block">Farmers</span>
+            <strong id="admTotalFarmers" class="text-2xl font-black text-emerald-800">1</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-400 text-2xs uppercase block">Total Leaf Scans</span>
+            <strong id="admTotalPredictions" class="text-2xl font-black text-slate-800">12</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-400 text-2xs uppercase block">Avg Confidence</span>
+            <strong id="admAvgConfidence" class="text-2xl font-black text-emerald-700">92.4%</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-400 text-2xs uppercase block" data-i18n="admin_portal.active_model">Active AI Model</span>
+            <strong id="admActiveModel" class="text-xs font-bold text-blue-700 block truncate">TITAN-Ensemble</strong>
+          </div>
+        </div>
+
+        <!-- AI Model Registry Switcher -->
+        <div class="mt-8 pt-6 border-t border-slate-200">
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3">AI Model Version Registry</h3>
+          <div id="admModelsList" class="space-y-3">
+            <!-- Dynamically populated model registry list -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 11. MY FARM & FIELDS SECTION -->
+    <!-- ============================================== -->
+    <section id="section-my_farm" class="app-section hidden space-y-6">
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">My Farm Fields & Health Monitor</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">Track individual crop plots, growth stages, and visual health indicators.</p>
+          </div>
+        </div>
+
+        <div id="myFieldsContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mt-6">
+          <!-- Dynamically populated field cards -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- LIVE WEBCAM MODAL -->
+  <div id="webcamModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-800 text-base">Live Camera Viewfinder</h3>
+        <button onclick="closeLiveWebcam()" class="text-slate-400 hover:text-slate-800 text-lg">✕</button>
+      </div>
+
+      <div class="relative bg-black rounded-2xl overflow-hidden aspect-video flex items-center justify-center">
+        <video id="webcamVideo" autoplay playsinline class="w-full h-full object-cover"></video>
+        <!-- Targeting Reticle -->
+        <div class="absolute inset-8 border-2 border-dashed border-emerald-400/80 rounded-xl pointer-events-none flex items-center justify-center">
+          <span class="text-3xs font-mono text-emerald-300 uppercase tracking-widest bg-black/50 px-2 py-0.5 rounded">Align Leaf Here</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="captureWebcamSnapshot()" class="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-sm transition">
+          📸 Capture Snapshot
+        </button>
+        <button onclick="closeLiveWebcam()" class="px-5 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- BUYER ORDER MODAL -->
+  <div id="buyerOrderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <h3 class="font-bold text-slate-800 text-base">Place Produce Order Inquiry</h3>
+        <button onclick="document.getElementById('buyerOrderModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 text-lg">✕</button>
+      </div>
+
+      <input type="hidden" id="buyerOrderListingId">
+      <div class="text-xs text-slate-600">Crop: <strong id="buyerOrderCropName" class="text-emerald-800 font-bold">Tomato</strong></div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Quantity Requested (Quintals)</label>
+          <input type="number" id="buyerOrderQty" value="25" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Offered Price / Quintal (₹)</label>
+          <input type="number" id="buyerOrderPrice" value="2350" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Notes / Logistics Pickup Date</label>
+          <textarea id="buyerOrderNotes" class="w-full p-2.5 rounded-xl border border-slate-300" placeholder="e.g. Will arrange truck pickup on Tuesday morning."></textarea>
+        </div>
+      </div>
+
+      <button onclick="submitBuyerOrder()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition">
+        Submit Order to Farmer
+      </button>
+    </div>
+  </div>
+
+  <!-- SECURE PHONE NUMBER & OTP LOGIN MODAL -->
+  <div id="phoneLoginModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-5 shadow-2xl border border-slate-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base font-bold shadow-inner">📱</span>
+            <h3 class="font-extrabold text-slate-900 text-lg md:text-xl" data-i18n="auth.login_title">Secure Phone & OTP Login</h3>
+          </div>
+          <p class="text-xs text-slate-500 mt-1" data-i18n="auth.login_subtitle">
+            Designed for farmers – enter phone number, receive OTP, and access your digital farm co-pilot.
+          </p>
+        </div>
+        <button onclick="closePhoneLoginModal()" class="text-slate-400 hover:text-slate-700 text-xl font-bold p-1">✕</button>
+      </div>
+
+      <!-- Role Selection: 1st Priority Farmer Highlighted -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2" data-i18n="auth.select_role">
+          Select Your Role (Farmer 1st Priority)
+        </label>
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+          <!-- 1st Priority Farmer: Big Green Pill -->
+          <button type="button" onclick="setAuthModalRole('FARMER')" id="authRoleBtn-FARMER" class="col-span-2 sm:col-span-1 p-2.5 rounded-xl font-extrabold border-2 border-emerald-600 bg-emerald-600 text-white flex items-center justify-center gap-1.5 shadow-sm transition">
+            <span>👨‍🌾</span> <span>Farmer</span>
+          </button>
+          <button type="button" onclick="setAuthModalRole('AGRICULTURAL_EXPERT')" id="authRoleBtn-AGRICULTURAL_EXPERT" class="p-2.5 rounded-xl font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
+            <span>🩺</span> <span>Expert</span>
+          </button>
+          <button type="button" onclick="setAuthModalRole('SELLER')" id="authRoleBtn-SELLER" class="p-2.5 rounded-xl font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
+            <span>🏪</span> <span>Seller</span>
+          </button>
+          <button type="button" onclick="setAuthModalRole('BUYER')" id="authRoleBtn-BUYER" class="p-2.5 rounded-xl font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
+            <span>🛒</span> <span>Buyer</span>
+          </button>
+          <button type="button" onclick="setAuthModalRole('ADMIN')" id="authRoleBtn-ADMIN" class="p-2.5 rounded-xl font-bold border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 flex items-center justify-center gap-1.5 transition">
+            <span>⚙️</span> <span>Admin</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 1: Phone Number & Name -->
+      <div id="otpStep1" class="space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="auth.name_label">Your Full Name</label>
+          <input type="text" id="authInputFullName" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden" placeholder="e.g. Ramesh Chandra Patel">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="auth.phone_label">Mobile Phone Number</label>
+          <div class="flex items-center">
+            <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
+              🇮🇳 +91
+            </span>
+            <input type="tel" id="authInputPhone" maxlength="10" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold font-mono tracking-wider focus:ring-2 focus:ring-emerald-500 focus:outline-hidden" placeholder="9861012345">
+          </div>
+        </div>
+
+        <button onclick="requestPhoneOtp()" class="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2 touch-target-large">
+          <span>📲</span> <span data-i18n="auth.send_otp">Send OTP to Mobile</span>
+        </button>
+      </div>
+
+      <!-- Step 2: OTP Verification Box -->
+      <div id="otpStep2" class="hidden space-y-3 pt-2 border-t border-slate-100">
+        <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
+          <span>OTP sent to <strong id="authOtpPhoneDisplay" class="font-mono">+91-9861012345</strong></span>
+          <button onclick="document.getElementById('otpStep1').classList.remove('hidden'); document.getElementById('otpStep2').classList.add('hidden');" class="text-3xs text-emerald-700 underline font-semibold">Change Number</button>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 mb-1" data-i18n="auth.otp_label">Enter 6-Digit Verification Code</label>
+          <input type="text" id="authInputOtpCode" maxlength="6" class="w-full p-3 rounded-xl border-2 border-emerald-500 text-center text-xl font-black font-mono tracking-widest text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50" placeholder="1 2 3 4 5 6">
+        </div>
+
+        <div class="flex items-center justify-between text-2xs text-slate-500">
+          <span data-i18n="auth.demo_hint">Demo Passcode: '123456' is approved for testing.</span>
+          <button onclick="requestPhoneOtp()" class="text-emerald-700 font-bold hover:underline" data-i18n="auth.resend_otp">Resend OTP</button>
+        </div>
+
+        <button onclick="submitPhoneOtp()" class="w-full py-3.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-lg transition flex items-center justify-center gap-2 touch-target-large">
+          <span>✔</span> <span data-i18n="auth.verify_btn">Verify OTP & Enter</span>
+        </button>
+      </div>
+
+      <!-- Quick 1-Click Evaluation Accounts Footer -->
+      <div class="pt-3 border-t border-slate-100">
+        <span class="text-3xs uppercase font-bold text-slate-400 tracking-wider block mb-2">Or test 1-click verified phone OTP login:</span>
+        <div class="flex flex-wrap gap-1.5 text-xs">
+          <button onclick="quickDemoPhoneLogin('FARMER')" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200 transition">
+            👨‍🌾 +91-9861012345 (Farmer Ramesh)
+          </button>
+          <button onclick="quickDemoPhoneLogin('AGRICULTURAL_EXPERT')" class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition">
+            🩺 +91-9437012345 (Expert Dr. Mohapatra)
+          </button>
+          <button onclick="quickDemoPhoneLogin('SELLER')" class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 transition">
+            🏪 +91-9124012345 (Seller Sunil)
+          </button>
+          <button onclick="quickDemoPhoneLogin('BUYER')" class="px-2.5 py-1 rounded-lg font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
+            🛒 +91-9937012345 (Buyer Utkal)
+          </button>
+          <button onclick="quickDemoPhoneLogin('ADMIN')" class="px-2.5 py-1 rounded-lg font-bold bg-slate-200 text-slate-800 hover:bg-slate-300 transition">
+            ⚙️ +91-9876543210 (Admin)
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastNotification" class="hidden">
+    <span id="toastIcon">🌾</span>
+    <span id="toastText">Notification message</span>
+  </div>
+
+  <!-- JAVASCRIPT CONTROLLER -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
+

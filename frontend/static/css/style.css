@@ -1,0 +1,250 @@
+/* Custom styles for AI Farm Co-Pilot */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans+Oriya:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary: #15803d;
+  --primary-light: #22c55e;
+  --primary-dark: #166534;
+  --accent: #f59e0b;
+}
+
+body {
+  font-family: 'Inter', 'Noto Sans Oriya', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #04070a;
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Glassmorphism */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Scanner Laser Animation */
+.scanner-laser-container {
+  position: relative;
+  overflow: hidden;
+}
+
+.scanner-laser {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #22c55e, #10b981, #22c55e, transparent);
+  box-shadow: 0 0 15px #22c55e, 0 0 8px #10b981;
+  animation: scanLaser 2s ease-in-out infinite alternate;
+  display: none;
+}
+
+.scanning .scanner-laser {
+  display: block;
+}
+
+@keyframes scanLaser {
+  0% { top: 2%; }
+  100% { top: 96%; }
+}
+
+/* Voice Wave Animation */
+.voice-waves {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 32px;
+}
+
+.voice-wave-bar {
+  width: 4px;
+  height: 8px;
+  background: #22c55e;
+  border-radius: 4px;
+  transition: height 0.1s ease;
+}
+
+.listening .voice-wave-bar {
+  animation: wavePulse 1s ease-in-out infinite alternate;
+}
+
+.listening .voice-wave-bar:nth-child(1) { animation-delay: 0.1s; }
+.listening .voice-wave-bar:nth-child(2) { animation-delay: 0.3s; }
+.listening .voice-wave-bar:nth-child(3) { animation-delay: 0.5s; }
+.listening .voice-wave-bar:nth-child(4) { animation-delay: 0.2s; }
+.listening .voice-wave-bar:nth-child(5) { animation-delay: 0.4s; }
+
+@keyframes wavePulse {
+  0% { height: 6px; }
+  100% { height: 28px; }
+}
+
+/* High Contrast & Accessibility Badges */
+.badge-healthy {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+}
+
+.badge-attention {
+  background-color: #fef9c3;
+  color: #854d0e;
+  border: 1px solid #fde047;
+}
+
+.badge-risk {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.badge-water {
+  background-color: #ffedd5;
+  color: #9a3412;
+  border: 1px solid #fdba74;
+}
+
+/* Touch Targets for Low-Literacy / Mobile */
+.touch-target-large {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Mobile Scrollbar hiding for tabs */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ==============================================================================
+   3D ILLUMINATION REAL FARMER & FARMING BACKGROUND (BLACK & REAL PICTURE)
+   ============================================================================== */
+.farm-3d-bg-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background-color: #04070a;
+}
+
+.farm-3d-bg-image {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: url('/static/assets/farmer_pure_vivid_3d.jpg');
+  background-size: cover;
+  background-position: center 20%;
+  background-repeat: no-repeat;
+  filter: brightness(0.96) contrast(1.06) saturate(1.12);
+  transform: scale(1.02);
+  transition: opacity 0.5s ease-in-out, background-image 0.5s ease-in-out;
+  animation: subtle3dFloat 24s ease-in-out infinite alternate;
+}
+
+/* 3D Atmospheric Depth & Light Vignette (Crystal Clear Visibility) */
+.farm-3d-bg-overlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(circle at center, rgba(0, 0, 0, 0.0) 0%, rgba(0, 0, 0, 0.18) 60%, rgba(4, 7, 12, 0.60) 100%),
+    linear-gradient(180deg, rgba(8, 12, 18, 0.35) 0%, rgba(0, 0, 0, 0.05) 30%, rgba(4, 7, 12, 0.55) 100%);
+  pointer-events: none;
+}
+
+/* Dynamic Volumetric 3D Golden & Emerald Illumination Glow */
+.farm-3d-illumination-glow {
+  position: absolute;
+  top: 10%;
+  right: 15%;
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.16) 0%, rgba(34, 197, 94, 0.10) 40%, transparent 70%);
+  filter: blur(65px);
+  pointer-events: none;
+  transition: background 0.8s ease;
+  animation: glowPulse 8s ease-in-out infinite alternate;
+}
+
+.farm-3d-illumination-glow-left {
+  position: absolute;
+  bottom: 15%;
+  left: 10%;
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.14) 0%, rgba(6, 95, 70, 0.08) 45%, transparent 70%);
+  filter: blur(70px);
+  pointer-events: none;
+  transition: background 0.8s ease;
+  animation: glowPulse 10s ease-in-out infinite alternate-reverse;
+}
+
+/* 3D Floating Agricultural Firefly & Spore Particles */
+.farm-3d-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.farm-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: particleFloat 14s infinite ease-in-out;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100vh) translateX(0) scale(0.6);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.85;
+  }
+  80% {
+    opacity: 0.65;
+  }
+  100% {
+    transform: translateY(-20vh) translateX(40px) scale(1.2);
+    opacity: 0;
+  }
+}
+
+/* 3D Card Hover Perspective Elevation */
+.card-3d-elevation {
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, border-color 0.35s ease;
+  perspective: 1000px;
+}
+
+.card-3d-elevation:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 35px -8px rgba(0, 0, 0, 0.35), 0 0 15px rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.6) !important;
+}
+
+@keyframes subtle3dFloat {
+  0% { transform: scale(1.01) translateY(0); }
+  50% { transform: scale(1.04) translateY(-10px); }
+  100% { transform: scale(1.01) translateY(0); }
+}
+
+@keyframes glowPulse {
+  0% { opacity: 0.55; transform: scale(0.92); }
+  100% { opacity: 1.0; transform: scale(1.12); }
+}
+

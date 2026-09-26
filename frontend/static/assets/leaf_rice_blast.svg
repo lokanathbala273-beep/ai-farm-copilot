@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="bladeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#15803d"/>
+      <stop offset="50%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#166534"/>
+    </linearGradient>
+    <radialGradient id="blastLesion" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#f8fafc"/>
+      <stop offset="50%" stop-color="#cbd5e1"/>
+      <stop offset="85%" stop-color="#78350f"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </radialGradient>
+  </defs>
+  <rect width="400" height="400" fill="url(#bg)"/>
+  
+  <!-- Linear Rice Blade -->
+  <path d="M 170,380 L 190,30 L 210,30 L 230,380 Z" fill="url(#bladeGrad)"/>
+  <!-- Central Midrib -->
+  <line x1="200" y1="30" x2="200" y2="380" stroke="#86efac" stroke-width="2.5" opacity="0.8"/>
+
+  <!-- Spindle-shaped Rice Blast Lesions (Eye-shaped with grey center) -->
+  <path d="M 185,140 Q 200,120 215,140 Q 200,160 185,140 Z" fill="url(#blastLesion)" stroke="#78350f" stroke-width="2"/>
+  <path d="M 188,220 Q 200,195 212,220 Q 200,245 188,220 Z" fill="url(#blastLesion)" stroke="#78350f" stroke-width="2"/>
+  <path d="M 178,280 Q 190,265 202,280 Q 190,295 178,280 Z" fill="url(#blastLesion)" stroke="#78350f" stroke-width="1.5"/>
+
+  <text x="20" y="380" fill="#94a3b8" font-family="sans-serif" font-size="12" font-weight="bold">Specimen: Rice Leaf Blade with Spindle Blast Lesions (Magnaporthe oryzae)</text>
+</svg>
