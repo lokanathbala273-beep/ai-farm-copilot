@@ -446,15 +446,45 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
 
             # STRICT FINGERPRINT CHECK: Only this farmer's 1 registered fingerprint allowed!
             if login_data.biometric_token:
-                if not user.biometric_token or login_data.biometric_token != user.biometric_token:
+                if (
+                    "mismatch" in login_data.biometric_token.lower()
+                    or "unauthorized" in login_data.biometric_token.lower()
+                    or not user.biometric_token
+                    or login_data.biometric_token != user.biometric_token
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Biometric fingerprint mismatch! Only this specific farmer's 1 registered fingerprint is authorized. Another fingerprint cannot be used."
+                        detail="Biometric fingerprint mismatch! Only this specific farmer's 1 registered fingerprint is authorized. Another person's (banda's) fingerprint cannot be used."
                     )
 
             # STRICT FACE RECOGNITION CHECK: Only this farmer's registered face allowed!
             if login_data.face_token:
-                if not user.face_token or login_data.face_token != user.face_token:
+                if "mismatch" in login_data.face_token.lower() or "unauthorized" in login_data.face_token.lower():
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Face recognition mismatch! Another person's face was detected. Only this specific registered farmer is authorized."
+                    )
+                # If face tokens contain facial feature vectors, calculate visual similarity distance:
+                if user.face_token and user.face_token.startswith("FACE_VEC_") and login_data.face_token.startswith("FACE_VEC_"):
+                    try:
+                        v1 = [float(x) for x in user.face_token.replace("FACE_VEC_", "").split(",") if x.strip()]
+                        v2 = [float(x) for x in login_data.face_token.replace("FACE_VEC_", "").split(",") if x.strip()]
+                        if len(v1) == len(v2) and len(v1) > 0:
+                            mae = sum(abs(a - b) for a, b in zip(v1, v2)) / len(v1)
+                            if mae > 0.16:  # Visual difference too high = different person
+                                raise HTTPException(
+                                    status_code=status.HTTP_401_UNAUTHORIZED,
+                                    detail=f"Face recognition mismatch (distance: {mae:.2f})! This face does not match the registered farmer. Another person (banda) cannot open this portal."
+                                )
+                    except HTTPException:
+                        raise
+                    except Exception:
+                        if login_data.face_token != user.face_token:
+                            raise HTTPException(
+                                status_code=status.HTTP_401_UNAUTHORIZED,
+                                detail="Face recognition mismatch! Only this specific farmer's registered face is authorized."
+                            )
+                elif not user.face_token or login_data.face_token != user.face_token:
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
                         detail="Face recognition mismatch! Only this specific farmer's registered face is authorized. Another face cannot open this portal."

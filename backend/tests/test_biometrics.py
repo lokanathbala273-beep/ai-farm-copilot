@@ -90,5 +90,40 @@ class TestBiometricAuthentication(unittest.TestCase):
         self.assertEqual(res_fail.status_code, 401)
         self.assertIn("mismatch", res_fail.json()["detail"].lower())
 
+    def test_farmer_face_vector_mae_isolation(self):
+        unique_email = f"farmer_vec_{uuid.uuid4().hex[:8]}@gmail.com"
+        vec_registered = "FACE_VEC_" + ",".join([str(0.5) for _ in range(64)])
+        reg_payload = {
+            "email": unique_email,
+            "password": "FarmerPassword123",
+            "full_name": "Kishan Kumar",
+            "phone_number": "+919861017777",
+            "role": "FARMER",
+            "face_enrolled": True,
+            "face_token": vec_registered
+        }
+        res = self.client.post("/api/auth/register", json=reg_payload)
+        self.assertEqual(res.status_code, 200)
+
+        # Same face (small variation, MAE = 0.02 < 0.16) -> OK
+        vec_similar = "FACE_VEC_" + ",".join([str(0.52) for _ in range(64)])
+        res_ok = self.client.post("/api/auth/login", json={
+            "email": unique_email,
+            "password": "FarmerPassword123",
+            "face_token": vec_similar
+        })
+        self.assertEqual(res_ok.status_code, 200)
+
+        # Different person's face (large variation, MAE = 0.40 > 0.16) -> 401 Mismatch
+        vec_different_person = "FACE_VEC_" + ",".join([str(0.9) for _ in range(64)])
+        res_fail = self.client.post("/api/auth/login", json={
+            "email": unique_email,
+            "password": "FarmerPassword123",
+            "face_token": vec_different_person
+        })
+        self.assertEqual(res_fail.status_code, 401)
+        self.assertIn("mismatch", res_fail.json()["detail"].lower())
+
 if __name__ == "__main__":
     unittest.main()
+
