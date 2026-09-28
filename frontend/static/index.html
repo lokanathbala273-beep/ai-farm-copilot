@@ -303,67 +303,6 @@
               </div>
             </div>
 
-            <!-- FARMER BIOMETRIC ENROLLMENT OPTIONS (FINGERPRINT OR FACE - ANY ONE REQUIRED) -->
-            <div class="space-y-2.5 pt-1">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <label class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                  <span>🔐</span> <span>Biometric Authentication Security</span>
-                  <span class="text-3xs text-emerald-800 bg-emerald-100 font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">Any One Required (Fingerprint OR Face) *</span>
-                </label>
-                <span id="biometricEnrollSummaryBadge" class="text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 self-start sm:self-auto">
-                  ⚠️ Provide Fingerprint or Face Scan
-                </span>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <!-- OPTION 1: 1-TOUCH FINGERPRINT SENSOR (STRICTLY 1 FINGERPRINT PER FARMER) -->
-                <div id="biometricEnrollBox" onclick="openLiveFingerprintModal('enroll')" class="cursor-pointer p-3.5 md:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex flex-col justify-between gap-3 group shadow-xs">
-                  <div class="flex items-start gap-3">
-                    <div id="fingerprintSensorIcon" class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition shrink-0">
-                      👆
-                    </div>
-                    <div>
-                      <div class="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
-                        <span>1-Touch Fingerprint</span>
-                        <span id="fingerprintStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                          👆 Tap to Enroll
-                        </span>
-                      </div>
-                      <div id="fingerprintHelpText" class="text-2xs text-slate-600 mt-0.5">
-                        Strictly 1 registered fingerprint per farmer. Another fingerprint cannot open portal.
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" onclick="event.stopPropagation(); openLiveFingerprintModal('enroll')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5">
-                    <span>👆</span> <span>Enroll 1 Fingerprint</span>
-                  </button>
-                </div>
-
-                <!-- OPTION 2: LIVE FACE AUTHENTICATION -->
-                <div id="faceEnrollBox" onclick="openLiveFaceModal('enroll')" class="cursor-pointer p-3.5 md:p-4 rounded-2xl border-2 border-blue-500/80 bg-blue-50/70 hover:bg-blue-100/70 transition flex flex-col justify-between gap-3 group shadow-xs">
-                  <div class="flex items-start gap-3">
-                    <div id="faceSensorIcon" class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition shrink-0">
-                      👤
-                    </div>
-                    <div>
-                      <div class="text-xs font-black text-slate-900 flex items-center gap-1.5 flex-wrap">
-                        <span>Face Recognition</span>
-                        <span id="faceStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                          👤 Tap to Scan Face
-                        </span>
-                      </div>
-                      <div id="faceHelpText" class="text-2xs text-slate-600 mt-0.5">
-                        Live camera face scan. Only this farmer's face is accepted. Another face is blocked.
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" onclick="event.stopPropagation(); openLiveFaceModal('enroll')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5">
-                    <span>📸</span> <span>Scan & Enroll Face</span>
-                  </button>
-                </div>
-              </div>
-            </div>
-
             <!-- Registration Action Buttons -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button onclick="submitRegistrationWithPassword()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
@@ -371,7 +310,7 @@
               </button>
             </div>
             <p class="text-3xs text-slate-400 text-center">
-              🔒 End-to-end encrypted passwords & biometrics. Your account and farm data are isolated from other users.
+              🔒 End-to-end encrypted passwords. Your account and farm data are isolated and secure.
             </p>
           </div>
         </div>
@@ -411,67 +350,6 @@
                   <input type="password" id="signinPassword" class="w-full p-3 pr-10 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your password" value="">
                   <button type="button" onclick="togglePasswordVisibility('signinPassword')" class="absolute right-3 top-3 text-slate-400 hover:text-slate-600 text-xs">
                     👁️
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <!-- LIVE BIOMETRIC AUTHENTICATION (FINGERPRINT OR FACE VERIFICATION) -->
-            <div class="space-y-2.5 pt-1">
-              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <label class="text-xs font-black text-slate-800 flex items-center gap-1.5">
-                  <span>🔐</span> <span>Biometric Authentication</span>
-                  <span class="text-3xs text-emerald-800 bg-emerald-100 font-extrabold px-2 py-0.5 rounded-full border border-emerald-300">1 Registered Fingerprint OR Face</span>
-                </label>
-                <span id="biometricLoginSummaryBadge" class="text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 self-start sm:self-auto">
-                  👆 Verify with Fingerprint or Face
-                </span>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                <!-- FINGERPRINT VERIFICATION -->
-                <div id="biometricLoginBox" onclick="openLiveFingerprintModal('verify')" class="cursor-pointer p-3.5 md:p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/80 hover:bg-emerald-100 transition flex flex-col justify-between gap-3 group shadow-xs">
-                  <div class="flex items-start gap-3">
-                    <div id="biometricLoginIcon" class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition shrink-0">
-                      👆
-                    </div>
-                    <div>
-                      <div class="text-xs font-black text-emerald-950 flex items-center gap-1.5 flex-wrap">
-                        <span>1-Touch Fingerprint</span>
-                        <span id="loginFingerprintStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                          👆 Tap to Verify
-                        </span>
-                      </div>
-                      <div id="loginFingerprintHelpText" class="text-2xs text-emerald-700 mt-0.5">
-                        Matches farmer's 1 registered fingerprint. Another fingerprint is blocked.
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" onclick="event.stopPropagation(); openLiveFingerprintModal('verify')" class="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1">
-                    <span>👆</span> <span>Verify Fingerprint</span>
-                  </button>
-                </div>
-
-                <!-- FACE RECOGNITION VERIFICATION -->
-                <div id="faceLoginBox" onclick="openLiveFaceModal('verify')" class="cursor-pointer p-3.5 md:p-4 rounded-2xl border-2 border-blue-500/80 bg-blue-50/80 hover:bg-blue-100 transition flex flex-col justify-between gap-3 group shadow-xs">
-                  <div class="flex items-start gap-3">
-                    <div id="faceLoginIcon" class="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition shrink-0">
-                      👤
-                    </div>
-                    <div>
-                      <div class="text-xs font-black text-blue-950 flex items-center gap-1.5 flex-wrap">
-                        <span>Face Recognition</span>
-                        <span id="loginFaceStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                          👤 Tap to Verify
-                        </span>
-                      </div>
-                      <div id="loginFaceHelpText" class="text-2xs text-blue-700 mt-0.5">
-                        Validates against farmer's registered face. Another face is blocked.
-                      </div>
-                    </div>
-                  </div>
-                  <button type="button" onclick="event.stopPropagation(); openLiveFaceModal('verify')" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1">
-                    <span>📸</span> <span>Verify Face</span>
                   </button>
                 </div>
               </div>
@@ -1806,162 +1684,6 @@
     </div>
   </div>
 
-  <!-- LIVE BIOMETRIC FINGERPRINT TOUCH SCANNER MODAL (MOBILE & PC) -->
-  <div id="liveFingerprintModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div class="bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-5 shadow-2xl relative overflow-hidden">
-      <!-- Glow ambient background -->
-      <div class="absolute -top-24 -left-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-      <!-- Header -->
-      <div class="flex items-center justify-between relative z-10">
-        <span class="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-3xs font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          1-Touch Biometric Sensor
-        </span>
-        <button type="button" onclick="closeLiveFingerprintModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm transition">✕</button>
-      </div>
-
-      <div class="relative z-10 space-y-1">
-        <h3 id="liveFingerprintModalTitle" class="text-lg sm:text-xl font-black text-white tracking-tight">
-          👆 Farmer Fingerprint Sensor (Live)
-        </h3>
-        <p id="liveFingerprintModalSubtitle" class="text-xs text-slate-300">
-          Touch or press the sensor pad below with your finger to capture your live biometric signature.
-        </p>
-      </div>
-
-      <!-- Target Account Identification -->
-      <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700/80 text-3xs font-mono relative z-10">
-        <span class="text-slate-400">Target Account:</span>
-        <span id="liveFpTargetUserDisplay" class="text-emerald-300 font-bold truncate max-w-[140px]">farmer@gmail.com</span>
-        <span class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">Biometric Locked</span>
-      </div>
-
-      <!-- Live Touch Sensor Pad Container (1-Touch Instant) -->
-      <div class="flex flex-col items-center justify-center py-3 relative z-10">
-        <div id="liveFingerprintSensorPad" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition select-none" title="Place finger here to scan">
-          <!-- Laser sweep beam -->
-          <div class="fingerprint-laser-line"></div>
-          <!-- Tactile Ripple -->
-          <div class="fingerprint-ripple"></div>
-          <!-- SVG Biometric Fingerprint Ridges -->
-          <svg class="fingerprint-svg-ridges w-20 h-20 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2a10 10 0 0 0-8 8.4" />
-            <path d="M12 2a10 10 0 0 1 8 8.4" />
-            <path d="M7.5 9a5 5 0 0 1 9 0" />
-            <path d="M12 6.5a6 6 0 0 0-4.5 10" />
-            <path d="M12 6.5a6 6 0 0 1 4.5 10" />
-            <path d="M9 13a3 3 0 0 0 6 0" />
-            <path d="M12 10a2 2 0 0 0-2 2v6" />
-            <path d="M14 18v-4a2 2 0 0 0-2-2" />
-            <path d="M6 14v4" />
-            <path d="M18 14v4" />
-            <path d="M10 21h4" />
-          </svg>
-        </div>
-
-        <!-- Live Progress Percentage & Status -->
-        <div class="mt-4 flex items-center gap-2">
-          <span id="liveFingerprintPercent" class="text-2xl font-black font-mono text-emerald-400">READY</span>
-          <span id="liveFingerprintStatusHint" class="text-xs font-bold text-emerald-300 uppercase tracking-wide">Touch Sensor Pad With Finger</span>
-        </div>
-
-        <!-- Progress Bar Track -->
-        <div class="w-full max-w-xs bg-slate-800 rounded-full h-2.5 mt-2 overflow-hidden border border-slate-700">
-          <div id="liveFingerprintProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-150" style="width: 0%;"></div>
-        </div>
-      </div>
-
-      <!-- Live Touch Sensor Single Action Button -->
-      <button type="button" id="liveFingerprintTouchBtn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
-        <span>👆</span> <span id="liveFingerprintTouchBtnText">Touch / Scan Fingerprint Live</span>
-      </button>
-
-      <!-- Live Instructions Banner -->
-      <div id="liveFingerprintInstructionBox" class="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10">
-        👆 <strong>Biometric Verification:</strong> Touch the sensor pad or button. Only the registered farmer's biometric identity is authorized.
-      </div>
-    </div>
-  </div>
-
-  <!-- LIVE AI FACE AUTHENTICATION MODAL (MOBILE & PC CAMERA SCANNER) -->
-  <div id="liveFaceModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4">
-    <div class="relative w-full max-w-sm bg-slate-900 border-2 border-blue-500/70 rounded-3xl p-5 sm:p-6 shadow-2xl text-center space-y-4 overflow-hidden">
-      <!-- Glow ambient background -->
-      <div class="absolute -top-24 -left-24 w-48 h-48 bg-blue-500/20 rounded-full blur-3xl pointer-events-none"></div>
-      <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none"></div>
-
-      <!-- Header -->
-      <div class="flex items-center justify-between relative z-10">
-        <span class="px-3 py-1 rounded-full bg-blue-950 text-blue-300 border border-blue-500/50 text-3xs font-extrabold uppercase tracking-widest flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-          AI Face Authentication
-        </span>
-        <button type="button" onclick="closeLiveFaceModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm transition">✕</button>
-      </div>
-
-      <div class="relative z-10 space-y-1">
-        <h3 id="liveFaceModalTitle" class="text-lg sm:text-xl font-black text-white tracking-tight">
-          👤 Farmer Face Recognition
-        </h3>
-        <p id="liveFaceModalSubtitle" class="text-xs text-slate-300">
-          Position your face inside the green oval scanner to authenticate your farmer portal.
-        </p>
-      </div>
-
-      <!-- Target Account Identification -->
-      <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700/80 text-3xs font-mono relative z-10">
-        <span class="text-slate-400">Target Account:</span>
-        <span id="liveFaceTargetUserDisplay" class="text-blue-300 font-bold truncate max-w-[140px]">farmer@gmail.com</span>
-        <span class="px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-500/30 whitespace-nowrap">Biometric Locked</span>
-      </div>
-
-      <!-- Camera Viewport & Face Mesh Frame -->
-      <div class="relative w-full aspect-4/3 bg-slate-950 rounded-2xl overflow-hidden border-2 border-blue-500/40 flex items-center justify-center">
-        <!-- Live Video Element -->
-        <video id="faceCameraVideo" autoplay playsinline muted class="w-full h-full object-cover transform -scale-x-100"></video>
-        <!-- Canvas for processing -->
-        <canvas id="faceSnapshotCanvas" class="hidden"></canvas>
-
-        <!-- Simulated Camera Fallback (when camera permission is denied or loading) -->
-        <div id="faceCameraPlaceholder" class="hidden absolute inset-0 flex flex-col items-center justify-center p-4 bg-slate-950/95 text-center">
-          <div class="w-20 h-20 rounded-full bg-blue-950 border-2 border-blue-400 flex items-center justify-center text-4xl mb-2 shadow-lg shadow-blue-500/30">👤</div>
-          <p class="text-xs font-bold text-blue-300">AI Facial Simulator Active</p>
-          <p class="text-3xs text-slate-400 mt-1">Tap capture below to generate your biometric facial key</p>
-        </div>
-
-        <!-- Face Guide Oval with Radar Sweep -->
-        <div class="absolute inset-0 pointer-events-none flex items-center justify-center face-scanning-active">
-          <div class="w-36 h-48 sm:w-44 sm:h-56 border-2 border-dashed border-emerald-400/90 rounded-[50%] shadow-[0_0_20px_rgba(52,211,153,0.35)] relative flex items-center justify-center overflow-hidden">
-            <div id="faceLaserSweep" class="absolute left-0 right-0 h-1 bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_12px_#34d399]"></div>
-            <div class="absolute w-2 h-2 rounded-full bg-emerald-400/70 top-1/4 left-1/3"></div>
-            <div class="absolute w-2 h-2 rounded-full bg-emerald-400/70 top-1/4 right-1/3"></div>
-            <div class="absolute w-1.5 h-1.5 rounded-full bg-emerald-400/70 top-1/2 left-1/2 -translate-x-1/2"></div>
-            <div class="absolute w-4 h-1 rounded-full bg-emerald-400/70 bottom-1/4 left-1/2 -translate-x-1/2"></div>
-          </div>
-        </div>
-
-        <!-- Status Pill Overlay -->
-        <div class="absolute bottom-2 left-2 right-2 flex items-center justify-between px-3 py-1 bg-slate-900/85 backdrop-blur-sm rounded-xl text-3xs font-mono border border-slate-700/60">
-          <span id="faceScanStatusText" class="text-emerald-400 font-bold">● Face Detected in Frame</span>
-          <span id="faceConfidenceBadge" class="text-blue-300 font-bold">Similarity: Ready</span>
-        </div>
-      </div>
-
-      <!-- Action Button (Single Button) -->
-      <button type="button" id="btnCaptureFace" onclick="captureAndProcessFace()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-blue-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
-        <span>📸</span> <span id="btnCaptureFaceText">Capture & Enroll My Face</span>
-      </button>
-
-      <!-- Live Instructions Banner -->
-      <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10 flex items-center justify-between gap-2">
-        <span>👤 <strong>Live Face Recognition:</strong> Real-time biometric face verification. Only the registered farmer is authenticated.</span>
-        <button type="button" onclick="switchFaceCameraFacing()" class="text-3xs text-blue-400 hover:text-blue-300 underline font-bold whitespace-nowrap">🔄 Switch Cam</button>
-      </div>
-    </div>
-  </div>
-
   <!-- TOAST NOTIFICATION CONTAINER -->
   <div id="toastNotification" class="hidden">
     <span id="toastIcon">🌾</span>
@@ -1969,7 +1691,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20260928_v4"></script>
+  <script src="/static/js/app.js?v=20260928_v5"></script>
 </body>
 </html>
 

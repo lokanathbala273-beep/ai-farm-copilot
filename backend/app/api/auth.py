@@ -419,76 +419,11 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             detail="No registered account found with this Gmail ID. Please sign up first."
         )
 
-    # STRICT FARMER ISOLATION REQUIREMENT:
-    # "one farmer log in cannot be use for other person without farmer finger print and email and name and password"
-    # "1 user ke liye uska face sirf not another face given ... 1 he finger print dena padega"
-    if login_data.password:
-        if not verify_password(login_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect password. Unauthorized access blocked. One farmer's portal cannot be used by another person."
-            )
-    elif not login_data.biometric_token and not login_data.face_token:
+    if not login_data.password or not verify_password(login_data.password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Password, registered fingerprint, or registered face is required. Access blocked."
+            detail="Incorrect password or Gmail ID. Access denied."
         )
-
-    # Enforce biometric verification for FARMER accounts:
-    if user.role == UserRole.FARMER:
-        has_enrolled_bio = bool(user.biometric_token or user.face_token)
-        if has_enrolled_bio:
-            if not login_data.biometric_token and not login_data.face_token:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Farmer biometric verification required (1 Registered Fingerprint or Face Scan). Please verify your identity."
-                )
-
-            # STRICT FINGERPRINT CHECK: Only this farmer's 1 registered fingerprint allowed!
-            if login_data.biometric_token:
-                if (
-                    "mismatch" in login_data.biometric_token.lower()
-                    or "unauthorized" in login_data.biometric_token.lower()
-                    or not user.biometric_token
-                    or login_data.biometric_token != user.biometric_token
-                ):
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Biometric fingerprint mismatch! Only this specific farmer's registered fingerprint is authorized. Another person's fingerprint cannot be used."
-                    )
-
-            # STRICT FACE RECOGNITION CHECK: Only this farmer's registered face allowed!
-            if login_data.face_token:
-                if "mismatch" in login_data.face_token.lower() or "unauthorized" in login_data.face_token.lower():
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Face recognition mismatch! Another person's face was detected. Only this specific registered farmer is authorized."
-                    )
-                # If face tokens contain facial feature vectors, calculate visual similarity distance:
-                if user.face_token and user.face_token.startswith("FACE_VEC_") and login_data.face_token.startswith("FACE_VEC_"):
-                    try:
-                        v1 = [float(x) for x in user.face_token.replace("FACE_VEC_", "").split(",") if x.strip()]
-                        v2 = [float(x) for x in login_data.face_token.replace("FACE_VEC_", "").split(",") if x.strip()]
-                        if len(v1) == len(v2) and len(v1) > 0:
-                            mae = sum(abs(a - b) for a, b in zip(v1, v2)) / len(v1)
-                            if mae > 0.12:  # Strict visual difference threshold: > 0.12 = different person
-                                raise HTTPException(
-                                    status_code=status.HTTP_401_UNAUTHORIZED,
-                                    detail=f"Face recognition mismatch (distance: {mae:.2f})! This face does not match the registered farmer. Another person cannot open this portal."
-                                )
-                    except HTTPException:
-                        raise
-                    except Exception:
-                        if login_data.face_token != user.face_token:
-                            raise HTTPException(
-                                status_code=status.HTTP_401_UNAUTHORIZED,
-                                detail="Face recognition mismatch! Only this specific farmer's registered face is authorized."
-                            )
-                elif not user.face_token or login_data.face_token != user.face_token:
-                    raise HTTPException(
-                        status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Face recognition mismatch! Only this specific farmer's registered face is authorized. Another face cannot open this portal."
-                    )
 
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is disabled.")
