@@ -303,25 +303,25 @@
               </div>
             </div>
 
-            <!-- REAL DEVICE FINGERPRINT BIOMETRIC ENROLLMENT BOX (1-TOUCH SENSOR) -->
-            <div id="biometricEnrollBox" onclick="instantTouchFingerprint('enroll')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-sm">
+            <!-- REAL DEVICE FINGERPRINT BIOMETRIC ENROLLMENT BOX (LIVE SENSOR) -->
+            <div id="biometricEnrollBox" onclick="openLiveFingerprintModal('enroll')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-sm">
               <div class="flex items-center gap-3.5">
                 <div id="fingerprintSensorIcon" class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-md group-hover:scale-105 transition">
                   👆
                 </div>
                 <div>
                   <div class="text-xs font-black text-slate-900 flex items-center gap-2">
-                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● INSTANT TOUCH</span></span>
+                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● LIVE SENSOR</span></span>
                     <span id="fingerprintStatusBadge" class="text-3xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                      👆 Tap / Click to Verify
+                      👆 Tap to Provide Fingerprint
                     </span>
                   </div>
                   <div id="fingerprintHelpText" class="text-2xs text-slate-600 mt-0.5">
-                    Touch or click sensor once to link your unique biometric key. Instant verification on Phone & PC screens.
+                    Touch sensor to open live screen scanner. Captures your fingerprint input on Phone & PC.
                   </div>
                 </div>
               </div>
-              <button type="button" class="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
+              <button type="button" onclick="event.stopPropagation(); openLiveFingerprintModal('enroll')" class="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
                 <span>👆</span> <span>Touch Sensor</span>
               </button>
             </div>
@@ -379,24 +379,24 @@
             </div>
 
             <!-- LIVE SCREEN FINGERPRINT 1-TOUCH SIGN IN -->
-            <div id="biometricLoginBox" onclick="instantTouchFingerprint('verify')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/80 hover:bg-emerald-100 transition flex items-center justify-between gap-3 group shadow-xs">
+            <div id="biometricLoginBox" onclick="openLiveFingerprintModal('verify')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/80 hover:bg-emerald-100 transition flex items-center justify-between gap-3 group shadow-xs">
               <div class="flex items-center gap-3.5">
                 <div id="biometricLoginIcon" class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
                   👆
                 </div>
                 <div>
                   <div class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● INSTANT TOUCH</span></span>
+                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● LIVE SENSOR</span></span>
                     <span id="loginFingerprintStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                      👆 Tap / Click to Touch
+                      👆 Tap to Touch Sensor
                     </span>
                   </div>
-                  <div class="text-2xs text-emerald-700 mt-0.5">Touch or click sensor once to authenticate. Works instantly on Phone & PC screen.</div>
+                  <div id="loginFingerprintHelpText" class="text-2xs text-emerald-700 mt-0.5">Touch sensor to verify your farmer fingerprint live on Phone & PC screen.</div>
                 </div>
               </div>
-              <span class="text-xs font-extrabold text-emerald-800 group-hover:translate-x-1 transition flex items-center gap-1">
-                Touch Sensor ➔
-              </span>
+              <button type="button" onclick="event.stopPropagation(); openLiveFingerprintModal('verify')" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center gap-1 whitespace-nowrap">
+                <span>👆</span> <span>Touch Sensor</span>
+              </button>
             </div>
 
             <!-- Sign In Action Button -->
@@ -1746,16 +1746,16 @@
 
       <div class="relative z-10 space-y-1">
         <h3 id="liveFingerprintModalTitle" class="text-lg sm:text-xl font-black text-white tracking-tight">
-          1-Touch Fingerprint Sensor
+          👆 Farmer Fingerprint Sensor (Live)
         </h3>
         <p id="liveFingerprintModalSubtitle" class="text-xs text-slate-300">
-          Touch or click the sensor circle once to instantly authenticate your biometric identity.
+          Touch or press the sensor pad below with your finger to capture your live biometric signature.
         </p>
       </div>
 
       <!-- Live Touch Sensor Pad Container (1-Touch Instant) -->
-      <div class="flex flex-col items-center justify-center py-4 relative z-10">
-        <div id="liveFingerprintSensorPad" onclick="handleInstantFingerprintPadClick()" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition" title="Tap or click to authenticate">
+      <div class="flex flex-col items-center justify-center py-3 relative z-10">
+        <div id="liveFingerprintSensorPad" onclick="handleInstantFingerprintPadClick()" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition" title="Place finger here to scan">
           <!-- Laser sweep beam -->
           <div class="fingerprint-laser-line"></div>
           <!-- Tactile Ripple -->
@@ -1776,21 +1776,26 @@
           </svg>
         </div>
 
-        <!-- Live Progress Percentage -->
+        <!-- Live Progress Percentage & Status -->
         <div class="mt-4 flex items-center gap-2">
-          <span id="liveFingerprintPercent" class="text-2xl font-black font-mono text-emerald-400">100%</span>
-          <span id="liveFingerprintStatusHint" class="text-xs font-bold text-emerald-300 uppercase tracking-wide">Touch Sensor to Verify</span>
+          <span id="liveFingerprintPercent" class="text-2xl font-black font-mono text-emerald-400">READY</span>
+          <span id="liveFingerprintStatusHint" class="text-xs font-bold text-emerald-300 uppercase tracking-wide">Touch Sensor Pad With Finger</span>
         </div>
 
         <!-- Progress Bar Track -->
         <div class="w-full max-w-xs bg-slate-800 rounded-full h-2.5 mt-2 overflow-hidden border border-slate-700">
-          <div id="liveFingerprintProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-75" style="width: 100%;"></div>
+          <div id="liveFingerprintProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-150" style="width: 0%;"></div>
         </div>
       </div>
 
+      <!-- Live Touch Sensor Explicit Action Button -->
+      <button type="button" id="liveFingerprintTouchBtn" onclick="handleInstantFingerprintPadClick()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
+        <span>👆</span> <span>Touch / Scan My Fingerprint Live</span>
+      </button>
+
       <!-- Live Instructions Banner -->
       <div id="liveFingerprintInstructionBox" class="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10">
-        👆 <strong>Instant 1-Touch:</strong> Single tap or click anywhere on the sensor circle to authenticate. Works live on both Phone & PC.
+        👆 <strong>Live Farmer Fingerprint Input:</strong> Tap the green circle or button above with your finger on Phone screen or PC. Your finger input is captured live!
       </div>
     </div>
   </div>

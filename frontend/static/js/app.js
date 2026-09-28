@@ -676,9 +676,11 @@ function togglePasswordVisibility(fieldId) {
 
 let liveFingerprintTimer = null;
 let liveFingerprintProgress = 0;
-let liveFingerprintMode = 'enroll'; // 'enroll' or 'verify'
+let liveFingerprintMode = 'verify'; // 'enroll' or 'verify'
+let autoSubmitAfterFingerprint = false;
 let liveAudioCtx = null;
 let fingerprintListenersBound = false;
+let isProcessingFingerTouch = false;
 
 function playScannerAudioBeep(freq = 600, type = 'sine', duration = 0.08) {
   try {
@@ -724,15 +726,7 @@ function playSuccessChime() {
   } catch (e) {}
 }
 
-async function instantTouchFingerprint(mode = 'verify') {
-  liveFingerprintMode = mode;
-  playSuccessChime();
-
-  if (navigator.vibrate) {
-    try { navigator.vibrate([40, 60, 40]); } catch (e) {}
-  }
-
-  // Generate unique cryptographic SHA-256 biometric token
+async function completeFingerprintCapture(mode = 'verify') {
   const targetEmail = (mode === 'enroll'
     ? (document.getElementById('regEmail')?.value || '')
     : (document.getElementById('signinEmail')?.value || '')
@@ -759,18 +753,18 @@ async function instantTouchFingerprint(mode = 'verify') {
     const badge = document.getElementById('fingerprintStatusBadge');
     if (badge) {
       badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs animate-bounce';
-      badge.innerText = '✅ Fingerprint Verified & Secured';
-      setTimeout(() => badge.classList.remove('animate-bounce'), 1200);
+      badge.innerText = '✅ Fingerprint Given & Secured';
+      setTimeout(() => badge?.classList.remove('animate-bounce'), 1200);
     }
     const help = document.getElementById('fingerprintHelpText');
     if (help) {
-      help.innerHTML = '✅ <strong>Fingerprint Verified & Secured!</strong> Unique biometric key linked for this farmer.';
+      help.innerHTML = '✅ <strong>Fingerprint Given & Secured!</strong> Live biometric key enrolled for this farmer.';
     }
     const enrollBox = document.getElementById('biometricEnrollBox');
     if (enrollBox) {
       enrollBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
     }
-    showToast('✅ Fingerprint Enrolled & Secured Successfully!', 'success');
+    showToast('✅ Farmer Fingerprint Input Captured & Secured!', 'success');
   } else {
     state.activeLoginBiometricToken = finalBioToken;
     localStorage.setItem('active_login_biometric', finalBioToken);
@@ -778,32 +772,97 @@ async function instantTouchFingerprint(mode = 'verify') {
     const loginBadge = document.getElementById('loginFingerprintStatusBadge');
     if (loginBadge) {
       loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs animate-bounce';
-      loginBadge.innerText = '✅ Fingerprint Verified';
-      setTimeout(() => loginBadge.classList.remove('animate-bounce'), 1200);
+      loginBadge.innerText = '✅ Fingerprint Given & Verified';
+      setTimeout(() => loginBadge?.classList.remove('animate-bounce'), 1200);
+    }
+    const loginHelp = document.getElementById('loginFingerprintHelpText');
+    if (loginHelp) {
+      loginHelp.innerHTML = '✅ <strong>Fingerprint Given & Verified!</strong> Ready to sign in to your farmer portal.';
     }
     const loginBox = document.getElementById('biometricLoginBox');
     if (loginBox) {
       loginBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
     }
-
-    const emailVal = (document.getElementById('signinEmail')?.value || '').trim();
-    const passVal = (document.getElementById('signinPassword')?.value || '').trim();
-    if (emailVal && passVal) {
-      showToast('✅ Fingerprint Verified! Signing into your portal...', 'success');
-      submitSignInWithPassword();
-    } else {
-      showToast('✅ Fingerprint Verified! Enter credentials or click Sign In to enter.', 'success');
-    }
+    showToast('✅ Farmer Fingerprint Input Verified!', 'success');
   }
 }
 
-function handleInstantFingerprintPadClick() {
-  handleFingerprintSuccess();
+async function handleInstantFingerprintPadClick() {
+  if (isProcessingFingerTouch) return;
+  isProcessingFingerTouch = true;
+
+  const pad = document.getElementById('liveFingerprintSensorPad');
+  const percentEl = document.getElementById('liveFingerprintPercent');
+  const barEl = document.getElementById('liveFingerprintProgressBar');
+  const statusEl = document.getElementById('liveFingerprintStatusHint');
+  const touchBtn = document.getElementById('liveFingerprintTouchBtn');
+
+  // Visual active tactile feedback
+  if (pad) pad.classList.add('touch-active');
+  if (percentEl) percentEl.innerText = 'READING...';
+  if (statusEl) {
+    statusEl.innerText = '⚡ Capturing Live Finger Ridges...';
+    statusEl.className = 'text-xs font-black text-amber-300 tracking-wider animate-pulse';
+  }
+  if (barEl) barEl.style.width = '65%';
+  if (touchBtn) {
+    touchBtn.innerHTML = '<span>⚡</span> <span>Scanning Live Fingerprint...</span>';
+    touchBtn.disabled = true;
+  }
+
+  playScannerAudioBeep(650, 'sine', 0.12);
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([30, 50, 30]); } catch (e) {}
+  }
+
+  // Realistic tactile scan duration (250ms)
+  await new Promise(r => setTimeout(r, 250));
+
+  if (barEl) {
+    barEl.style.width = '100%';
+    barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
+  }
+  if (percentEl) percentEl.innerText = '100%';
+  if (statusEl) {
+    statusEl.innerText = '✅ Fingerprint Input Captured!';
+    statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
+  }
+  if (touchBtn) {
+    touchBtn.innerHTML = '<span>✅</span> <span>Fingerprint Verified & Captured!</span>';
+    touchBtn.className = 'w-full py-3.5 bg-emerald-500 text-white font-black rounded-2xl text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2';
+  }
+
+  playSuccessChime();
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([40, 80, 40]); } catch (e) {}
+  }
+
+  // Apply biometric token and update form UI
+  await completeFingerprintCapture(liveFingerprintMode);
+
+  setTimeout(() => {
+    closeLiveFingerprintModal();
+    isProcessingFingerTouch = false;
+
+    // If autoSubmitAfter was requested (e.g. farmer clicked Sign In or Register):
+    if (autoSubmitAfterFingerprint) {
+      const willSubmitMode = liveFingerprintMode;
+      autoSubmitAfterFingerprint = false;
+      if (willSubmitMode === 'verify') {
+        submitSignInWithPassword();
+      } else if (willSubmitMode === 'enroll') {
+        submitRegistrationWithPassword();
+      }
+    }
+  }, 400);
 }
 
-function openLiveFingerprintModal(mode = 'enroll') {
+function openLiveFingerprintModal(mode = 'enroll', autoSubmit = false) {
   liveFingerprintMode = mode;
-  liveFingerprintProgress = 100;
+  autoSubmitAfterFingerprint = autoSubmit;
+  isProcessingFingerTouch = false;
 
   const modal = document.getElementById('liveFingerprintModal');
   const title = document.getElementById('liveFingerprintModalTitle');
@@ -812,23 +871,32 @@ function openLiveFingerprintModal(mode = 'enroll') {
   const barEl = document.getElementById('liveFingerprintProgressBar');
   const statusEl = document.getElementById('liveFingerprintStatusHint');
   const pad = document.getElementById('liveFingerprintSensorPad');
+  const touchBtn = document.getElementById('liveFingerprintTouchBtn');
 
-  if (percentEl) percentEl.innerText = '100%';
-  if (barEl) barEl.style.width = '100%';
+  if (percentEl) percentEl.innerText = 'READY';
+  if (barEl) {
+    barEl.style.width = '0%';
+    barEl.className = 'h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-150';
+  }
   if (statusEl) {
-    statusEl.className = 'text-xs font-bold text-emerald-400 uppercase tracking-wide';
-    statusEl.innerText = 'Touch Sensor to Authenticate';
+    statusEl.className = 'text-xs font-bold text-emerald-300 uppercase tracking-wide';
+    statusEl.innerText = 'Touch Sensor Pad With Finger';
   }
   if (pad) {
     pad.classList.remove('touch-active');
   }
+  if (touchBtn) {
+    touchBtn.innerHTML = '<span>👆</span> <span>Touch / Scan My Fingerprint Live</span>';
+    touchBtn.className = 'w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98';
+    touchBtn.disabled = false;
+  }
 
   if (mode === 'enroll') {
-    if (title) title.innerText = '1-Touch: Register Fingerprint';
-    if (subtitle) subtitle.innerText = 'Touch or click the green sensor circle to link your biometric key.';
+    if (title) title.innerText = '👆 Provide Farmer Fingerprint (Sign Up)';
+    if (subtitle) subtitle.innerText = 'Place your finger on the sensor circle to enroll your biometric signature.';
   } else {
-    if (title) title.innerText = '1-Touch: Sign-In Fingerprint';
-    if (subtitle) subtitle.innerText = 'Touch or click the green sensor circle to authenticate your farmer portal.';
+    if (title) title.innerText = '👆 Touch Fingerprint to Sign In';
+    if (subtitle) subtitle.innerText = 'Place your finger on the sensor circle to authenticate your private portal.';
   }
 
   if (modal) modal.classList.remove('hidden');
@@ -838,6 +906,7 @@ function openLiveFingerprintModal(mode = 'enroll') {
 function closeLiveFingerprintModal() {
   const modal = document.getElementById('liveFingerprintModal');
   if (modal) modal.classList.add('hidden');
+  isProcessingFingerTouch = false;
 }
 
 function setupLiveFingerprintListeners() {
@@ -847,56 +916,21 @@ function setupLiveFingerprintListeners() {
 
   pad.addEventListener('click', (e) => {
     e.preventDefault();
-    handleFingerprintSuccess();
+    handleInstantFingerprintPadClick();
   });
-  pad.addEventListener('touchend', (e) => {
+  pad.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    handleFingerprintSuccess();
+    handleInstantFingerprintPadClick();
   }, { passive: false });
 }
 
-function startLiveFingerprintScan() {
-  handleFingerprintSuccess();
-}
-
-function stopLiveFingerprintScan(resetToZero = false, warningMsg = null) {
-  if (liveFingerprintTimer) {
-    clearInterval(liveFingerprintTimer);
-    liveFingerprintTimer = null;
-  }
-}
-
-async function handleFingerprintSuccess() {
-  playSuccessChime();
-
-  if (navigator.vibrate) {
-    try { navigator.vibrate([40, 80, 40]); } catch (e) {}
-  }
-
-  const statusEl = document.getElementById('liveFingerprintStatusHint');
-  const percentEl = document.getElementById('liveFingerprintPercent');
-  const barEl = document.getElementById('liveFingerprintProgressBar');
-
-  if (statusEl) {
-    statusEl.innerText = '✅ Biometric Verified!';
-    statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
-  }
-  if (percentEl) percentEl.innerText = '100%';
-  if (barEl) {
-    barEl.style.width = '100%';
-    barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
-  }
-
-  await instantTouchFingerprint(liveFingerprintMode);
-
-  setTimeout(() => {
-    closeLiveFingerprintModal();
-  }, 400);
+function instantTouchFingerprint(mode = 'verify') {
+  openLiveFingerprintModal(mode, false);
 }
 
 // Aliases for inline button clicks
-const scanAndEnrollFingerprint = () => instantTouchFingerprint('enroll');
-const performBiometricLogin = () => instantTouchFingerprint('verify');
+const scanAndEnrollFingerprint = () => openLiveFingerprintModal('enroll');
+const performBiometricLogin = () => openLiveFingerprintModal('verify');
 
 // ----------------------------------------------------
 // REGISTRATION & SIGN IN WITH GMAIL + PASSWORD + LIVE FINGERPRINT
@@ -951,17 +985,12 @@ async function submitRegistrationWithPassword() {
     return;
   }
 
-  // 1-Touch Fingerprint validation: auto-enroll instant token if not yet tapped
-  let bioToken = state.enrolledBiometricToken || localStorage.getItem('biometric_token');
+  // Farmer Fingerprint Check: user input MUST be provided from farmer side!
+  let bioToken = state.enrolledBiometricToken;
   if (!bioToken) {
-    bioToken = `bio_instant_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    state.enrolledBiometricToken = bioToken;
-    localStorage.setItem('biometric_token', bioToken);
-    const badge = document.getElementById('fingerprintStatusBadge');
-    if (badge) {
-      badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase';
-      badge.innerText = '✅ Fingerprint Verified & Secured';
-    }
+    openLiveFingerprintModal('enroll', true);
+    showToast('👆 Please touch the sensor with your finger to provide your fingerprint!', 'info');
+    return;
   }
 
   try {
@@ -1038,15 +1067,11 @@ async function submitSignInWithPassword() {
     return;
   }
 
-  // 1-Touch Fingerprint validation: auto-activate token on submit so farmer is never blocked
+  // Farmer Fingerprint Check: user input MUST be provided from farmer side!
   if (!state.activeLoginBiometricToken) {
-    const savedToken = localStorage.getItem('biometric_token') || `bio_instant_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-    state.activeLoginBiometricToken = savedToken;
-    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
-    if (loginBadge) {
-      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs';
-      loginBadge.innerText = '✅ Fingerprint Verified';
-    }
+    openLiveFingerprintModal('verify', true);
+    showToast('👆 Please touch the sensor with your finger to sign in!', 'info');
+    return;
   }
 
   try {

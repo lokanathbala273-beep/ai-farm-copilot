@@ -432,6 +432,14 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             detail="Password or live fingerprint is required. Access blocked."
         )
 
+    # Enforce farmer live fingerprint verification:
+    if user.role == UserRole.FARMER and user.biometric_token:
+        if not login_data.biometric_token:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Farmer fingerprint input is required. Please touch the live fingerprint sensor on screen to verify your biometric identity."
+            )
+
     # Biometric validation:
     if user.biometric_token and login_data.biometric_token:
         if login_data.biometric_token != user.biometric_token and not login_data.biometric_token.startswith("bio_"):
