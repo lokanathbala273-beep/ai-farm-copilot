@@ -270,11 +270,23 @@ class MarketOption(BaseModel):
     gross_revenue: float
     distance_km: float
     transport_cost: float
+    total_transport_cost: Optional[float] = None
+    transport_cost_per_qtl: Optional[float] = None
+    transport_rate_per_km_quintal: Optional[float] = None
     market_fees: float
+    mandi_fee_pct: Optional[float] = 1.5
+    mandi_fee_per_qtl: Optional[float] = None
+    total_mandi_fee: Optional[float] = None
     net_realization: float
     net_price_per_quintal: float
     is_recommended: bool
+    rank: Optional[int] = 0
     source: str
+    daily_date: Optional[str] = None
+    daily_analysis_day: Optional[str] = None
+    crop: Optional[str] = None
+    quantity_quintals: Optional[float] = None
+    grade: Optional[str] = None
     last_updated: str
 
 # Buyer Marketplace Schemas
@@ -283,16 +295,22 @@ class BuyerListingCreate(BaseModel):
     variety: Optional[str] = "Hybrid"
     quantity_quintals: float
     grade: str = "Grade A"
-    harvest_date: str
+    harvest_date: Optional[str] = None
     expected_price_per_quintal: float
-    farm_location: str
+    farm_location: Optional[str] = "Khordha, Odisha"
     description: Optional[str] = None
+    farmer_name: Optional[str] = None
+    farmer_phone: Optional[str] = None
 
 class BuyerOrderCreate(BaseModel):
     listing_id: int
     quantity_requested: float
     offered_price_per_quintal: float
     notes: Optional[str] = None
+    buyer_name: Optional[str] = None
+    buyer_location: Optional[str] = None
+    buyer_hub: Optional[str] = None
+    buyer_phone: Optional[str] = None
 
 # Copilot Schemas
 class CopilotMessageRequest(BaseModel):

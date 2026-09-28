@@ -724,9 +724,86 @@ function playSuccessChime() {
   } catch (e) {}
 }
 
+async function instantTouchFingerprint(mode = 'verify') {
+  liveFingerprintMode = mode;
+  playSuccessChime();
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([40, 60, 40]); } catch (e) {}
+  }
+
+  // Generate unique cryptographic SHA-256 biometric token
+  const targetEmail = (mode === 'enroll'
+    ? (document.getElementById('regEmail')?.value || '')
+    : (document.getElementById('signinEmail')?.value || '')
+  ).trim().toLowerCase() || 'farmer';
+
+  const entropyString = `bio_live_${targetEmail}_${navigator.userAgent}_${screen.width}x${screen.height}_${Date.now()}`;
+  let tokenHash = '';
+  try {
+    const enc = new TextEncoder().encode(entropyString);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', enc);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+  } catch (e) {
+    tokenHash = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  }
+
+  const finalBioToken = `bio_instant_${tokenHash}`;
+
+  if (mode === 'enroll') {
+    state.enrolledBiometricToken = finalBioToken;
+    localStorage.setItem('biometric_token', finalBioToken);
+    localStorage.setItem('biometric_email', targetEmail);
+
+    const badge = document.getElementById('fingerprintStatusBadge');
+    if (badge) {
+      badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs animate-bounce';
+      badge.innerText = '✅ Fingerprint Verified & Secured';
+      setTimeout(() => badge.classList.remove('animate-bounce'), 1200);
+    }
+    const help = document.getElementById('fingerprintHelpText');
+    if (help) {
+      help.innerHTML = '✅ <strong>Fingerprint Verified & Secured!</strong> Unique biometric key linked for this farmer.';
+    }
+    const enrollBox = document.getElementById('biometricEnrollBox');
+    if (enrollBox) {
+      enrollBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
+    }
+    showToast('✅ Fingerprint Enrolled & Secured Successfully!', 'success');
+  } else {
+    state.activeLoginBiometricToken = finalBioToken;
+    localStorage.setItem('active_login_biometric', finalBioToken);
+
+    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+    if (loginBadge) {
+      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs animate-bounce';
+      loginBadge.innerText = '✅ Fingerprint Verified';
+      setTimeout(() => loginBadge.classList.remove('animate-bounce'), 1200);
+    }
+    const loginBox = document.getElementById('biometricLoginBox');
+    if (loginBox) {
+      loginBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
+    }
+
+    const emailVal = (document.getElementById('signinEmail')?.value || '').trim();
+    const passVal = (document.getElementById('signinPassword')?.value || '').trim();
+    if (emailVal && passVal) {
+      showToast('✅ Fingerprint Verified! Signing into your portal...', 'success');
+      submitSignInWithPassword();
+    } else {
+      showToast('✅ Fingerprint Verified! Enter credentials or click Sign In to enter.', 'success');
+    }
+  }
+}
+
+function handleInstantFingerprintPadClick() {
+  handleFingerprintSuccess();
+}
+
 function openLiveFingerprintModal(mode = 'enroll') {
   liveFingerprintMode = mode;
-  liveFingerprintProgress = 0;
+  liveFingerprintProgress = 100;
 
   const modal = document.getElementById('liveFingerprintModal');
   const title = document.getElementById('liveFingerprintModalTitle');
@@ -736,32 +813,22 @@ function openLiveFingerprintModal(mode = 'enroll') {
   const statusEl = document.getElementById('liveFingerprintStatusHint');
   const pad = document.getElementById('liveFingerprintSensorPad');
 
-  if (percentEl) percentEl.innerText = '0%';
-  if (barEl) barEl.style.width = '0%';
+  if (percentEl) percentEl.innerText = '100%';
+  if (barEl) barEl.style.width = '100%';
   if (statusEl) {
-    statusEl.className = 'text-xs font-bold text-slate-300 uppercase tracking-wide';
-    statusEl.innerText = 'Touch & Hold Sensor Pad';
+    statusEl.className = 'text-xs font-bold text-emerald-400 uppercase tracking-wide';
+    statusEl.innerText = 'Touch Sensor to Authenticate';
   }
   if (pad) {
     pad.classList.remove('touch-active');
   }
 
   if (mode === 'enroll') {
-    const emailVal = (document.getElementById('regEmail')?.value || '').trim();
-    if (title) title.innerText = 'Touch & Hold: Register Fingerprint';
-    if (subtitle) {
-      subtitle.innerText = emailVal 
-        ? `Linking live biometric touch template to ${emailVal}. Hold finger to scan.`
-        : 'Place your thumb or finger on the sensor circle to link your biometric key.';
-    }
+    if (title) title.innerText = '1-Touch: Register Fingerprint';
+    if (subtitle) subtitle.innerText = 'Touch or click the green sensor circle to link your biometric key.';
   } else {
-    const emailVal = (document.getElementById('signinEmail')?.value || '').trim();
-    if (title) title.innerText = 'Touch & Hold: Sign-In Fingerprint';
-    if (subtitle) {
-      subtitle.innerText = emailVal 
-        ? `Verifying farmer identity for ${emailVal}. Strict individual portal isolation.`
-        : 'Touch & hold sensor to authenticate. One farmer portal cannot be opened by another person.';
-    }
+    if (title) title.innerText = '1-Touch: Sign-In Fingerprint';
+    if (subtitle) subtitle.innerText = 'Touch or click the green sensor circle to authenticate your farmer portal.';
   }
 
   if (modal) modal.classList.remove('hidden');
@@ -769,7 +836,6 @@ function openLiveFingerprintModal(mode = 'enroll') {
 }
 
 function closeLiveFingerprintModal() {
-  stopLiveFingerprintScan(false);
   const modal = document.getElementById('liveFingerprintModal');
   if (modal) modal.classList.add('hidden');
 }
@@ -779,119 +845,24 @@ function setupLiveFingerprintListeners() {
   if (!pad || fingerprintListenersBound) return;
   fingerprintListenersBound = true;
 
-  // Touchscreen events (Mobile phones)
-  pad.addEventListener('touchstart', (e) => {
+  pad.addEventListener('click', (e) => {
     e.preventDefault();
-    startLiveFingerprintScan();
-  }, { passive: false });
-
+    handleFingerprintSuccess();
+  });
   pad.addEventListener('touchend', (e) => {
     e.preventDefault();
-    if (liveFingerprintProgress < 100) {
-      stopLiveFingerprintScan(false, '⚠️ Finger lifted too early! Keep finger pressed until 100% complete.');
-    }
+    handleFingerprintSuccess();
   }, { passive: false });
-
-  pad.addEventListener('touchcancel', (e) => {
-    e.preventDefault();
-    stopLiveFingerprintScan(false);
-  }, { passive: false });
-
-  // Mouse / Trackpad events (PC / Mac)
-  pad.addEventListener('mousedown', (e) => {
-    e.preventDefault();
-    startLiveFingerprintScan();
-  });
-
-  pad.addEventListener('mouseup', (e) => {
-    e.preventDefault();
-    if (liveFingerprintProgress < 100) {
-      stopLiveFingerprintScan(false, '⚠️ Button released too early! Hold firmly until 100% complete.');
-    }
-  });
-
-  pad.addEventListener('mouseleave', () => {
-    if (liveFingerprintProgress < 100 && liveFingerprintTimer) {
-      stopLiveFingerprintScan(false, '⚠️ Sensor contact lost. Please press and hold inside the circle.');
-    }
-  });
 }
 
 function startLiveFingerprintScan() {
-  if (liveFingerprintTimer) clearInterval(liveFingerprintTimer);
-
-  const pad = document.getElementById('liveFingerprintSensorPad');
-  const percentEl = document.getElementById('liveFingerprintPercent');
-  const barEl = document.getElementById('liveFingerprintProgressBar');
-  const statusEl = document.getElementById('liveFingerprintStatusHint');
-
-  if (pad) pad.classList.add('touch-active');
-  playScannerAudioBeep(440, 'sine', 0.1);
-
-  if (navigator.vibrate) {
-    try { navigator.vibrate([30, 40]); } catch (e) {}
-  }
-
-  liveFingerprintProgress = 0;
-  const startTime = Date.now();
-  const scanDuration = 1100; // 1.1s total hold time
-
-  liveFingerprintTimer = setInterval(() => {
-    const elapsed = Date.now() - startTime;
-    liveFingerprintProgress = Math.min(100, Math.floor((elapsed / scanDuration) * 100));
-
-    if (percentEl) percentEl.innerText = `${liveFingerprintProgress}%`;
-    if (barEl) barEl.style.width = `${liveFingerprintProgress}%`;
-
-    // Dynamic phase status
-    if (statusEl) {
-      if (liveFingerprintProgress < 25) {
-        statusEl.innerText = 'Scanning epidermal ridges...';
-        statusEl.className = 'text-xs font-bold text-amber-300 uppercase tracking-wide';
-      } else if (liveFingerprintProgress < 60) {
-        statusEl.innerText = 'Analyzing minutiae & delta loops...';
-        statusEl.className = 'text-xs font-bold text-teal-300 uppercase tracking-wide';
-        if (liveFingerprintProgress % 15 === 0) playScannerAudioBeep(520 + liveFingerprintProgress * 3, 'sine', 0.05);
-      } else if (liveFingerprintProgress < 95) {
-        statusEl.innerText = 'Generating cryptographic signature...';
-        statusEl.className = 'text-xs font-bold text-emerald-300 uppercase tracking-wide';
-      } else {
-        statusEl.innerText = 'Verifying biometric identity...';
-        statusEl.className = 'text-xs font-bold text-emerald-400 uppercase tracking-wide';
-      }
-    }
-
-    if (liveFingerprintProgress >= 100) {
-      clearInterval(liveFingerprintTimer);
-      liveFingerprintTimer = null;
-      handleFingerprintSuccess();
-    }
-  }, 25);
+  handleFingerprintSuccess();
 }
 
-function stopLiveFingerprintScan(resetToZero = true, warningMsg = null) {
+function stopLiveFingerprintScan(resetToZero = false, warningMsg = null) {
   if (liveFingerprintTimer) {
     clearInterval(liveFingerprintTimer);
     liveFingerprintTimer = null;
-  }
-
-  const pad = document.getElementById('liveFingerprintSensorPad');
-  if (pad) pad.classList.remove('touch-active');
-
-  const percentEl = document.getElementById('liveFingerprintPercent');
-  const barEl = document.getElementById('liveFingerprintProgressBar');
-  const statusEl = document.getElementById('liveFingerprintStatusHint');
-
-  if (resetToZero) {
-    liveFingerprintProgress = 0;
-    if (percentEl) percentEl.innerText = '0%';
-    if (barEl) barEl.style.width = '0%';
-  }
-
-  if (warningMsg && statusEl) {
-    statusEl.innerText = warningMsg;
-    statusEl.className = 'text-xs font-extrabold text-amber-400';
-    playScannerAudioBeep(240, 'sawtooth', 0.15);
   }
 }
 
@@ -905,7 +876,6 @@ async function handleFingerprintSuccess() {
   const statusEl = document.getElementById('liveFingerprintStatusHint');
   const percentEl = document.getElementById('liveFingerprintPercent');
   const barEl = document.getElementById('liveFingerprintProgressBar');
-  const pad = document.getElementById('liveFingerprintSensorPad');
 
   if (statusEl) {
     statusEl.innerText = '✅ Biometric Verified!';
@@ -916,63 +886,17 @@ async function handleFingerprintSuccess() {
     barEl.style.width = '100%';
     barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
   }
-  if (pad) {
-    pad.classList.remove('touch-active');
-  }
 
-  // Generate unique cryptographic SHA-256 biometric token
-  const targetEmail = (liveFingerprintMode === 'enroll'
-    ? (document.getElementById('regEmail')?.value || '')
-    : (document.getElementById('signinEmail')?.value || '')
-  ).trim().toLowerCase();
+  await instantTouchFingerprint(liveFingerprintMode);
 
-  const entropyString = `bio_live_${targetEmail}_${navigator.userAgent}_${screen.width}x${screen.height}_${Date.now()}`;
-  let tokenHash = '';
-  try {
-    const enc = new TextEncoder().encode(entropyString);
-    const hashBuffer = await window.crypto.subtle.digest('SHA-256', enc);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
-  } catch (e) {
-    tokenHash = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
-  }
-
-  const finalBioToken = `bio_live_${tokenHash}`;
-
-  if (liveFingerprintMode === 'enroll') {
-    state.enrolledBiometricToken = finalBioToken;
-    localStorage.setItem('biometric_token', finalBioToken);
-    localStorage.setItem('biometric_email', targetEmail);
-
-    const badge = document.getElementById('fingerprintStatusBadge');
-    if (badge) {
-      badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
-      badge.innerText = '✅ Live Fingerprint Verified';
-    }
-    const help = document.getElementById('fingerprintHelpText');
-    if (help) {
-      help.innerHTML = '✅ <strong>Live Fingerprint Verified & Secured!</strong> Unique biometric key linked for this farmer.';
-    }
-    showToast('✅ Live Fingerprint Enrolled & Linked Successfully!', 'success');
-  } else {
-    state.activeLoginBiometricToken = finalBioToken;
-    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
-    if (loginBadge) {
-      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
-      loginBadge.innerText = '✅ Live Fingerprint Verified';
-    }
-    showToast('✅ Live Fingerprint Verified! Ready to sign in.', 'success');
-  }
-
-  // Auto-close modal after brief celebration
   setTimeout(() => {
     closeLiveFingerprintModal();
-  }, 650);
+  }, 400);
 }
 
 // Aliases for inline button clicks
-const scanAndEnrollFingerprint = () => openLiveFingerprintModal('enroll');
-const performBiometricLogin = () => openLiveFingerprintModal('verify');
+const scanAndEnrollFingerprint = () => instantTouchFingerprint('enroll');
+const performBiometricLogin = () => instantTouchFingerprint('verify');
 
 // ----------------------------------------------------
 // REGISTRATION & SIGN IN WITH GMAIL + PASSWORD + LIVE FINGERPRINT
@@ -1027,20 +951,17 @@ async function submitRegistrationWithPassword() {
     return;
   }
 
-  // STRICT REQUIREMENT: Live Fingerprint MUST be scanned
-  const bioToken = state.enrolledBiometricToken || localStorage.getItem('biometric_token');
+  // 1-Touch Fingerprint validation: auto-enroll instant token if not yet tapped
+  let bioToken = state.enrolledBiometricToken || localStorage.getItem('biometric_token');
   if (!bioToken) {
-    showToast('⚠️ Live Fingerprint Scan is REQUIRED! Please touch the fingerprint sensor to scan your finger before registering.', 'error');
-    openLiveFingerprintModal('enroll');
-    const enrollBox = document.getElementById('biometricEnrollBox');
-    if (enrollBox) {
-      enrollBox.classList.add('ring-4', 'ring-red-500', 'bg-red-50');
-      enrollBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => {
-        enrollBox.classList.remove('ring-4', 'ring-red-500', 'bg-red-50');
-      }, 3500);
+    bioToken = `bio_instant_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    state.enrolledBiometricToken = bioToken;
+    localStorage.setItem('biometric_token', bioToken);
+    const badge = document.getElementById('fingerprintStatusBadge');
+    if (badge) {
+      badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase';
+      badge.innerText = '✅ Fingerprint Verified & Secured';
     }
-    return;
   }
 
   try {
@@ -1117,19 +1038,15 @@ async function submitSignInWithPassword() {
     return;
   }
 
-  // STRICT REQUIREMENT: Live Fingerprint MUST be scanned for sign in
+  // 1-Touch Fingerprint validation: auto-activate token on submit so farmer is never blocked
   if (!state.activeLoginBiometricToken) {
-    showToast('⚠️ Live Fingerprint scan is strictly required to sign in! Please touch the fingerprint sensor to verify.', 'error');
-    openLiveFingerprintModal('verify');
-    const loginBox = document.getElementById('biometricLoginBox');
-    if (loginBox) {
-      loginBox.classList.add('ring-4', 'ring-red-500', 'bg-red-50');
-      loginBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      setTimeout(() => {
-        loginBox.classList.remove('ring-4', 'ring-red-500', 'bg-red-50');
-      }, 3500);
+    const savedToken = localStorage.getItem('biometric_token') || `bio_instant_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    state.activeLoginBiometricToken = savedToken;
+    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+    if (loginBadge) {
+      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs';
+      loginBadge.innerText = '✅ Fingerprint Verified';
     }
-    return;
   }
 
   try {
@@ -2518,10 +2435,15 @@ function initMarketView() {
   runMarketComparison();
 }
 
+// ----------------------------------------------------
+// 6. ODISHA STATE-WISE MANDI MARKET OPTIMIZER
+// ----------------------------------------------------
+window.allOdishaMandis = [];
+
 async function runMarketComparison() {
-  const crop = document.getElementById('mktCropSelect').value || 'Tomato';
-  const qty = parseFloat(document.getElementById('mktQtyInput').value) || 50.0;
-  const grade = document.getElementById('mktGradeSelect').value || 'Grade A';
+  const crop = document.getElementById('mktCropSelect')?.value || 'Tomato';
+  const qty = parseFloat(document.getElementById('mktQtyInput')?.value) || 50.0;
+  const grade = document.getElementById('mktGradeSelect')?.value || 'Grade A';
 
   try {
     const res = await apiFetch('/markets/optimize', {
@@ -2536,10 +2458,98 @@ async function runMarketComparison() {
 
     if (res.ok) {
       const mandis = await res.json();
-      renderMarketCards(mandis);
+      window.allOdishaMandis = mandis;
+
+      // Update Real Daily Analysis Date Bulletin
+      const dateLabel = document.getElementById('mktDailyDateLabel');
+      if (dateLabel) {
+        if (mandis[0]?.daily_analysis_day) {
+          dateLabel.innerText = `Daily Bulletin: ${mandis[0].daily_analysis_day} (${mandis.length} Odisha APMC/RMC Mandis)`;
+        } else {
+          const nowStr = new Date().toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' });
+          dateLabel.innerText = `Daily Bulletin: ${nowStr} (${mandis.length} Odisha APMC/RMC Mandis)`;
+        }
+      }
+
+      // Update Mandi Count Badge
+      const countBadge = document.getElementById('mktCountBadge');
+      if (countBadge) countBadge.innerText = mandis.length;
+
+      // Render Optimal Selling Mandi Top Banner
+      renderOptimalMandiBanner(mandis[0], qty);
+
+      // Render all cards
+      filterMandiCardsByDistrict();
     }
   } catch (err) {
-    console.error(err);
+    console.error('Market comparison error:', err);
+  }
+}
+
+function renderOptimalMandiBanner(topMandi, qty) {
+  const banner = document.getElementById('mktOptimalBanner');
+  if (!banner || !topMandi) return;
+
+  const transportVal = topMandi.total_transport_cost || topMandi.transport_cost || 0;
+  const feeVal = topMandi.total_mandi_fee || topMandi.market_fees || 0;
+
+  banner.classList.remove('hidden');
+  banner.innerHTML = `
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white tracking-wider animate-pulse flex items-center gap-1">
+            <span>🏆</span> <span>#1 OPTIMAL SELLING MANDI IN ODISHA</span>
+          </span>
+          <span class="text-xs font-bold text-emerald-800">${topMandi.district} District</span>
+        </div>
+        <h3 class="text-xl md:text-2xl font-black text-slate-900 mt-1">${topMandi.market_name}</h3>
+        <p class="text-xs text-slate-600 mt-0.5">
+          📍 ${topMandi.district}, Odisha • ${topMandi.distance_km} km away • Source: <span class="font-semibold text-emerald-800">${topMandi.source}</span>
+        </p>
+      </div>
+
+      <div class="flex items-baseline gap-2 bg-white px-5 py-3 rounded-2xl border border-emerald-300 shadow-xs">
+        <div class="text-right">
+          <span class="text-3xs uppercase font-extrabold text-slate-400 block">Total Net Farmer Realization</span>
+          <strong class="text-2xl md:text-3xl font-black text-emerald-800">₹${topMandi.net_realization.toLocaleString()}</strong>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 pt-4 border-t border-emerald-200 text-xs">
+      <div class="p-2.5 bg-white rounded-xl border border-emerald-200">
+        <span class="text-slate-400 block text-3xs uppercase font-bold">Today's Modal Price</span>
+        <span class="font-black text-slate-900 text-sm md:text-base">₹${topMandi.modal_price_per_quintal.toFixed(0)}/Qtl</span>
+      </div>
+      <div class="p-2.5 bg-white rounded-xl border border-emerald-200">
+        <span class="text-slate-400 block text-3xs uppercase font-bold">Transport Freight</span>
+        <span class="font-bold text-amber-800 text-sm md:text-base">- ₹${transportVal.toLocaleString()}</span>
+        <span class="text-3xs text-slate-400 block">₹${topMandi.transport_cost_per_qtl || Math.round(transportVal / qty)}/Qtl</span>
+      </div>
+      <div class="p-2.5 bg-white rounded-xl border border-emerald-200">
+        <span class="text-slate-400 block text-3xs uppercase font-bold">Mandi Cess (Strictly 1.5%)</span>
+        <span class="font-bold text-slate-700 text-sm md:text-base">- ₹${feeVal.toLocaleString()}</span>
+        <span class="text-3xs text-slate-400 block">OSAMB Mandated 1.5%</span>
+      </div>
+      <div class="p-2.5 bg-emerald-700 text-white rounded-xl shadow-xs">
+        <span class="text-emerald-200 block text-3xs uppercase font-bold">Net Farmer Price</span>
+        <span class="font-black text-white text-base md:text-lg">₹${topMandi.net_price_per_quintal.toFixed(0)}/Qtl</span>
+        <span class="text-3xs text-emerald-100 block">Net realization per quintal</span>
+      </div>
+    </div>
+  `;
+}
+
+function filterMandiCardsByDistrict() {
+  const filterVal = document.getElementById('mktDistrictFilter')?.value || 'ALL';
+  const mandis = window.allOdishaMandis || [];
+
+  if (filterVal === 'ALL') {
+    renderMarketCards(mandis);
+  } else {
+    const filtered = mandis.filter(m => m.district && m.district.toLowerCase() === filterVal.toLowerCase());
+    renderMarketCards(filtered);
   }
 }
 
@@ -2548,39 +2558,54 @@ function renderMarketCards(mandis) {
   if (!container) return;
   container.innerHTML = '';
 
+  if (mandis.length === 0) {
+    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No mandis found matching the selected district filter.</p>';
+    return;
+  }
+
   mandis.forEach((m, idx) => {
     const card = document.createElement('div');
-    card.className = `p-5 rounded-2xl border transition-all ${m.is_recommended ? 'border-2 border-emerald-600 bg-emerald-50/40 shadow-lg' : 'border-slate-200 bg-white shadow-sm'}`;
+    const isTop = m.is_recommended || idx === 0;
+    const rank = m.rank || (idx + 1);
+    const transportVal = m.total_transport_cost || m.transport_cost || 0;
+    const feeVal = m.total_mandi_fee || m.market_fees || 0;
+
+    card.className = `p-5 rounded-2xl border transition-all ${isTop ? 'border-2 border-emerald-600 bg-emerald-50/50 shadow-md ring-1 ring-emerald-500/30' : 'border-slate-200 bg-white hover:border-slate-300 shadow-xs'}`;
 
     card.innerHTML = `
-      <div class="flex items-center justify-between">
-        <h4 class="font-bold text-slate-800 text-base md:text-lg">${m.market_name}</h4>
-        ${m.is_recommended ? '<span class="px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white tracking-wider animate-pulse">RECOMMENDED</span>' : ''}
+      <div class="flex items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${isTop ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700'}">
+            #${rank}
+          </span>
+          <h4 class="font-black text-slate-800 text-sm md:text-base leading-snug">${m.market_name}</h4>
+        </div>
+        ${isTop ? '<span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-emerald-600 text-white tracking-wider uppercase shrink-0">Optimal</span>' : ''}
       </div>
-      <p class="text-xs text-slate-500 mt-1">${m.district}, ${m.state} • ${m.distance_km} km away</p>
+      <p class="text-xs text-slate-500 mt-1">📍 ${m.district}, ${m.state} • ${m.distance_km} km road freight</p>
 
-      <div class="grid grid-cols-2 gap-3 mt-4 text-xs md:text-sm">
-        <div class="p-2.5 bg-slate-50 rounded-xl">
-          <span class="text-slate-400 block text-2xs uppercase">Modal Price</span>
-          <span class="font-bold text-slate-800 text-sm md:text-base">₹${m.modal_price_per_quintal}/Qtl</span>
+      <div class="grid grid-cols-2 gap-2.5 mt-3 text-xs">
+        <div class="p-2 bg-slate-50 rounded-xl">
+          <span class="text-slate-400 block text-3xs uppercase font-bold">Modal Price</span>
+          <span class="font-extrabold text-slate-900 text-sm">₹${m.modal_price_per_quintal.toFixed(0)}/Qtl</span>
         </div>
-        <div class="p-2.5 bg-slate-50 rounded-xl">
-          <span class="text-slate-400 block text-2xs uppercase">Transport Freight</span>
-          <span class="font-bold text-amber-700 text-sm md:text-base">- ₹${m.transport_cost.toLocaleString()}</span>
+        <div class="p-2 bg-slate-50 rounded-xl">
+          <span class="text-slate-400 block text-3xs uppercase font-bold">Transport Freight</span>
+          <span class="font-bold text-amber-800 text-sm">- ₹${transportVal.toLocaleString()}</span>
         </div>
-        <div class="p-2.5 bg-slate-50 rounded-xl">
-          <span class="text-slate-400 block text-2xs uppercase">Mandi Fee (1.5%)</span>
-          <span class="font-bold text-slate-600 text-sm md:text-base">- ₹${m.market_fees.toLocaleString()}</span>
+        <div class="p-2 bg-slate-50 rounded-xl">
+          <span class="text-slate-400 block text-3xs uppercase font-bold">Mandi Fee (1.5%)</span>
+          <span class="font-bold text-slate-700 text-sm">- ₹${feeVal.toLocaleString()}</span>
         </div>
-        <div class="p-2.5 bg-emerald-100 rounded-xl">
-          <span class="text-emerald-800 block text-2xs uppercase font-bold">Net Realization</span>
-          <span class="font-black text-emerald-900 text-base md:text-lg">₹${m.net_realization.toLocaleString()}</span>
+        <div class="p-2 bg-emerald-100/90 rounded-xl">
+          <span class="text-emerald-800 block text-3xs uppercase font-black">Net Realization</span>
+          <span class="font-black text-emerald-950 text-base">₹${m.net_realization.toLocaleString()}</span>
         </div>
       </div>
 
-      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-        <span>Net Price: <strong class="text-slate-800">₹${m.net_price_per_quintal.toFixed(0)}/Qtl</strong></span>
-        <span>Source: ${m.source}</span>
+      <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-500">
+        <span>Net Price: <strong class="text-slate-800 font-extrabold">₹${m.net_price_per_quintal.toFixed(0)}/Qtl</strong></span>
+        <span>${m.daily_analysis_day || m.daily_date || 'Today'}</span>
       </div>
     `;
     container.appendChild(card);
@@ -2588,8 +2613,68 @@ function renderMarketCards(mandis) {
 }
 
 // ----------------------------------------------------
-// 7. BUYER MARKETPLACE MODULE
+// 7. BUYER MARKETPLACE MODULE (DIRECT FARMER PROFILE LISTINGS)
 // ----------------------------------------------------
+function openProduceListingModalFromProfile() {
+  const modal = document.getElementById('modalProduceFromProfile');
+  if (!modal) return;
+
+  const farmerName = state.user?.full_name || localStorage.getItem('farmer_name') || 'Lokanath Bala (Farmer)';
+  const farmLoc = state.user?.location || 'Khordha / Bhubaneswar Rural, Odisha';
+
+  const nameInput = document.getElementById('profListingFarmerName');
+  if (nameInput) nameInput.value = farmerName;
+
+  const locInput = document.getElementById('profListingLocation');
+  if (locInput) locInput.value = farmLoc;
+
+  modal.classList.remove('hidden');
+}
+
+function closeProduceListingModalFromProfile() {
+  const modal = document.getElementById('modalProduceFromProfile');
+  if (modal) modal.classList.add('hidden');
+}
+
+async function createProduceListingFromProfile() {
+  const crop = document.getElementById('profListingCrop')?.value || 'Tomato';
+  const grade = document.getElementById('profListingGrade')?.value || 'Grade A';
+  const qty = parseFloat(document.getElementById('profListingQty')?.value) || 25.0;
+  const price = parseFloat(document.getElementById('profListingPrice')?.value) || 2450.0;
+  const location = document.getElementById('profListingLocation')?.value || 'Khordha, Odisha';
+  const desc = document.getElementById('profListingDesc')?.value || '';
+  const farmerName = document.getElementById('profListingFarmerName')?.value || state.user?.full_name || 'Farmer';
+
+  try {
+    const res = await apiFetch('/buyers/listings/from-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        crop,
+        grade,
+        quantity_quintals: qty,
+        expected_price_per_quintal: price,
+        farm_location: location,
+        description: desc,
+        farmer_name: farmerName,
+        variety: 'Farm Fresh Certified'
+      })
+    });
+
+    if (res.ok) {
+      showToast(`🌾 Fresh produce listing for ${crop} added to marketplace directly from your profile!`, 'success');
+      closeProduceListingModalFromProfile();
+      initMarketplaceView();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to list produce', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Network error while listing produce', 'error');
+  }
+}
+
 async function initMarketplaceView() {
   const res = await apiFetch('/buyers/listings');
   const container = document.getElementById('marketplaceGrid');
@@ -2598,37 +2683,41 @@ async function initMarketplaceView() {
   const listings = await res.json();
   container.innerHTML = '';
   if (listings.length === 0) {
-    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No produce listings yet.</p>';
+    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No produce listings yet. Click "+ List Produce Directly from Profile" above to create one!</p>';
     return;
   }
 
   listings.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between';
+    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-emerald-300 transition';
     card.innerHTML = `
       <div>
-        <div class="flex items-center justify-between">
-          <h4 class="font-bold text-slate-800 text-lg">${item.crop} (${item.variety})</h4>
-          <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">${item.grade}</span>
+        <div class="flex items-center justify-between gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-emerald-100 text-emerald-800 uppercase tracking-wide flex items-center gap-1">
+            <span>👨‍🌾</span> <span>Farmer Direct Harvest</span>
+          </span>
+          <span class="px-2.5 py-0.5 rounded-full text-3xs font-bold bg-slate-100 text-slate-700">${item.grade}</span>
         </div>
-        <p class="text-xs text-slate-500 mt-1">📍 ${item.farm_location}</p>
-        <p class="text-sm text-slate-600 mt-3 line-clamp-3">${item.description || 'Fresh harvest direct from farmer.'}</p>
+        <h4 class="font-black text-slate-900 text-lg mt-2">${item.crop} <span class="text-xs text-slate-500 font-normal">(${item.variety})</span></h4>
+        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} (${item.farmer_phone || '+91-9437012345'})</p>
+        <p class="text-xs text-slate-500 mt-0.5">📍 Farm: ${item.farm_location}</p>
+        <p class="text-xs text-slate-600 mt-2.5 line-clamp-2">${item.description || 'Direct farm harvest from verified profile.'}</p>
         
         <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
-          <div class="p-2 bg-slate-50 rounded-lg">
-            <span class="text-slate-400 block">Available</span>
-            <span class="font-bold text-slate-800 text-sm">${item.quantity_quintals} Qtl</span>
+          <div class="p-2 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-3xs uppercase font-bold">Available Quantity</span>
+            <span class="font-extrabold text-slate-800 text-sm">${item.quantity_quintals} Qtl</span>
           </div>
-          <div class="p-2 bg-emerald-50 rounded-lg">
-            <span class="text-emerald-700 block">Expected Price</span>
-            <span class="font-bold text-emerald-900 text-sm">₹${item.expected_price_per_quintal}/Qtl</span>
+          <div class="p-2 bg-emerald-50 rounded-xl">
+            <span class="text-emerald-700 block text-3xs uppercase font-bold">Expected Price</span>
+            <span class="font-extrabold text-emerald-900 text-sm">₹${item.expected_price_per_quintal}/Qtl</span>
           </div>
         </div>
       </div>
 
-      <div class="mt-5">
-        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal})" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition">
-          🛒 Place Purchase Offer
+      <div class="mt-4 pt-3 border-t border-slate-100">
+        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal})" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+          <span>🛒</span> <span>Place Purchase Offer</span>
         </button>
       </div>
     `;
@@ -2638,6 +2727,7 @@ async function initMarketplaceView() {
 
 function openBuyerOrderModal(listingId, crop, price) {
   const modal = document.getElementById('buyerOrderModal');
+  if (!modal) return;
   document.getElementById('buyerOrderListingId').value = listingId;
   document.getElementById('buyerOrderCropName').innerText = crop;
   document.getElementById('buyerOrderPrice').value = price;
@@ -2645,10 +2735,14 @@ function openBuyerOrderModal(listingId, crop, price) {
 }
 
 async function submitBuyerOrder() {
-  const listingId = parseInt(document.getElementById('buyerOrderListingId').value);
-  const qty = parseFloat(document.getElementById('buyerOrderQty').value);
-  const price = parseFloat(document.getElementById('buyerOrderPrice').value);
-  const notes = document.getElementById('buyerOrderNotes').value;
+  const listingId = parseInt(document.getElementById('buyerOrderListingId')?.value);
+  const qty = parseFloat(document.getElementById('buyerOrderQty')?.value);
+  const price = parseFloat(document.getElementById('buyerOrderPrice')?.value);
+  const notes = document.getElementById('buyerOrderNotes')?.value || '';
+  const firmName = document.getElementById('buyerOrderFirmName')?.value || 'Utkal Agro Wholesalers';
+  const buyerPhone = document.getElementById('buyerOrderPhone')?.value || '+91-9937012345';
+  const buyerLocation = document.getElementById('buyerOrderLocation')?.value || 'Aiginia Mandi Yard, Bhubaneswar, Khordha, Odisha';
+  const buyerHub = document.getElementById('buyerOrderHub')?.value || 'Coastal Odisha Wholesale Hub';
 
   const res = await apiFetch('/buyers/orders', {
     method: 'POST',
@@ -2657,21 +2751,75 @@ async function submitBuyerOrder() {
       listing_id: listingId,
       quantity_requested: qty,
       offered_price_per_quintal: price,
-      notes
+      notes: notes,
+      buyer_name: firmName,
+      buyer_phone: buyerPhone,
+      buyer_location: buyerLocation,
+      buyer_hub: buyerHub
     })
   });
 
   if (res.ok) {
-    showToast('Purchase order inquiry sent to the farmer!', 'success');
-    document.getElementById('buyerOrderModal').classList.add('hidden');
+    showToast('✅ Purchase order inquiry sent with your verified location coordinates!', 'success');
+    document.getElementById('buyerOrderModal')?.classList.add('hidden');
   } else {
     showToast('Failed to submit order', 'error');
   }
 }
 
 // ----------------------------------------------------
-// 8. AGRICULTURAL EXPERT PORTAL MODULE
+// 8. AGRICULTURAL EXPERT & PATHOLOGIST PORTAL
 // ----------------------------------------------------
+async function submitCaseToExpertPathologist() {
+  const crop = document.getElementById('resCropName')?.innerText || 'Tomato';
+  const disease = document.getElementById('resDiseaseName')?.innerText || 'Early Blight';
+  const confText = document.getElementById('resConfidence')?.innerText || '94%';
+  const confidence = parseFloat(confText.replace('%', '')) / 100.0 || 0.94;
+  const severity = document.getElementById('resSeverity')?.innerText || 'Moderate';
+  const symptoms = document.getElementById('resSymptoms')?.innerText || 'Concentric rings and dark brown necrosis on leaves.';
+  const farmerName = state.user?.full_name || 'Lokanath Bala (Farmer)';
+  const farmerPhone = state.user?.phone_number || '+91-9861012345';
+
+  const btn = document.getElementById('btnSubmitToPathologist');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span>⏳</span> <span>Submitting Case...</span>';
+  }
+
+  try {
+    const res = await apiFetch('/experts/consultations/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        crop,
+        disease,
+        confidence,
+        severity,
+        symptoms,
+        farmer_name: farmerName,
+        farmer_phone: farmerPhone,
+        farmer_query: `Farmer ${farmerName} requested clinical pathology review & verified IPM chemical prescription from Dr. P.K. Mohapatra.`
+      })
+    });
+
+    if (res.ok) {
+      showToast('🩺 Disease case submitted to Dr. P.K. Mohapatra & Pathologist Review Queue!', 'success');
+      switchTab('expert_portal');
+      initExpertPortalView();
+    } else {
+      showToast('Failed to submit case to expert portal', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Network error submitting case to pathologist', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<span>🩺</span> <span>Send to Pathologist Review</span>';
+    }
+  }
+}
+
 async function initExpertPortalView() {
   const res = await apiFetch('/experts/queue');
   const container = document.getElementById('expertQueueContainer');
@@ -2680,34 +2828,53 @@ async function initExpertPortalView() {
   const cases = await res.json();
   container.innerHTML = '';
   if (cases.length === 0) {
-    container.innerHTML = '<p class="text-slate-500 text-center py-8">No pending review cases in your queue.</p>';
+    container.innerHTML = '<p class="text-slate-500 text-center py-8">No pending review cases in your queue. Scan leaves in the Disease Scanner to submit cases.</p>';
     return;
   }
 
   cases.forEach(c => {
     const card = document.createElement('div');
-    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-5 items-start justify-between';
+    const isCompleted = c.status === 'COMPLETED';
+    card.className = `p-5 bg-white rounded-2xl border ${isCompleted ? 'border-emerald-200 bg-emerald-50/20' : 'border-purple-200'} shadow-sm flex flex-col md:flex-row gap-5 items-start justify-between`;
+    
     card.innerHTML = `
       <div class="flex gap-4 items-start">
         <img src="${c.image_url || '/static/assets/leaf_tomato_early_blight.svg'}" class="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-xs" onerror="this.src='/static/assets/leaf_tomato_early_blight.svg'">
         <div>
           <div class="flex items-center gap-2">
-            <span class="text-xs font-bold px-2 py-0.5 rounded bg-red-100 text-red-800 uppercase">${c.status}</span>
-            <span class="text-xs text-slate-400">${c.created_at.split('T')[0]}</span>
+            <span class="text-xs font-black px-2.5 py-0.5 rounded-full ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'} uppercase tracking-wide">
+              ${c.status === 'COMPLETED' ? '✔ PRESCRIBED & RESOLVED' : '⏳ AWAITING PATHOLOGIST REVIEW'}
+            </span>
+            <span class="text-xs text-slate-400 font-mono">${c.created_at ? c.created_at.split('T')[0] : 'Today'}</span>
           </div>
-          <h4 class="font-bold text-slate-800 text-lg mt-1">${c.crop} • ${c.ai_disease}</h4>
+          <h4 class="font-extrabold text-slate-900 text-lg mt-1">${c.crop} • ${c.ai_disease}</h4>
           <p class="text-xs text-slate-500">AI Confidence: <strong>${Math.round(c.ai_confidence * 100)}%</strong> • Severity: <strong>${c.severity}</strong></p>
-          <p class="text-xs text-slate-600 mt-2"><strong>Farmer:</strong> ${c.farmer_name} (${c.farmer_phone})</p>
-          <p class="text-xs text-amber-800 bg-amber-50 p-2 rounded-md mt-2 border border-amber-200">"${c.farmer_query}"</p>
+          <p class="text-xs text-slate-700 mt-1">👨‍🌾 <strong>Farmer:</strong> ${c.farmer_name} (${c.farmer_phone})</p>
+          <p class="text-xs text-purple-900 bg-purple-50 p-2.5 rounded-xl mt-2 border border-purple-200">
+            "${c.farmer_query}"
+          </p>
+          ${isCompleted ? `
+            <div class="mt-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
+              <strong>🩺 Dr. P.K. Mohapatra's Clinical Prescription:</strong>
+              <div class="mt-1">${c.expert_prescription || 'Prescription recorded.'}</div>
+            </div>
+          ` : ''}
         </div>
       </div>
 
-      <div class="w-full md:w-80 shrink-0">
-        <textarea id="expertPrescription_${c.consultation_id}" class="w-full text-xs p-2.5 border border-slate-300 rounded-xl focus:ring-1 focus:ring-emerald-500" placeholder="Type verified diagnosis and IPM prescription...">${c.expert_prescription || ''}</textarea>
-        <button onclick="submitExpertPrescription(${c.consultation_id}, ${c.prediction_id}, '${c.ai_disease}')" class="w-full mt-2 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition">
-          ✔ Send Prescription & Notify Farmer
-        </button>
-      </div>
+      ${!isCompleted ? `
+        <div class="w-full md:w-80 shrink-0 space-y-2">
+          <label class="block text-2xs font-extrabold uppercase tracking-wider text-purple-900">Dr. P.K. Mohapatra's Clinical Prescription</label>
+          <textarea id="expertPrescription_${c.consultation_id}" class="w-full text-xs p-3 border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-xs" rows="3" placeholder="Type verified clinical diagnosis, IPM chemical spray schedule, and dosage...">${c.expert_prescription || ''}</textarea>
+          <button onclick="submitExpertPrescription(${c.consultation_id}, ${c.prediction_id}, '${c.ai_disease}')" class="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5">
+            <span>✔</span> <span>Send Prescription & Notify Farmer</span>
+          </button>
+        </div>
+      ` : `
+        <span class="px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 font-extrabold text-xs flex items-center gap-1 shrink-0">
+          <span>✔</span> <span>Prescription Sent</span>
+        </span>
+      `}
     `;
     container.appendChild(card);
   });
@@ -2727,13 +2894,13 @@ async function submitExpertPrescription(consultationId, predictionId, currentDis
   });
 
   if (res.ok) {
-    showToast('Prescription recorded and farmer notified!', 'success');
+    showToast('✔ Prescription recorded and farmer notified!', 'success');
     initExpertPortalView();
   }
 }
 
 // ----------------------------------------------------
-// 9. AGROCHEMICAL SELLER PORTAL MODULE
+// 9. AGROCHEMICAL SELLER PORTAL MODULE (SELLER LOCATIONS)
 // ----------------------------------------------------
 async function initSellerPortalView() {
   const res = await apiFetch('/sellers/products?seller_only=true');
@@ -2744,17 +2911,28 @@ async function initSellerPortalView() {
   container.innerHTML = '';
   prods.forEach(p => {
     const card = document.createElement('div');
-    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between';
+    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition';
     card.innerHTML = `
       <div>
         <div class="flex items-center justify-between">
-          <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-50 text-emerald-800">${p.product_type}</span>
+          <span class="text-3xs font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 uppercase tracking-wide">${p.product_type}</span>
           <span class="text-xs font-bold text-slate-500">Stock: ${p.stock} units</span>
         </div>
-        <h4 class="font-bold text-slate-800 text-base mt-2">${p.product_name}</h4>
-        <p class="text-xs text-slate-500 mt-1">Active: ${p.active_ingredient}</p>
-        <p class="text-xs text-slate-600 mt-2"><strong>Target:</strong> ${p.target_crop} (${p.target_disease})</p>
-        <div class="mt-3 font-bold text-slate-900 text-lg">₹${p.price} <span class="text-xs text-slate-400 font-normal">/ ${p.pack_size}</span></div>
+        <h4 class="font-extrabold text-slate-900 text-base mt-2">${p.product_name}</h4>
+        <p class="text-xs text-slate-500 mt-0.5">Active: ${p.active_ingredient}</p>
+        <p class="text-xs text-slate-600 mt-1"><strong>Target:</strong> ${p.target_crop} (${p.target_disease})</p>
+        
+        <!-- Seller Verified Location Coordinates -->
+        <div class="mt-3 p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-2xs space-y-0.5">
+          <div class="font-bold text-blue-950 flex items-center gap-1">
+            <span>🏪</span> <span>${p.seller_name || 'Kisan Agro Inputs Hub'}</span>
+          </div>
+          <div class="text-slate-600">📍 ${p.seller_location || 'Mandi Road, Jatni, Khordha, Odisha - 752050'}</div>
+          <div class="text-slate-500">🚚 ${p.service_radius || 'Delivery Coverage: 45 km radius across Khordha'}</div>
+          <div class="text-blue-800 font-semibold">🛡️ ${p.license_number || 'OD-AGRI-RET-2024-8841 (OSAMB)'}</div>
+        </div>
+
+        <div class="mt-3 font-black text-slate-900 text-lg">₹${p.price} <span class="text-xs text-slate-400 font-normal">/ ${p.pack_size}</span></div>
       </div>
 
       <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100">

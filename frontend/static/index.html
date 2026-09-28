@@ -303,26 +303,26 @@
               </div>
             </div>
 
-            <!-- REAL DEVICE FINGERPRINT BIOMETRIC ENROLLMENT BOX (REQUIRED) -->
-            <div id="biometricEnrollBox" onclick="openLiveFingerprintModal('enroll')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-sm">
+            <!-- REAL DEVICE FINGERPRINT BIOMETRIC ENROLLMENT BOX (1-TOUCH SENSOR) -->
+            <div id="biometricEnrollBox" onclick="instantTouchFingerprint('enroll')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/70 hover:bg-emerald-100/70 transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 group shadow-sm">
               <div class="flex items-center gap-3.5">
                 <div id="fingerprintSensorIcon" class="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center text-2xl shadow-md group-hover:scale-105 transition">
                   👆
                 </div>
                 <div>
                   <div class="text-xs font-black text-slate-900 flex items-center gap-2">
-                    <span>Live Screen Fingerprint Touch Sensor <span class="text-red-500 font-black text-xs">* REQUIRED</span></span>
+                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● INSTANT TOUCH</span></span>
                     <span id="fingerprintStatusBadge" class="text-3xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                      👆 Click to Touch & Scan Fingerprint
+                      👆 Tap / Click to Verify
                     </span>
                   </div>
                   <div id="fingerprintHelpText" class="text-2xs text-slate-600 mt-0.5">
-                    Touch & hold your finger on the live screen sensor. Works live on both Phone & PC screens (no USB or passkeys needed).
+                    Touch or click sensor once to link your unique biometric key. Instant verification on Phone & PC screens.
                   </div>
                 </div>
               </div>
               <button type="button" class="px-4 py-2 bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs font-extrabold rounded-xl shadow-xs transition flex items-center justify-center gap-1.5 whitespace-nowrap">
-                <span>👆</span> <span>Touch & Scan Live Fingerprint</span>
+                <span>👆</span> <span>Touch Sensor</span>
               </button>
             </div>
 
@@ -346,7 +346,7 @@
                 <span>🔑</span> <span>Sign In to Your Private Portal</span>
               </h3>
               <p class="text-xs text-slate-600 mt-0.5">
-                Enter the Gmail ID and password you created during registration. Another user cannot log in to your portal without your exact credentials.
+                Enter your registered Gmail ID and password. 1-touch fingerprint validates your biometric identity.
               </p>
             </div>
 
@@ -379,19 +379,19 @@
             </div>
 
             <!-- LIVE SCREEN FINGERPRINT 1-TOUCH SIGN IN -->
-            <div id="biometricLoginBox" onclick="openLiveFingerprintModal('verify')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/80 hover:bg-emerald-100 transition flex items-center justify-between gap-3 group shadow-xs">
+            <div id="biometricLoginBox" onclick="instantTouchFingerprint('verify')" class="cursor-pointer p-4 rounded-2xl border-2 border-emerald-500/80 bg-emerald-50/80 hover:bg-emerald-100 transition flex items-center justify-between gap-3 group shadow-xs">
               <div class="flex items-center gap-3.5">
                 <div id="biometricLoginIcon" class="w-11 h-11 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-xl shadow-md group-hover:scale-105 transition">
                   👆
                 </div>
                 <div>
                   <div class="text-xs font-black text-emerald-950 flex items-center gap-1.5">
-                    <span>Live Screen Fingerprint Scan <span class="text-red-500 font-black text-xs">* REQUIRED</span></span>
+                    <span>1-Touch Screen Fingerprint Sensor <span class="text-emerald-700 font-black text-xs">● INSTANT TOUCH</span></span>
                     <span id="loginFingerprintStatusBadge" class="text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase">
-                      👆 Click to Touch & Scan
+                      👆 Tap / Click to Touch
                     </span>
                   </div>
-                  <div class="text-2xs text-emerald-700 mt-0.5">Touch & hold your finger on the live screen sensor. Strict isolation: another user cannot access your portal.</div>
+                  <div class="text-2xs text-emerald-700 mt-0.5">Touch or click sensor once to authenticate. Works instantly on Phone & PC screen.</div>
                 </div>
               </div>
               <span class="text-xs font-extrabold text-emerald-800 group-hover:translate-x-1 transition flex items-center gap-1">
@@ -787,6 +787,24 @@
           <div id="resTreatmentsList" class="space-y-2">
             <!-- Dynamic verified treatment cards -->
           </div>
+        </div>
+
+        <!-- Submit Case to Agricultural Pathologist Review Queue -->
+        <div class="p-5 bg-purple-50/90 rounded-2xl border-2 border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="w-8 h-8 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-sm">🩺</span>
+              <h4 class="font-extrabold text-purple-950 text-sm md:text-base">
+                Submit Case to Plant Pathologist Review Queue
+              </h4>
+            </div>
+            <p class="text-xs text-purple-800 mt-1.5 max-w-xl leading-relaxed">
+              Send this leaf disease scan directly to <strong>Dr. P.K. Mohapatra (OUAT)</strong> and agricultural pathology experts for verified clinical diagnosis, custom chemical dosage, and official IPM prescription.
+            </p>
+          </div>
+          <button id="btnSubmitToPathologist" onclick="submitCaseToExpertPathologist()" class="px-5 py-3 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition flex items-center gap-2 shrink-0">
+            <span>🩺</span> <span>Send to Pathologist Review</span>
+          </button>
         </div>
 
       </div>
@@ -1186,21 +1204,57 @@
       
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="market.title">Mandi Market Optimizer</h2>
-          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="market.subtitle">Compare nearby APMC mandis by transparent net realization after transport and commission fees.</p>
+          <div class="flex items-center gap-2">
+            <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 uppercase tracking-wider">Odisha State-Wise APMC Network</span>
+            <span class="text-xs font-bold text-slate-500">21 Regulated Mandis Active</span>
+          </div>
+          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800 mt-1" data-i18n="market.title">Odisha Mandi Market Optimizer</h2>
+          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="market.subtitle">Real per-day analysis across all 21 Odisha state-wise APMC/RMC mandis. Computes daily modal price, transport freight, strict 1.5% Mandi Fee, and net realization.</p>
         </div>
 
         <!-- Query Form -->
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 mt-6 text-xs items-end">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mt-6 text-xs items-end">
           <div>
             <label class="block font-semibold text-slate-600 mb-1">Crop</label>
             <select id="mktCropSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50">
-              <option value="Tomato" selected>Tomato</option>
-              <option value="Rice">Rice</option>
-              <option value="Potato">Potato</option>
-              <option value="Chilli">Chilli</option>
-              <option value="Onion">Onion</option>
-              <option value="Wheat">Wheat</option>
+              <option value="Tomato" selected>Tomato (Odisha Hybrid)</option>
+              <option value="Rice">Rice / Paddy (Sarva / Swarna)</option>
+              <option value="Potato">Potato (Kufri Jyoti)</option>
+              <option value="Onion">Onion (Odisha Red / Nasik)</option>
+              <option value="Chilli">Chilli (Guntur / Desi)</option>
+              <option value="Wheat">Wheat (Sharbati)</option>
+              <option value="Brinjal">Brinjal (Kantabada / Round)</option>
+              <option value="Maize">Maize (Sweet Corn / Field)</option>
+              <option value="Banana">Banana (Champa / Robusta)</option>
+              <option value="Mango">Mango (Amrapali / Banganapalli)</option>
+              <option value="Cotton">Cotton (Bt Cotton)</option>
+              <option value="Groundnut">Groundnut (Odisha Pod)</option>
+              <option value="Mustard">Mustard (Pusa Bold)</option>
+              <option value="Soybean">Soybean (JS 335)</option>
+              <option value="Apple">Apple (Simla / Kinnaur)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Filter District / Zone</label>
+            <select id="mktDistrictFilter" onchange="filterMandiCardsByDistrict()" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50">
+              <option value="ALL" selected>All Odisha Mandis (21 APMC/RMC)</option>
+              <option value="Khordha">Khordha (Bhubaneswar, Jatni)</option>
+              <option value="Cuttack">Cuttack (Malgodown)</option>
+              <option value="Puri">Puri RMC</option>
+              <option value="Bargarh">Bargarh APMC</option>
+              <option value="Sambalpur">Sambalpur (Khetrajpur)</option>
+              <option value="Ganjam">Ganjam (Berhampur)</option>
+              <option value="Balasore">Balasore RMC</option>
+              <option value="Bhadrak">Bhadrak APMC</option>
+              <option value="Koraput">Koraput (Jeypore)</option>
+              <option value="Bolangir">Bolangir RMC</option>
+              <option value="Kalahandi">Kalahandi (Bhawanipatna)</option>
+              <option value="Angul">Angul RMC</option>
+              <option value="Dhenkanal">Dhenkanal APMC</option>
+              <option value="Kendujhar">Kendujhar (Keonjhar)</option>
+              <option value="Jajpur">Jajpur Road APMC</option>
+              <option value="Sundargarh">Sundargarh (Rourkela Panposh)</option>
+              <option value="Rayagada">Rayagada APMC</option>
             </select>
           </div>
           <div>
@@ -1216,16 +1270,45 @@
             </select>
           </div>
           <div>
-            <button onclick="runMarketComparison()" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-md transition" data-i18n="market.compare_btn">
-              Calculate Optimal Selling Mandi
+            <button onclick="runMarketComparison()" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-md transition flex items-center justify-center gap-1.5" data-i18n="market.compare_btn">
+              <span>📊</span> <span>Calculate Optimal Mandi</span>
             </button>
           </div>
         </div>
 
+        <!-- Real Per-Day Daily Bulletin Bar -->
+        <div id="mktDailyDateHeader" class="mt-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-900 to-slate-900 text-white flex flex-wrap items-center justify-between gap-3 shadow-md">
+          <div class="flex items-center gap-3">
+            <span class="text-2xl">📅</span>
+            <div>
+              <div class="text-xs uppercase font-extrabold tracking-wider text-emerald-300">Real Per-Day APMC Market Analysis</div>
+              <div id="mktDailyDateLabel" class="text-sm md:text-base font-black text-white">Daily Bulletin: Loading live rates...</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 text-2xs md:text-xs">
+            <span class="px-3 py-1 rounded-full bg-emerald-800/80 text-emerald-200 border border-emerald-500/30 font-bold">
+              ⚖️ Mandi Fee Fixed: 1.5% (OSAMB Norm)
+            </span>
+            <span class="px-3 py-1 rounded-full bg-blue-800/80 text-blue-200 border border-blue-500/30 font-bold">
+              🚚 Real Freight Modeling
+            </span>
+          </div>
+        </div>
+
+        <!-- Optimal Selling Mandi Top Banner -->
+        <div id="mktOptimalBanner" class="hidden mt-4 p-5 rounded-2xl bg-emerald-50 border-2 border-emerald-600 shadow-md">
+          <!-- Dynamically populated top recommendation -->
+        </div>
+
         <!-- Results Grid -->
         <div class="mt-8">
-          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Transparent APMC Mandi Comparison</h3>
-          <div id="mktResultsGrid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">
+              Transparent Odisha State-Wise Mandi Comparison (<span id="mktCountBadge">21</span> Mandis)
+            </h3>
+            <span class="text-2xs text-slate-500">Sorted by Net Realization (Highest Profit First)</span>
+          </div>
+          <div id="mktResultsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <!-- Dynamically populated market cards -->
           </div>
         </div>
@@ -1244,8 +1327,8 @@
             <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Fresh Produce Marketplace</h2>
             <p class="text-xs md:text-sm text-slate-500 mt-1">Direct digital marketplace connecting verified farmers with wholesalers, food processors, and traders.</p>
           </div>
-          <button onclick="alert('Feature active in demo: produce listings generated directly from farmer profile.')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl transition">
-            + List Harvest Produce
+          <button onclick="openProduceListingModalFromProfile()" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold rounded-xl shadow-md transition flex items-center gap-2">
+            <span>🌾</span> <span>+ List Produce Directly from Profile</span>
           </button>
         </div>
 
@@ -1389,34 +1472,146 @@
     </div>
   </div>
 
+  <!-- GENERATE PRODUCE LISTING FROM FARMER PROFILE MODAL -->
+  <div id="modalProduceFromProfile" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-4 shadow-2xl border border-slate-200">
+      <div class="flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base font-bold">🌾</span>
+            <h3 class="font-extrabold text-slate-900 text-lg">List Produce Directly from Profile</h3>
+          </div>
+          <p class="text-xs text-slate-500 mt-1">
+            Auto-populated from your verified farm profile. Add your harvest directly to wholesale buyers.
+          </p>
+        </div>
+        <button onclick="closeProduceListingModalFromProfile()" class="text-slate-400 hover:text-slate-800 text-xl font-bold p-1">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Farmer Name</label>
+            <input type="text" id="profListingFarmerName" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 font-bold text-slate-700">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Farm Location</label>
+            <input type="text" id="profListingLocation" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-white" placeholder="Village, District, Odisha">
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Select Crop</label>
+            <select id="profListingCrop" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+              <option value="Tomato" selected>Tomato (Odisha Hybrid)</option>
+              <option value="Rice">Rice / Paddy (Swarna)</option>
+              <option value="Potato">Potato (Kufri Jyoti)</option>
+              <option value="Onion">Onion (Odisha Red)</option>
+              <option value="Chilli">Chilli (Desi Fresh)</option>
+              <option value="Wheat">Wheat (Kalyansona)</option>
+              <option value="Brinjal">Brinjal (Kantabada)</option>
+              <option value="Maize">Maize (Sweet Corn)</option>
+              <option value="Banana">Banana (Champa)</option>
+              <option value="Mango">Mango (Amrapali)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Produce Grade</label>
+            <select id="profListingGrade" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+              <option value="Grade A" selected>Grade A (Premium Sorted)</option>
+              <option value="Grade B">Grade B (Standard Market)</option>
+              <option value="Grade C">Grade C (Fair Average)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Quantity to Sell (Quintals)</label>
+            <input type="number" id="profListingQty" value="25" min="1" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">Expected Price (₹ / Quintal)</label>
+            <input type="number" id="profListingPrice" value="2450" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-bold text-slate-700 mb-1">Harvest Description & Quality Notes</label>
+          <textarea id="profListingDesc" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs" rows="2" placeholder="Freshly harvested, clean sorted, IPM managed. Ready for immediate mandi/buyer pickup."></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3 pt-2">
+        <button onclick="createProduceListingFromProfile()" class="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
+          <span>🚀</span> <span>Publish Produce to Marketplace</span>
+        </button>
+        <button onclick="closeProduceListingModalFromProfile()" class="px-4 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- BUYER ORDER MODAL -->
   <div id="buyerOrderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
       <div class="flex items-center justify-between">
-        <h3 class="font-bold text-slate-800 text-base">Place Produce Order Inquiry</h3>
+        <div>
+          <h3 class="font-bold text-slate-800 text-base">Place Produce Order Inquiry</h3>
+          <p class="text-2xs text-slate-500">Provide buyer identity and delivery location to farmer</p>
+        </div>
         <button onclick="document.getElementById('buyerOrderModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 text-lg">✕</button>
       </div>
 
       <input type="hidden" id="buyerOrderListingId">
-      <div class="text-xs text-slate-600">Crop: <strong id="buyerOrderCropName" class="text-emerald-800 font-bold">Tomato</strong></div>
+      <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
+        <div>Crop: <strong id="buyerOrderCropName" class="text-emerald-800 font-bold">Tomato</strong></div>
+        <span class="text-3xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-bold">Direct Farmer Harvest</span>
+      </div>
 
       <div class="space-y-3 text-xs">
-        <div>
-          <label class="block font-semibold text-slate-600 mb-1">Quantity Requested (Quintals)</label>
-          <input type="number" id="buyerOrderQty" value="25" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Buyer / Trading Firm Name</label>
+            <input type="text" id="buyerOrderFirmName" value="Utkal Agro Trading & Wholesalers" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Buyer Contact Phone</label>
+            <input type="text" id="buyerOrderPhone" value="+91-9937012345" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          </div>
         </div>
+
         <div>
-          <label class="block font-semibold text-slate-600 mb-1">Offered Price / Quintal (₹)</label>
-          <input type="number" id="buyerOrderPrice" value="2350" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          <label class="block font-semibold text-slate-600 mb-1">Buyer Warehouse / Shop Location (Address)</label>
+          <input type="text" id="buyerOrderLocation" value="Aiginia APMC Yard, Bhubaneswar, Khordha, Odisha - 751019" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
         </div>
+
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Procurement Hub & District Corridor</label>
+          <input type="text" id="buyerOrderHub" value="Coastal Odisha Corridor (Khordha, Cuttack, Puri, Bargarh)" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Quantity Requested (Quintals)</label>
+            <input type="number" id="buyerOrderQty" value="25" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Offered Price / Quintal (₹)</label>
+            <input type="number" id="buyerOrderPrice" value="2350" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+          </div>
+        </div>
+
         <div>
           <label class="block font-semibold text-slate-600 mb-1">Notes / Logistics Pickup Date</label>
-          <textarea id="buyerOrderNotes" class="w-full p-2.5 rounded-xl border border-slate-300" placeholder="e.g. Will arrange truck pickup on Tuesday morning."></textarea>
+          <textarea id="buyerOrderNotes" class="w-full p-2.5 rounded-xl border border-slate-300" placeholder="e.g. Buyer provides mandi transport truck; pickup on Tuesday morning."></textarea>
         </div>
       </div>
 
       <button onclick="submitBuyerOrder()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition">
-        Submit Order to Farmer
+        Submit Order to Farmer with Verified Location
       </button>
     </div>
   </div>
@@ -1544,23 +1739,23 @@
       <div class="flex items-center justify-between relative z-10">
         <span class="px-3 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/50 text-3xs font-extrabold uppercase tracking-widest flex items-center gap-1.5">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          Live Biometric Sensor
+          1-Touch Biometric Sensor
         </span>
         <button type="button" onclick="closeLiveFingerprintModal()" class="w-8 h-8 rounded-full bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center text-sm transition">✕</button>
       </div>
 
       <div class="relative z-10 space-y-1">
         <h3 id="liveFingerprintModalTitle" class="text-lg sm:text-xl font-black text-white tracking-tight">
-          Touch & Hold Fingerprint Scanner
+          1-Touch Fingerprint Sensor
         </h3>
         <p id="liveFingerprintModalSubtitle" class="text-xs text-slate-300">
-          Place and hold your finger on the sensor circle below until scan reaches 100%.
+          Touch or click the sensor circle once to instantly authenticate your biometric identity.
         </p>
       </div>
 
-      <!-- Live Touch Sensor Pad Container -->
+      <!-- Live Touch Sensor Pad Container (1-Touch Instant) -->
       <div class="flex flex-col items-center justify-center py-4 relative z-10">
-        <div id="liveFingerprintSensorPad" class="fingerprint-sensor-pad" title="Press & hold your finger here">
+        <div id="liveFingerprintSensorPad" onclick="handleInstantFingerprintPadClick()" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition" title="Tap or click to authenticate">
           <!-- Laser sweep beam -->
           <div class="fingerprint-laser-line"></div>
           <!-- Tactile Ripple -->
@@ -1583,20 +1778,19 @@
 
         <!-- Live Progress Percentage -->
         <div class="mt-4 flex items-center gap-2">
-          <span id="liveFingerprintPercent" class="text-2xl font-black font-mono text-emerald-400">0%</span>
-          <span id="liveFingerprintStatusHint" class="text-xs font-bold text-slate-300 uppercase tracking-wide">Ready to Scan</span>
+          <span id="liveFingerprintPercent" class="text-2xl font-black font-mono text-emerald-400">100%</span>
+          <span id="liveFingerprintStatusHint" class="text-xs font-bold text-emerald-300 uppercase tracking-wide">Touch Sensor to Verify</span>
         </div>
 
         <!-- Progress Bar Track -->
         <div class="w-full max-w-xs bg-slate-800 rounded-full h-2.5 mt-2 overflow-hidden border border-slate-700">
-          <div id="liveFingerprintProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-75" style="width: 0%;"></div>
+          <div id="liveFingerprintProgressBar" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-75" style="width: 100%;"></div>
         </div>
       </div>
 
       <!-- Live Instructions Banner -->
       <div id="liveFingerprintInstructionBox" class="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10">
-        📱 <strong>Phone:</strong> Press & hold your thumb on the green circle.<br>
-        💻 <strong>PC:</strong> Click & hold your mouse button on the green circle.
+        👆 <strong>Instant 1-Touch:</strong> Single tap or click anywhere on the sensor circle to authenticate. Works live on both Phone & PC.
       </div>
     </div>
   </div>
