@@ -46,6 +46,8 @@ def get_consultation_queue(
         field = db.query(Field).first()
         if farmer and field:
             pred = DiseasePrediction(
+                farmer_id=farmer.id,
+                farm_id=field.farm_id if field else 1,
                 field_id=field.id,
                 crop="Tomato",
                 disease="Early Blight",
@@ -126,6 +128,8 @@ def submit_case_to_pathologist(
     if not pred_id:
         # Create a new DiseasePrediction record
         new_pred = DiseasePrediction(
+            farmer_id=farmer_id,
+            farm_id=field.farm_id if field else 1,
             field_id=field_id,
             crop=case_in.crop,
             disease=case_in.disease,
