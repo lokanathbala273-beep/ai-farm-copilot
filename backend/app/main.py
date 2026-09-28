@@ -78,7 +78,14 @@ app.mount("/locales", StaticFiles(directory=str(LOCALES_DIR)), name="locales")
 async def serve_index():
     index_file = STATIC_DIR / "index.html"
     if index_file.exists():
-        return FileResponse(str(index_file))
+        return FileResponse(
+            str(index_file),
+            headers={
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0"
+            }
+        )
     return {"message": "AI Farm Co-Pilot API is running", "docs": "/docs"}
 
 @app.get("/download/zip")

@@ -1,4 +1,5 @@
 import unittest
+import uuid
 from fastapi.testclient import TestClient
 from backend.app.main import app
 
@@ -7,9 +8,10 @@ class TestBiometricAuthentication(unittest.TestCase):
         self.client = TestClient(app)
 
     def test_farmer_fingerprint_single_user_isolation(self):
+        unique_email = f"farmer_fp_{uuid.uuid4().hex[:8]}@gmail.com"
         # 1. Register farmer with strictly 1 fingerprint
         reg_payload = {
-            "email": "farmer_fp_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "full_name": "Ramesh Pradhan",
             "phone_number": "+919861019999",
@@ -24,7 +26,7 @@ class TestBiometricAuthentication(unittest.TestCase):
 
         # 2. Login with the EXACT matching 1 registered fingerprint -> SUCCEEDS
         login_success = {
-            "email": "farmer_fp_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "biometric_token": "bio_farmer_fp_unique_key_ramesh_12345"
         }
@@ -34,7 +36,7 @@ class TestBiometricAuthentication(unittest.TestCase):
 
         # 3. Login with a DIFFERENT/unauthorized fingerprint -> BLOCKED (401)
         login_fail = {
-            "email": "farmer_fp_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "biometric_token": "bio_farmer_fp_attacker_different_fingerprint"
         }
@@ -44,7 +46,7 @@ class TestBiometricAuthentication(unittest.TestCase):
 
         # 4. Login with NO biometric token -> BLOCKED (401)
         login_no_bio = {
-            "email": "farmer_fp_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123"
         }
         res_no_bio = self.client.post("/api/auth/login", json=login_no_bio)
@@ -52,9 +54,10 @@ class TestBiometricAuthentication(unittest.TestCase):
         self.assertIn("biometric verification required", res_no_bio.json()["detail"].lower())
 
     def test_farmer_face_recognition_single_user_isolation(self):
+        unique_email = f"farmer_face_{uuid.uuid4().hex[:8]}@gmail.com"
         # 1. Register farmer with Face Scan only
         reg_payload = {
-            "email": "farmer_face_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "full_name": "Sita Devi",
             "phone_number": "+919861018888",
@@ -69,7 +72,7 @@ class TestBiometricAuthentication(unittest.TestCase):
 
         # 2. Login with EXACT matching registered face -> SUCCEEDS
         login_face_ok = {
-            "email": "farmer_face_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "face_token": "face_farmer_ai_unique_mesh_sita_67890"
         }
@@ -79,7 +82,7 @@ class TestBiometricAuthentication(unittest.TestCase):
 
         # 3. Login with DIFFERENT/unauthorized face -> BLOCKED (401)
         login_face_fail = {
-            "email": "farmer_face_test@gmail.com",
+            "email": unique_email,
             "password": "FarmerPassword123",
             "face_token": "face_unauthorized_stranger_face_rejected"
         }
