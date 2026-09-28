@@ -293,6 +293,7 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         role=role_enum,
         preferred_language=user_in.preferred_language or "en",
         biometric_token=user_in.biometric_token,
+        face_token=user_in.face_token,
         is_active=True
     )
     db.add(user)
@@ -420,36 +421,45 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
 
     # STRICT FARMER ISOLATION REQUIREMENT:
     # "one farmer log in cannot be use for other person without farmer finger print and email and name and password"
+    # "1 user ke liye uska face sirf not another face given ... 1 he finger print dena padega"
     if login_data.password:
         if not verify_password(login_data.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect password. Unauthorized access blocked. One farmer's portal cannot be used by another person."
             )
-    elif not login_data.biometric_token:
+    elif not login_data.biometric_token and not login_data.face_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Password or live fingerprint is required. Access blocked."
+            detail="Password, registered fingerprint, or registered face is required. Access blocked."
         )
 
-    # Enforce farmer live fingerprint verification:
-    if user.role == UserRole.FARMER and user.biometric_token:
-        if not login_data.biometric_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Farmer fingerprint input is required. Please touch the live fingerprint sensor on screen to verify your biometric identity."
-            )
+    # Enforce biometric verification for FARMER accounts:
+    if user.role == UserRole.FARMER:
+        has_enrolled_bio = bool(user.biometric_token or user.face_token)
+        if has_enrolled_bio:
+            if not login_data.biometric_token and not login_data.face_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Farmer biometric verification required (1 Registered Fingerprint or Face Scan). Please verify your identity."
+                )
 
-    # Biometric validation:
-    if user.biometric_token and login_data.biometric_token:
-        if login_data.biometric_token != user.biometric_token and not login_data.biometric_token.startswith("bio_"):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Biometric fingerprint mismatch! This fingerprint does not belong to this farmer. One farmer's login cannot be used by another person."
-            )
-    elif login_data.biometric_token and not user.biometric_token:
-        user.biometric_token = login_data.biometric_token
-        db.commit()
+            # STRICT FINGERPRINT CHECK: Only this farmer's 1 registered fingerprint allowed!
+            if login_data.biometric_token:
+                if not user.biometric_token or login_data.biometric_token != user.biometric_token:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Biometric fingerprint mismatch! Only this specific farmer's 1 registered fingerprint is authorized. Another fingerprint cannot be used."
+                    )
+
+            # STRICT FACE RECOGNITION CHECK: Only this farmer's registered face allowed!
+            if login_data.face_token:
+                if not user.face_token or login_data.face_token != user.face_token:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Face recognition mismatch! Only this specific farmer's registered face is authorized. Another face cannot open this portal."
+                    )
+
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is disabled.")
 

@@ -330,3 +330,17 @@ body {
   filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95)) brightness(1.2);
 }
 
+/* ============================================================== */
+/* LIVE FACE AUTHENTICATION SCANNER STYLES */
+/* ============================================================== */
+@keyframes faceLaserSweep {
+  0% { top: 10%; opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { top: 90%; opacity: 0.7; }
+}
+
+.face-scanning-active #faceLaserSweep {
+  animation: faceLaserSweep 1.5s ease-in-out infinite alternate;
+}
+
+

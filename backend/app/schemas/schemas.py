@@ -38,11 +38,14 @@ class UserRegister(BaseModel):
     farming_method: Optional[str] = "Integrated Farming"
     biometric_enrolled: Optional[bool] = False
     biometric_token: Optional[str] = None
+    face_enrolled: Optional[bool] = False
+    face_token: Optional[str] = None
 
 class UserLogin(BaseModel):
     email: str
     password: Optional[str] = None
     biometric_token: Optional[str] = None
+    face_token: Optional[str] = None
 
 class OtpSendRequest(BaseModel):
     phone: Optional[str] = None

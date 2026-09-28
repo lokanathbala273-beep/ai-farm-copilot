@@ -31,6 +31,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     preferred_language = Column(String(10), default="en")  # en, od, hi
     biometric_token = Column(String(255), nullable=True)
+    face_token = Column(Text, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships
