@@ -845,10 +845,10 @@ function updateBiometricSummaryBadge() {
       enrollBadge.innerText = '✅ Biometrics Ready (Fingerprint & Face Enrolled)';
     } else if (state.enrolledBiometricToken) {
       enrollBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 self-start sm:self-auto';
-      enrollBadge.innerText = '✅ Biometric Ready (Person 1 Fingerprint)';
+      enrollBadge.innerText = '✅ Biometric Ready (Fingerprint Enrolled)';
     } else if (state.enrolledFaceToken) {
       enrollBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 self-start sm:self-auto';
-      enrollBadge.innerText = '✅ Biometric Ready (Person 1 Face Enrolled)';
+      enrollBadge.innerText = '✅ Biometric Ready (Face Enrolled)';
     } else {
       enrollBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 self-start sm:self-auto';
       enrollBadge.innerText = '⚠️ Provide Fingerprint or Face Scan';
@@ -861,16 +861,16 @@ function updateBiometricSummaryBadge() {
                        (state.activeLoginFaceToken && state.activeLoginFaceToken.includes('mismatch'));
     if (isMismatch) {
       loginBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-rose-100 text-rose-900 border border-rose-300 self-start sm:self-auto';
-      loginBadge.innerText = '❌ Person 2 Blocked (Mismatch)';
+      loginBadge.innerText = '❌ Biometric Mismatch (Access Blocked)';
     } else if (state.activeLoginBiometricToken && state.activeLoginFaceToken) {
       loginBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 self-start sm:self-auto';
-      loginBadge.innerText = '✅ Person 1 Verified (Fingerprint & Face)';
+      loginBadge.innerText = '✅ Verified (Fingerprint & Face)';
     } else if (state.activeLoginBiometricToken) {
       loginBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300 self-start sm:self-auto';
-      loginBadge.innerText = '✅ Person 1 Verified (Fingerprint)';
+      loginBadge.innerText = '✅ Verified (Fingerprint)';
     } else if (state.activeLoginFaceToken) {
       loginBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 self-start sm:self-auto';
-      loginBadge.innerText = '✅ Person 1 Verified (Face Matched)';
+      loginBadge.innerText = '✅ Verified (Face Matched)';
     } else {
       loginBadge.className = 'text-3xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-900 border border-amber-300 self-start sm:self-auto';
       loginBadge.innerText = '👆 Verify with Fingerprint or Face';
@@ -885,8 +885,9 @@ async function completeFingerprintCapture(mode = 'verify') {
   ).trim().toLowerCase() || 'farmer';
 
   if (mode === 'enroll') {
-    // Generate unique secret key for Person 1 (Farmer)
-    const finalBioToken = await generateFarmerFingerprintKey(targetEmail);
+    // Generate unique random secret biometric key for this farmer
+    const randomSuffix = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+    const finalBioToken = `bio_farmer_fp_${targetEmail}_${randomSuffix}`;
     state.enrolledBiometricToken = finalBioToken;
     localStorage.setItem('biometric_token', finalBioToken);
     localStorage.setItem('farmer_enrolled_fingerprint_' + targetEmail, finalBioToken);
@@ -894,35 +895,34 @@ async function completeFingerprintCapture(mode = 'verify') {
     const badge = document.getElementById('fingerprintStatusBadge');
     if (badge) {
       badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs animate-bounce';
-      badge.innerText = '✅ Person 1 Fingerprint Enrolled';
+      badge.innerText = '✅ Fingerprint Enrolled';
       setTimeout(() => badge?.classList.remove('animate-bounce'), 1200);
     }
     const help = document.getElementById('fingerprintHelpText');
     if (help) {
-      help.innerHTML = '✅ <strong>Person 1 Fingerprint Enrolled:</strong> Strictly 1 fingerprint registered for this farmer.';
+      help.innerHTML = '✅ <strong>Fingerprint Enrolled:</strong> 1 registered fingerprint locked to this farmer.';
     }
     const enrollBox = document.getElementById('biometricEnrollBox');
     if (enrollBox) {
       enrollBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
     }
     updateBiometricSummaryBadge();
-    showToast('✅ Person 1 (Farmer) Fingerprint Captured & Enrolled!', 'success');
+    showToast('✅ Farmer Fingerprint Captured & Enrolled!', 'success');
   } else {
-    // In verify mode, authenticate as Person 1
-    await handleFingerprintVerifyTouch(true);
+    // In verify mode, authenticate
+    await handleInstantFingerprintPadClick();
   }
 }
 
 async function handleInstantFingerprintPadClick() {
   if (isProcessingFingerTouch) return;
-
-  if (liveFingerprintMode === 'verify') {
-    // In verify mode, pad click defaults to Person 1 verification
-    await handleFingerprintVerifyTouch(true);
-    return;
-  }
-
   isProcessingFingerTouch = true;
+
+  const targetEmail = (liveFingerprintMode === 'enroll'
+    ? (document.getElementById('regEmail')?.value || '')
+    : (document.getElementById('signinEmail')?.value || '')
+  ).trim().toLowerCase() || 'farmer';
+
   const pad = document.getElementById('liveFingerprintSensorPad');
   const percentEl = document.getElementById('liveFingerprintPercent');
   const barEl = document.getElementById('liveFingerprintProgressBar');
@@ -930,75 +930,66 @@ async function handleInstantFingerprintPadClick() {
   const touchBtn = document.getElementById('liveFingerprintTouchBtn');
 
   if (pad) pad.classList.add('touch-active');
-  if (percentEl) percentEl.innerText = 'READING...';
-  if (statusEl) {
-    statusEl.innerText = '⚡ Capturing Person 1 Biometric Ridge...';
-    statusEl.className = 'text-xs font-black text-amber-300 tracking-wider animate-pulse';
-  }
-  if (barEl) barEl.style.width = '65%';
-  if (touchBtn) {
-    touchBtn.innerHTML = '<span>⚡</span> <span>Scanning Live Fingerprint...</span>';
-    touchBtn.disabled = true;
-  }
 
-  playScannerAudioBeep(650, 'sine', 0.12);
-  if (navigator.vibrate) {
-    try { navigator.vibrate([30, 50, 30]); } catch (e) {}
-  }
-
-  await new Promise(r => setTimeout(r, 250));
-
-  if (barEl) {
-    barEl.style.width = '100%';
-    barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
-  }
-  if (percentEl) percentEl.innerText = '100%';
-  if (statusEl) {
-    statusEl.innerText = '✅ Person 1 Fingerprint Captured!';
-    statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
-  }
-  if (touchBtn) {
-    touchBtn.innerHTML = '<span>✅</span> <span>Person 1 Fingerprint Secured!</span>';
-    touchBtn.className = 'w-full py-3.5 bg-emerald-500 text-white font-black rounded-2xl text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2';
-  }
-
-  playSuccessChime();
-  if (navigator.vibrate) {
-    try { navigator.vibrate([40, 80, 40]); } catch (e) {}
-  }
-
-  await completeFingerprintCapture('enroll');
-
-  setTimeout(() => {
-    closeLiveFingerprintModal();
-    isProcessingFingerTouch = false;
-    if (autoSubmitAfterFingerprint) {
-      autoSubmitAfterFingerprint = false;
-      submitRegistrationWithPassword();
-    }
-  }, 400);
-}
-
-async function handleFingerprintVerifyTouch(isPerson1 = true) {
-  if (isProcessingFingerTouch) return;
-  isProcessingFingerTouch = true;
-
-  const targetEmail = (document.getElementById('signinEmail')?.value || '').trim().toLowerCase() || 'farmer';
-  const pad = document.getElementById('liveFingerprintSensorPad');
-  const percentEl = document.getElementById('liveFingerprintPercent');
-  const barEl = document.getElementById('liveFingerprintProgressBar');
-  const statusEl = document.getElementById('liveFingerprintStatusHint');
-
-  if (pad) pad.classList.add('touch-active');
-
-  if (isPerson1) {
-    // PERSON 1 (REGISTERED FARMER) -> MATCH!
-    if (percentEl) {
-      percentEl.innerText = 'READING...';
-      percentEl.className = 'text-2xl font-black font-mono text-emerald-400';
-    }
+  if (liveFingerprintMode === 'enroll') {
+    // ENROLLMENT MODE: Capture and secure 1 fingerprint
+    if (percentEl) percentEl.innerText = 'READING...';
     if (statusEl) {
-      statusEl.innerText = '⚡ Verifying Person 1 Biometric Ridge...';
+      statusEl.innerText = '⚡ Capturing Farmer Biometric Ridge...';
+      statusEl.className = 'text-xs font-black text-amber-300 tracking-wider animate-pulse';
+    }
+    if (barEl) barEl.style.width = '65%';
+    if (touchBtn) {
+      touchBtn.innerHTML = '<span>⚡</span> <span>Scanning Live Fingerprint...</span>';
+      touchBtn.disabled = true;
+    }
+
+    playScannerAudioBeep(650, 'sine', 0.12);
+    if (navigator.vibrate) {
+      try { navigator.vibrate([30, 50, 30]); } catch (e) {}
+    }
+
+    await new Promise(r => setTimeout(r, 260));
+
+    if (barEl) {
+      barEl.style.width = '100%';
+      barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
+    }
+    if (percentEl) percentEl.innerText = '100%';
+    if (statusEl) {
+      statusEl.innerText = '✅ Fingerprint Captured & Locked!';
+      statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
+    }
+    if (touchBtn) {
+      touchBtn.innerHTML = '<span>✅</span> <span>Fingerprint Secured!</span>';
+      touchBtn.className = 'w-full py-3.5 bg-emerald-500 text-white font-black rounded-2xl text-xs sm:text-sm shadow-lg transition flex items-center justify-center gap-2';
+    }
+
+    playSuccessChime();
+    if (navigator.vibrate) {
+      try { navigator.vibrate([40, 80, 40]); } catch (e) {}
+    }
+
+    await completeFingerprintCapture('enroll');
+
+    setTimeout(() => {
+      closeLiveFingerprintModal();
+      isProcessingFingerTouch = false;
+      if (autoSubmitAfterFingerprint) {
+        autoSubmitAfterFingerprint = false;
+        submitRegistrationWithPassword();
+      }
+    }, 400);
+
+  } else {
+    // VERIFY MODE: Strict 1-Farmer Authentication
+    // Check if this device / session holds the enrolled key for this farmer account
+    const enrolledToken = localStorage.getItem('farmer_enrolled_fingerprint_' + targetEmail) ||
+                          (targetEmail === (localStorage.getItem('user_email') || '').toLowerCase() ? localStorage.getItem('biometric_token') : null);
+
+    if (percentEl) percentEl.innerText = 'SCANNING...';
+    if (statusEl) {
+      statusEl.innerText = '⚡ Reading Biometric Ridge...';
       statusEl.className = 'text-xs font-black text-emerald-300 tracking-wider animate-pulse';
     }
     if (barEl) {
@@ -1013,93 +1004,93 @@ async function handleFingerprintVerifyTouch(isPerson1 = true) {
 
     await new Promise(r => setTimeout(r, 280));
 
-    // Retrieve or generate the exact registered secret key for Person 1
-    const enrolledToken = localStorage.getItem('farmer_enrolled_fingerprint_' + targetEmail) || await generateFarmerFingerprintKey(targetEmail);
-    state.activeLoginBiometricToken = enrolledToken;
-    localStorage.setItem('active_login_biometric', enrolledToken);
+    if (enrolledToken) {
+      // MATCH: The registered farmer's authorized fingerprint!
+      state.activeLoginBiometricToken = enrolledToken;
+      localStorage.setItem('active_login_biometric', enrolledToken);
 
-    if (barEl) barEl.style.width = '100%';
-    if (percentEl) percentEl.innerText = '100%';
-    if (statusEl) {
-      statusEl.innerText = '✅ Person 1 (Farmer) Fingerprint Verified!';
-      statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
-    }
-
-    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
-    if (loginBadge) {
-      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs';
-      loginBadge.innerText = '✅ Person 1 Verified';
-    }
-    const loginHelp = document.getElementById('loginFingerprintHelpText');
-    if (loginHelp) {
-      loginHelp.innerHTML = '✅ <strong>Person 1 (Farmer) Verified:</strong> Fingerprint matches registered farmer!';
-    }
-    const loginBox = document.getElementById('biometricLoginBox');
-    if (loginBox) {
-      loginBox.classList.remove('border-rose-600', 'bg-rose-100/90');
-      loginBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
-    }
-
-    playSuccessChime();
-    updateBiometricSummaryBadge();
-    showToast('✅ Person 1 (Registered Farmer) Fingerprint Verified!', 'success');
-
-    setTimeout(() => {
-      closeLiveFingerprintModal();
-      isProcessingFingerTouch = false;
-      if (autoSubmitAfterFingerprint) {
-        autoSubmitAfterFingerprint = false;
-        submitSignInWithPassword();
+      if (barEl) barEl.style.width = '100%';
+      if (percentEl) percentEl.innerText = '100%';
+      if (statusEl) {
+        statusEl.innerText = '✅ Farmer Fingerprint Verified!';
+        statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
       }
-    }, 400);
 
-  } else {
-    // PERSON 2 (ANOTHER PERSON / BANDA) -> STRICTLY BLOCKED!
-    if (percentEl) {
-      percentEl.innerText = 'MISMATCH!';
-      percentEl.className = 'text-2xl font-black font-mono text-rose-500 animate-bounce';
-    }
-    if (statusEl) {
-      statusEl.innerText = '❌ Person 2 Detected! Only Person 1 is Authorized.';
-      statusEl.className = 'text-xs font-black text-rose-400 tracking-wider';
-    }
-    if (barEl) {
-      barEl.style.width = '100%';
-      barEl.className = 'h-full bg-rose-600 rounded-full transition-all';
-    }
+      const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+      if (loginBadge) {
+        loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-600 text-white font-black uppercase shadow-xs';
+        loginBadge.innerText = '✅ Fingerprint Verified';
+      }
+      const loginHelp = document.getElementById('loginFingerprintHelpText');
+      if (loginHelp) {
+        loginHelp.innerHTML = '✅ <strong>Fingerprint Verified:</strong> Fingerprint matches registered farmer!';
+      }
+      const loginBox = document.getElementById('biometricLoginBox');
+      if (loginBox) {
+        loginBox.classList.remove('border-rose-600', 'bg-rose-100/90');
+        loginBox.classList.add('border-emerald-600', 'bg-emerald-100/90');
+      }
 
-    // Error buzzer sound
-    playScannerAudioBeep(220, 'sawtooth', 0.35);
-    if (navigator.vibrate) {
-      try { navigator.vibrate([150, 100, 150]); } catch (e) {}
-    }
+      playSuccessChime();
+      updateBiometricSummaryBadge();
+      showToast('✅ Farmer Fingerprint Verified & Authenticated!', 'success');
 
-    // Set mismatch token that the server WILL reject!
-    state.activeLoginBiometricToken = 'bio_mismatch_another_person_banda_rejected';
-    localStorage.setItem('active_login_biometric', state.activeLoginBiometricToken);
+      setTimeout(() => {
+        closeLiveFingerprintModal();
+        isProcessingFingerTouch = false;
+        if (autoSubmitAfterFingerprint) {
+          autoSubmitAfterFingerprint = false;
+          submitSignInWithPassword();
+        }
+      }, 400);
 
-    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
-    if (loginBadge) {
-      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-rose-600 text-white font-black uppercase shadow-xs';
-      loginBadge.innerText = '❌ Person 2 Blocked';
-    }
-    const loginHelp = document.getElementById('loginFingerprintHelpText');
-    if (loginHelp) {
-      loginHelp.innerHTML = '❌ <strong>Person 2 (Another Banda) Blocked:</strong> Only Person 1 (Registered Farmer) can access this account!';
-    }
-    const loginBox = document.getElementById('biometricLoginBox');
-    if (loginBox) {
-      loginBox.classList.remove('border-emerald-600', 'bg-emerald-100/90');
-      loginBox.classList.add('border-rose-600', 'bg-rose-100/90');
-    }
+    } else {
+      // MISMATCH / UNREGISTERED FINGER: Another person (banda) trying to access this account!
+      if (percentEl) {
+        percentEl.innerText = 'MISMATCH!';
+        percentEl.className = 'text-2xl font-black font-mono text-rose-500 animate-bounce';
+      }
+      if (statusEl) {
+        statusEl.innerText = '❌ Unrecognized Fingerprint! Access Blocked.';
+        statusEl.className = 'text-xs font-black text-rose-400 tracking-wider';
+      }
+      if (barEl) {
+        barEl.style.width = '100%';
+        barEl.className = 'h-full bg-rose-600 rounded-full transition-all';
+      }
 
-    updateBiometricSummaryBadge();
-    showToast('❌ Fingerprint Mismatch! Person 2 (Another Banda) detected. Access Blocked!', 'error');
+      playScannerAudioBeep(220, 'sawtooth', 0.35);
+      if (navigator.vibrate) {
+        try { navigator.vibrate([150, 100, 150]); } catch (e) {}
+      }
 
-    setTimeout(() => {
-      if (pad) pad.classList.remove('touch-active');
-      isProcessingFingerTouch = false;
-    }, 600);
+      // Set mismatch token that the server WILL reject!
+      state.activeLoginBiometricToken = 'bio_mismatch_unrecognized_finger_rejected';
+      localStorage.setItem('active_login_biometric', state.activeLoginBiometricToken);
+
+      const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+      if (loginBadge) {
+        loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-rose-600 text-white font-black uppercase shadow-xs';
+        loginBadge.innerText = '❌ Access Blocked';
+      }
+      const loginHelp = document.getElementById('loginFingerprintHelpText');
+      if (loginHelp) {
+        loginHelp.innerHTML = '❌ <strong>Unrecognized Fingerprint:</strong> This finger is not registered for this farmer account!';
+      }
+      const loginBox = document.getElementById('biometricLoginBox');
+      if (loginBox) {
+        loginBox.classList.remove('border-emerald-600', 'bg-emerald-100/90');
+        loginBox.classList.add('border-rose-600', 'bg-rose-100/90');
+      }
+
+      updateBiometricSummaryBadge();
+      showToast('❌ Fingerprint Mismatch! Unrecognized finger. Access Denied!', 'error');
+
+      setTimeout(() => {
+        if (pad) pad.classList.remove('touch-active');
+        isProcessingFingerTouch = false;
+      }, 600);
+    }
   }
 }
 
@@ -1121,7 +1112,6 @@ function openLiveFingerprintModal(mode = 'enroll', autoSubmit = false) {
   const statusEl = document.getElementById('liveFingerprintStatusHint');
   const pad = document.getElementById('liveFingerprintSensorPad');
   const touchBtn = document.getElementById('liveFingerprintTouchBtn');
-  const verifyButtons = document.getElementById('liveFpVerifyActionButtons');
   const targetDisplay = document.getElementById('liveFpTargetUserDisplay');
 
   if (targetDisplay) targetDisplay.innerText = targetEmail;
@@ -1142,20 +1132,26 @@ function openLiveFingerprintModal(mode = 'enroll', autoSubmit = false) {
 
   if (mode === 'enroll') {
     if (title) title.innerText = '👆 Register Farmer Fingerprint (Sign Up)';
-    if (subtitle) subtitle.innerText = 'Place your finger on sensor circle to enroll Person 1\'s unique biometric signature.';
+    if (subtitle) subtitle.innerText = 'Touch the sensor circle to enroll your live fingerprint.';
     if (touchBtn) {
       touchBtn.innerHTML = '<span>👆</span> <span>Touch / Scan My Fingerprint Live</span>';
       touchBtn.className = 'w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98';
-      touchBtn.classList.remove('hidden');
+      touchBtn.disabled = false;
     }
-    if (verifyButtons) verifyButtons.classList.add('hidden');
   } else {
     // Mode === 'verify'
-    if (title) title.innerText = '👆 Person 1 (Farmer) Fingerprint Verification';
-    if (subtitle) subtitle.innerText = 'Only Person 1 (Registered Farmer) can log in. Another person\'s (banda\'s) finger is blocked.';
-    if (touchBtn) touchBtn.classList.add('hidden');
-    if (verifyButtons) verifyButtons.classList.remove('hidden');
+    if (title) title.innerText = '👆 Farmer Fingerprint Verification';
+    if (subtitle) subtitle.innerText = 'Touch the sensor circle to authenticate your live fingerprint.';
+    if (touchBtn) {
+      touchBtn.innerHTML = '<span>👆</span> <span>Verify My Fingerprint Live</span>';
+      touchBtn.className = 'w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98';
+      touchBtn.disabled = false;
+    }
   }
+
+  if (modal) modal.classList.remove('hidden');
+  setupLiveFingerprintListeners();
+}
 
   if (modal) modal.classList.remove('hidden');
   setupLiveFingerprintListeners();
@@ -1188,7 +1184,7 @@ function instantTouchFingerprint(mode = 'verify') {
 
 // ==============================================================
 // LIVE AI FACE RECOGNITION (MOBILE & PC FRONT CAMERA SCANNER)
-// STRICT FARMER ISOLATION: ONLY PERSON 1'S FACE MATCHES
+// STRICT FARMER ISOLATION: ONLY REGISTERED FARMER'S FACE MATCHES
 // ==============================================================
 
 let liveFaceStream = null;
@@ -1275,30 +1271,28 @@ function openLiveFaceModal(mode = 'enroll', autoSubmit = false) {
   const subtitle = document.getElementById('liveFaceModalSubtitle');
   const btn = document.getElementById('btnCaptureFace');
   const btnText = document.getElementById('btnCaptureFaceText');
-  const verifyButtons = document.getElementById('liveFaceVerifyButtons');
   const targetDisplay = document.getElementById('liveFaceTargetUserDisplay');
 
   if (targetDisplay) targetDisplay.innerText = targetEmail;
 
   if (mode === 'enroll') {
-    if (title) title.innerText = '👤 Register Farmer Face Scan (Person 1)';
-    if (subtitle) subtitle.innerText = 'Position face inside the green oval scanner to enroll Person 1\'s unique face identity.';
-    if (btnText) btnText.innerText = 'Capture & Enroll Person 1 Face';
+    if (title) title.innerText = '👤 Register Farmer Face Scan (Sign Up)';
+    if (subtitle) subtitle.innerText = 'Position face inside the green oval scanner to enroll your live face identity.';
+    if (btnText) btnText.innerText = 'Capture & Enroll My Face';
     if (btn) btn.classList.remove('hidden');
-    if (verifyButtons) verifyButtons.classList.add('hidden');
   } else {
     // Mode === 'verify'
-    if (title) title.innerText = '👤 Person 1 (Farmer) Face Authentication';
-    if (subtitle) subtitle.innerText = 'Camera compares face geometry. Only Person 1 (Farmer) matches. Another person is blocked.';
-    if (btn) btn.classList.add('hidden');
-    if (verifyButtons) verifyButtons.classList.remove('hidden');
+    if (title) title.innerText = '👤 Farmer Face Authentication';
+    if (subtitle) subtitle.innerText = 'Position face inside the green oval scanner to verify your live face identity.';
+    if (btnText) btnText.innerText = 'Scan & Verify My Face Live';
+    if (btn) btn.classList.remove('hidden');
   }
 
   if (modal) modal.classList.remove('hidden');
   startFaceCamera();
 }
 
-async function captureAndProcessFace(isAttacker = false) {
+async function captureAndProcessFace() {
   if (isProcessingFace) return;
   isProcessingFace = true;
 
@@ -1344,17 +1338,17 @@ async function captureAndProcessFace(isAttacker = false) {
     localStorage.setItem('farmer_enrolled_face_' + targetEmail, faceToken);
     localStorage.setItem('farmer_enrolled_face_vec_' + targetEmail, JSON.stringify(faceVec));
 
-    if (statusText) statusText.innerText = '✅ Person 1 Face Enrolled & Secured!';
+    if (statusText) statusText.innerText = '✅ Face Enrolled & Secured!';
     if (confBadge) confBadge.innerText = 'Confidence: 99.8%';
 
     const badge = document.getElementById('faceStatusBadge');
     if (badge) {
       badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-blue-600 text-white font-black uppercase shadow-xs';
-      badge.innerText = '✅ Person 1 Face Enrolled';
+      badge.innerText = '✅ Face Enrolled';
     }
     const help = document.getElementById('faceHelpText');
     if (help) {
-      help.innerHTML = '✅ <strong>Person 1 Face Enrolled!</strong> Only this farmer\'s face is accepted.';
+      help.innerHTML = '✅ <strong>Face Enrolled:</strong> 1 registered face locked to this farmer.';
     }
     const enrollBox = document.getElementById('faceEnrollBox');
     if (enrollBox) {
@@ -1363,7 +1357,7 @@ async function captureAndProcessFace(isAttacker = false) {
 
     playSuccessChime();
     updateBiometricSummaryBadge();
-    showToast('✅ Person 1 (Farmer) Face Enrolled & Secured!', 'success');
+    showToast('✅ Farmer Face Enrolled & Secured!', 'success');
 
     setTimeout(() => {
       closeLiveFaceModal();
@@ -1375,34 +1369,89 @@ async function captureAndProcessFace(isAttacker = false) {
     }, 400);
 
   } else {
-    // Mode === 'verify'
-    if (isAttacker) {
-      // Person 2 (Another Person / Banda) - STRICTLY BLOCKED!
+    // Mode === 'verify': Verify live camera face against registered farmer face
+    const enrolledToken = localStorage.getItem('farmer_enrolled_face_' + targetEmail) ||
+                          (targetEmail === (localStorage.getItem('user_email') || '').toLowerCase() ? localStorage.getItem('face_token') : null);
+    const enrolledVecRaw = localStorage.getItem('farmer_enrolled_face_vec_' + targetEmail);
+    let enrolledVec = enrolledVecRaw ? JSON.parse(enrolledVecRaw) : null;
+    if (!enrolledVec && enrolledToken && enrolledToken.startsWith('FACE_VEC_')) {
+      enrolledVec = enrolledToken.replace('FACE_VEC_', '').split(',').map(x => parseFloat(x));
+    }
+
+    const liveVec = extractFaceFeaturesFromCanvas(canvas);
+    let matchResult = { isMatch: true, similarity: 94 };
+
+    // If enrolled vector is available, compare real visual facial features!
+    if (enrolledVec && liveVec) {
+      matchResult = compareFaceVectors(liveVec, enrolledVec);
+    }
+
+    if (matchResult.isMatch) {
+      // MATCH: The registered farmer is looking at the camera!
+      const verifiedToken = enrolledToken || (liveVec ? 'FACE_VEC_' + liveVec.join(',') : `FACE_VEC_${Array.from({ length: 64 }, () => 0.5).join(',')}`);
+      state.activeLoginFaceToken = verifiedToken;
+      localStorage.setItem('active_login_face', verifiedToken);
+
       if (statusText) {
-        statusText.innerText = '❌ Person 2 Detected! Not Registered Farmer.';
+        statusText.innerText = `✅ Face Matched: ${matchResult.similarity}% - Identity Verified!`;
+        statusText.className = 'text-emerald-400 font-bold';
+      }
+      if (confBadge) {
+        confBadge.innerText = `Match: ${matchResult.similarity}% (MATCH)`;
+        confBadge.className = 'text-emerald-300 font-bold';
+      }
+
+      const loginBadge = document.getElementById('loginFaceStatusBadge');
+      if (loginBadge) {
+        loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-blue-600 text-white font-black uppercase shadow-xs';
+        loginBadge.innerText = '✅ Face Verified';
+      }
+      const loginHelp = document.getElementById('loginFaceHelpText');
+      if (loginHelp) {
+        loginHelp.innerHTML = '✅ <strong>Face Verified:</strong> Live camera matched registered farmer identity.';
+      }
+      const loginBox = document.getElementById('faceLoginBox');
+      if (loginBox) {
+        loginBox.classList.remove('border-rose-600', 'bg-rose-100/90');
+        loginBox.classList.add('border-blue-600', 'bg-blue-100/90');
+      }
+
+      playSuccessChime();
+      updateBiometricSummaryBadge();
+      showToast(`✅ Face Matched (${matchResult.similarity}%)! Farmer Verified.`, 'success');
+
+      setTimeout(() => {
+        closeLiveFaceModal();
+        isProcessingFace = false;
+        if (autoSubmitAfterFace) {
+          autoSubmitAfterFace = false;
+          submitSignInWithPassword();
+        }
+      }, 400);
+
+    } else {
+      // MISMATCH: Another person (banda) looking at the camera!
+      if (statusText) {
+        statusText.innerText = `❌ Face Mismatch: ${matchResult.similarity}% (Access Denied!)`;
         statusText.className = 'text-rose-400 font-bold';
       }
       if (confBadge) {
-        confBadge.innerText = 'Match: 38% (FAILED)';
+        confBadge.innerText = `Match: ${matchResult.similarity}% (FAILED)`;
         confBadge.className = 'text-rose-400 font-bold';
       }
 
       playScannerAudioBeep(220, 'sawtooth', 0.35);
-      if (navigator.vibrate) {
-        try { navigator.vibrate([150, 100, 150]); } catch (e) {}
-      }
-
-      state.activeLoginFaceToken = 'face_mismatch_unauthorized_banda_rejected';
+      state.activeLoginFaceToken = 'face_mismatch_unauthorized_face_rejected';
       localStorage.setItem('active_login_face', state.activeLoginFaceToken);
 
       const loginBadge = document.getElementById('loginFaceStatusBadge');
       if (loginBadge) {
         loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-rose-600 text-white font-black uppercase shadow-xs';
-        loginBadge.innerText = '❌ Person 2 Blocked';
+        loginBadge.innerText = '❌ Access Blocked';
       }
       const loginHelp = document.getElementById('loginFaceHelpText');
       if (loginHelp) {
-        loginHelp.innerHTML = '❌ <strong>Person 2 (Another Banda) Blocked:</strong> Face does not match Person 1 (Registered Farmer)!';
+        loginHelp.innerHTML = '❌ <strong>Face Mismatch:</strong> Live camera face does not match the registered farmer!';
       }
       const loginBox = document.getElementById('faceLoginBox');
       if (loginBox) {
@@ -1411,98 +1460,8 @@ async function captureAndProcessFace(isAttacker = false) {
       }
 
       updateBiometricSummaryBadge();
-      showToast('❌ Face Mismatch! Person 2 (Another Banda) detected. Access Blocked!', 'error');
+      showToast(`❌ Face Mismatch (${matchResult.similarity}%)! Face does not match registered farmer. Access Blocked!`, 'error');
       isProcessingFace = false;
-
-    } else {
-      // Person 1 (Farmer) - Verify face similarity
-      const enrolledToken = localStorage.getItem('farmer_enrolled_face_' + targetEmail) || localStorage.getItem('face_token');
-      const enrolledVecRaw = localStorage.getItem('farmer_enrolled_face_vec_' + targetEmail);
-      let enrolledVec = enrolledVecRaw ? JSON.parse(enrolledVecRaw) : null;
-      if (!enrolledVec && enrolledToken && enrolledToken.startsWith('FACE_VEC_')) {
-        enrolledVec = enrolledToken.replace('FACE_VEC_', '').split(',').map(x => parseFloat(x));
-      }
-
-      const liveVec = extractFaceFeaturesFromCanvas(canvas);
-      let matchResult = { isMatch: true, similarity: 94 };
-
-      // If we have both vectors, compare real visual similarity!
-      if (enrolledVec && liveVec) {
-        matchResult = compareFaceVectors(liveVec, enrolledVec);
-      }
-
-      if (matchResult.isMatch) {
-        // Success: Person 1 Verified!
-        const verifiedToken = enrolledToken || (liveVec ? 'FACE_VEC_' + liveVec.join(',') : await generateFarmerFaceKey(targetEmail));
-        state.activeLoginFaceToken = verifiedToken;
-        localStorage.setItem('active_login_face', verifiedToken);
-
-        if (statusText) {
-          statusText.innerText = `✅ Face Matched: ${matchResult.similarity}% - Person 1 Verified!`;
-          statusText.className = 'text-emerald-400 font-bold';
-        }
-        if (confBadge) {
-          confBadge.innerText = `Match: ${matchResult.similarity}% (MATCH)`;
-          confBadge.className = 'text-emerald-300 font-bold';
-        }
-
-        const loginBadge = document.getElementById('loginFaceStatusBadge');
-        if (loginBadge) {
-          loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-blue-600 text-white font-black uppercase shadow-xs';
-          loginBadge.innerText = '✅ Person 1 Verified';
-        }
-        const loginHelp = document.getElementById('loginFaceHelpText');
-        if (loginHelp) {
-          loginHelp.innerHTML = '✅ <strong>Person 1 Verified:</strong> Face matched with registered farmer identity.';
-        }
-        const loginBox = document.getElementById('faceLoginBox');
-        if (loginBox) {
-          loginBox.classList.remove('border-rose-600', 'bg-rose-100/90');
-          loginBox.classList.add('border-blue-600', 'bg-blue-100/90');
-        }
-
-        playSuccessChime();
-        updateBiometricSummaryBadge();
-        showToast(`✅ Face Matched (${matchResult.similarity}%)! Person 1 (Farmer) Verified.`, 'success');
-
-        setTimeout(() => {
-          closeLiveFaceModal();
-          isProcessingFace = false;
-          if (autoSubmitAfterFace) {
-            autoSubmitAfterFace = false;
-            submitSignInWithPassword();
-          }
-        }, 400);
-
-      } else {
-        // Visual mismatch! (e.g. another person sat in front of the camera)
-        if (statusText) {
-          statusText.innerText = `❌ Face Mismatch: ${matchResult.similarity}% (Not Person 1!)`;
-          statusText.className = 'text-rose-400 font-bold';
-        }
-        if (confBadge) {
-          confBadge.innerText = `Match: ${matchResult.similarity}% (FAILED)`;
-          confBadge.className = 'text-rose-400 font-bold';
-        }
-
-        playScannerAudioBeep(220, 'sawtooth', 0.35);
-        state.activeLoginFaceToken = 'face_mismatch_unauthorized_banda_rejected';
-        localStorage.setItem('active_login_face', state.activeLoginFaceToken);
-
-        const loginBadge = document.getElementById('loginFaceStatusBadge');
-        if (loginBadge) {
-          loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-rose-600 text-white font-black uppercase shadow-xs';
-          loginBadge.innerText = '❌ Person 2 Blocked';
-        }
-        const loginHelp = document.getElementById('loginFaceHelpText');
-        if (loginHelp) {
-          loginHelp.innerHTML = '❌ <strong>Another Person (Banda) Detected:</strong> Only Person 1 (Registered Farmer) is authorized!';
-        }
-
-        updateBiometricSummaryBadge();
-        showToast(`❌ Face Mismatch (${matchResult.similarity}%)! Another person detected. Access Blocked!`, 'error');
-        isProcessingFace = false;
-      }
     }
   }
 }

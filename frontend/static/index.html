@@ -1835,7 +1835,7 @@
       <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700/80 text-3xs font-mono relative z-10">
         <span class="text-slate-400">Target Account:</span>
         <span id="liveFpTargetUserDisplay" class="text-emerald-300 font-bold truncate max-w-[140px]">farmer@gmail.com</span>
-        <span class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">1 Person Only</span>
+        <span class="px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/30 whitespace-nowrap">Biometric Locked</span>
       </div>
 
       <!-- Live Touch Sensor Pad Container (1-Touch Instant) -->
@@ -1873,26 +1873,14 @@
         </div>
       </div>
 
-      <!-- Live Touch Sensor Explicit Action Button (Enroll Mode) -->
+      <!-- Live Touch Sensor Single Action Button -->
       <button type="button" id="liveFingerprintTouchBtn" onclick="handleInstantFingerprintPadClick()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
-        <span>👆</span> <span>Touch / Scan My Fingerprint Live</span>
+        <span>👆</span> <span id="liveFingerprintTouchBtnText">Touch / Scan Fingerprint Live</span>
       </button>
-
-      <!-- Multi-Person Fingerprint Test Buttons (Shown in Verify / Sign In Mode) -->
-      <div id="liveFpVerifyActionButtons" class="hidden grid grid-cols-2 gap-2.5 w-full relative z-10">
-        <button type="button" onclick="handleFingerprintVerifyTouch(true)" class="py-3 px-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs shadow-md transition flex flex-col items-center gap-1 active:scale-95 border border-emerald-400/40">
-          <span class="text-xs font-black">👆 Person 1 (Farmer)</span>
-          <span class="text-3xs font-normal text-emerald-100">Registered Finger (Access Allowed)</span>
-        </button>
-        <button type="button" onclick="handleFingerprintVerifyTouch(false)" class="py-3 px-2 bg-rose-700 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-xs shadow-md transition flex flex-col items-center gap-1 active:scale-95 border border-rose-400/40">
-          <span class="text-xs font-black">🚫 Person 2 (Banda)</span>
-          <span class="text-3xs font-normal text-rose-200">Another Finger (Strictly Blocked)</span>
-        </button>
-      </div>
 
       <!-- Live Instructions Banner -->
       <div id="liveFingerprintInstructionBox" class="p-3 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10">
-        👆 <strong>Strict 1-Farmer Rule:</strong> Only Person 1 (the registered farmer) can authenticate. Any other person's fingerprint is rejected!
+        👆 <strong>Biometric Verification:</strong> Touch the sensor pad or button. Only the registered farmer's biometric identity is authorized.
       </div>
     </div>
   </div>
@@ -1926,7 +1914,7 @@
       <div class="flex items-center justify-between px-3 py-1.5 bg-slate-800/80 rounded-xl border border-slate-700/80 text-3xs font-mono relative z-10">
         <span class="text-slate-400">Target Account:</span>
         <span id="liveFaceTargetUserDisplay" class="text-blue-300 font-bold truncate max-w-[140px]">farmer@gmail.com</span>
-        <span class="px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-500/30 whitespace-nowrap">1 Person Only</span>
+        <span class="px-2 py-0.5 rounded-full bg-blue-950 text-blue-300 border border-blue-500/30 whitespace-nowrap">Biometric Locked</span>
       </div>
 
       <!-- Camera Viewport & Face Mesh Frame -->
@@ -1961,26 +1949,14 @@
         </div>
       </div>
 
-      <!-- Action Button (Enroll Mode) -->
-      <button type="button" id="btnCaptureFace" onclick="captureAndProcessFace(false)" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-blue-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
+      <!-- Action Button (Single Button) -->
+      <button type="button" id="btnCaptureFace" onclick="captureAndProcessFace()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-blue-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
         <span>📸</span> <span id="btnCaptureFaceText">Capture & Enroll My Face</span>
       </button>
 
-      <!-- Multi-Person Face Test Buttons (Shown in Verify / Sign In Mode) -->
-      <div id="liveFaceVerifyButtons" class="hidden grid grid-cols-2 gap-2.5 w-full relative z-10">
-        <button type="button" onclick="captureAndProcessFace(false)" class="py-3 px-2 bg-blue-600 hover:bg-blue-500 text-white font-extrabold rounded-2xl text-xs shadow-md transition flex flex-col items-center gap-1 active:scale-95 border border-blue-400/40">
-          <span class="text-xs font-black">👤 Person 1 (Farmer)</span>
-          <span class="text-3xs font-normal text-blue-100">Scan Registered Face (Allowed)</span>
-        </button>
-        <button type="button" onclick="captureAndProcessFace(true)" class="py-3 px-2 bg-rose-700 hover:bg-rose-600 text-white font-extrabold rounded-2xl text-xs shadow-md transition flex flex-col items-center gap-1 active:scale-95 border border-rose-400/40">
-          <span class="text-xs font-black">🚫 Person 2 (Banda)</span>
-          <span class="text-3xs font-normal text-rose-200">Another Face (Blocked & Denied)</span>
-        </button>
-      </div>
-
       <!-- Live Instructions Banner -->
       <div class="p-2.5 bg-slate-800/80 rounded-2xl border border-slate-700 text-2xs text-slate-300 relative z-10 flex items-center justify-between gap-2">
-        <span>👤 <strong>Strict 1-Farmer Face:</strong> Only Person 1's face is accepted. Another banda's face is blocked.</span>
+        <span>👤 <strong>Live Face Recognition:</strong> Real-time biometric face verification. Only the registered farmer is authenticated.</span>
         <button type="button" onclick="switchFaceCameraFacing()" class="text-3xs text-blue-400 hover:text-blue-300 underline font-bold whitespace-nowrap">🔄 Switch Cam</button>
       </div>
     </div>

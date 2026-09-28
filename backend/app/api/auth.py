@@ -454,7 +454,7 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
                 ):
                     raise HTTPException(
                         status_code=status.HTTP_401_UNAUTHORIZED,
-                        detail="Biometric fingerprint mismatch! Only this specific farmer's 1 registered fingerprint is authorized. Another person's (banda's) fingerprint cannot be used."
+                        detail="Biometric fingerprint mismatch! Only this specific farmer's registered fingerprint is authorized. Another person's fingerprint cannot be used."
                     )
 
             # STRICT FACE RECOGNITION CHECK: Only this farmer's registered face allowed!
@@ -474,7 +474,7 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
                             if mae > 0.16:  # Visual difference too high = different person
                                 raise HTTPException(
                                     status_code=status.HTTP_401_UNAUTHORIZED,
-                                    detail=f"Face recognition mismatch (distance: {mae:.2f})! This face does not match the registered farmer. Another person (banda) cannot open this portal."
+                                    detail=f"Face recognition mismatch (distance: {mae:.2f})! This face does not match the registered farmer. Another person cannot open this portal."
                                 )
                     except HTTPException:
                         raise
