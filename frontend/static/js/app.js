@@ -1153,10 +1153,6 @@ function openLiveFingerprintModal(mode = 'enroll', autoSubmit = false) {
   setupLiveFingerprintListeners();
 }
 
-  if (modal) modal.classList.remove('hidden');
-  setupLiveFingerprintListeners();
-}
-
 function closeLiveFingerprintModal() {
   const modal = document.getElementById('liveFingerprintModal');
   if (modal) modal.classList.add('hidden');
