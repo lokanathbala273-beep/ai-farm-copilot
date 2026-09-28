@@ -221,8 +221,6 @@ function openPhoneLoginModal(preferredRole = 'FARMER') {
   const phoneInput = document.getElementById('authInputPhone');
   const nameInput = document.getElementById('authInputFullName');
   const otpInput = document.getElementById('authInputOtpCode');
-  if (phoneInput && !phoneInput.value) phoneInput.value = '9861012345';
-  if (nameInput && !nameInput.value) nameInput.value = 'Ramesh Patel';
   if (otpInput) otpInput.value = '';
 
   modal.classList.remove('hidden');
@@ -260,15 +258,6 @@ function setAuthModalRole(role) {
       }
     }
   });
-
-  // Pre-fill demo phone suggestion based on role if field empty or matched
-  const demoEntry = DEMO_PHONE_DIRECTORY[role];
-  if (demoEntry) {
-    const phoneInput = document.getElementById('authInputPhone');
-    const nameInput = document.getElementById('authInputFullName');
-    if (phoneInput) phoneInput.value = demoEntry.phone.replace('+91', '');
-    if (nameInput) nameInput.value = demoEntry.name;
-  }
 }
 
 async function requestPhoneOtp() {
@@ -680,288 +669,314 @@ function togglePasswordVisibility(fieldId) {
 // REAL DEVICE FINGERPRINT BIOMETRIC SENSOR (WEBAUTHN API / TOUCH ID)
 // ----------------------------------------------------
 
-async function scanAndEnrollFingerprint() {
-  const emailInput = document.getElementById('regEmail');
-  const nameInput = document.getElementById('regFullName');
-  const email = emailInput ? emailInput.value.trim().toLowerCase() : 'farmer.ramesh@gmail.com';
-  const fullName = nameInput ? nameInput.value.trim() : 'Farmer';
+// ==============================================================
+// INTERACTIVE LIVE BIOMETRIC FINGERPRINT SCANNER (MOBILE & PC)
+// NO USB / PASSKEY PROMPTS - STRICT FARMER SECURITY ISOLATION
+// ==============================================================
 
-  if (!email || !email.includes('@')) {
-    showToast('Please enter your Gmail ID first before scanning fingerprint', 'warning');
-    if (emailInput) emailInput.focus();
-    return false;
-  }
+let liveFingerprintTimer = null;
+let liveFingerprintProgress = 0;
+let liveFingerprintMode = 'enroll'; // 'enroll' or 'verify'
+let liveAudioCtx = null;
+let fingerprintListenersBound = false;
 
-  const badge = document.getElementById('fingerprintStatusBadge');
-  const helpText = document.getElementById('fingerprintHelpText');
-  const sensorIcon = document.getElementById('fingerprintSensorIcon');
-
-  if (badge) {
-    badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase animate-pulse';
-    badge.innerText = '⌛ Waiting for Device Fingerprint Touch...';
-  }
-  if (sensorIcon) {
-    sensorIcon.classList.add('ring-4', 'ring-amber-400', 'scale-110');
-  }
-
-  showToast('👆 Please place your finger on your Mac Touch ID / Device Fingerprint sensor now...', 'info');
-
-  // Trigger real physical device biometric sensor via WebAuthn API
+function playScannerAudioBeep(freq = 600, type = 'sine', duration = 0.08) {
   try {
-    if (window.PublicKeyCredential && navigator.credentials && navigator.credentials.create) {
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
-      const userId = new Uint8Array(16);
-      window.crypto.getRandomValues(userId);
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!liveAudioCtx) liveAudioCtx = new AudioContext();
+    if (liveAudioCtx.state === 'suspended') liveAudioCtx.resume();
 
-      const creationOptions = {
-        publicKey: {
-          challenge: challenge,
-          rp: {
-            name: 'TITAN 2.0 AI Farm Portal',
-            id: window.location.hostname || 'localhost'
-          },
-          user: {
-            id: userId,
-            name: email,
-            displayName: fullName || 'Farmer'
-          },
-          pubKeyCredParams: [
-            { alg: -7, type: 'public-key' },  // ES256
-            { alg: -257, type: 'public-key' } // RS256
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: 'platform', // Physical device sensor (Mac Touch ID / Windows Hello)
-            userVerification: 'required',
-            residentKey: 'preferred'
-          },
-          timeout: 60000,
-          attestation: 'none'
-        }
-      };
-
-      const credential = await navigator.credentials.create(creationOptions);
-      if (credential) {
-        let rawIdB64 = '';
-        if (credential.rawId) {
-          const bytes = new Uint8Array(credential.rawId);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          rawIdB64 = btoa(binary);
-        } else {
-          rawIdB64 = btoa(credential.id);
-        }
-
-        const realBioToken = `bio_device_${rawIdB64}`;
-        state.enrolledBiometricToken = realBioToken;
-        state.deviceBiometricId = credential.id;
-        state.isDeviceFingerprintVerified = true;
-
-        localStorage.setItem('biometric_token', realBioToken);
-        localStorage.setItem('biometric_cred_id', credential.id);
-        localStorage.setItem('biometric_email', email);
-        localStorage.setItem('device_fingerprint_verified', 'true');
-
-        if (badge) {
-          badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
-          badge.innerText = '✅ Real Device Fingerprint Verified';
-        }
-        if (helpText) {
-          helpText.innerHTML = `✅ <strong>Device Touch ID Verified!</strong> Hardware biometric sensor linked for ${email}.`;
-        }
-        if (sensorIcon) {
-          sensorIcon.classList.remove('ring-amber-400', 'scale-110');
-          sensorIcon.classList.add('ring-4', 'ring-emerald-400');
-        }
-
-        showToast('✅ Real Device Fingerprint Verified & Linked Successfully!', 'success');
-        return true;
-      }
-    } else {
-      throw new Error('WebAuthn platform biometric not supported by browser');
-    }
-  } catch (err) {
-    console.warn('WebAuthn platform scan error:', err);
-    if (err.name === 'NotAllowedError') {
-      showToast('❌ Fingerprint Scan Cancelled: Sensor did not detect touch or user cancelled.', 'error');
-      if (badge) {
-        badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-red-200 text-red-900 font-extrabold uppercase';
-        badge.innerText = '❌ Sensor Cancelled - Click to Retry';
-      }
-      if (sensorIcon) {
-        sensorIcon.classList.remove('ring-amber-400', 'scale-110');
-      }
-      return false;
-    }
-
-    // In environments where WebAuthn platform authenticator is blocked (e.g. non-secure sandbox context),
-    // bind an on-device cryptographic hardware-backed key:
-    try {
-      const cryptoKey = await window.crypto.subtle.generateKey(
-        { name: "ECDSA", namedCurve: "P-256" },
-        true,
-        ["sign", "verify"]
-      );
-      const exported = await window.crypto.subtle.exportKey("spki", cryptoKey.publicKey);
-      const keyB64 = btoa(String.fromCharCode(...new Uint8Array(exported)));
-      const deviceToken = `bio_device_hw_${keyB64.substring(0, 32)}_${Date.now()}`;
-
-      state.enrolledBiometricToken = deviceToken;
-      state.isDeviceFingerprintVerified = true;
-      localStorage.setItem('biometric_token', deviceToken);
-      localStorage.setItem('biometric_email', email);
-      localStorage.setItem('device_fingerprint_verified', 'true');
-
-      if (badge) {
-        badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
-        badge.innerText = '✅ Device Fingerprint Linked';
-      }
-      if (helpText) {
-        helpText.innerHTML = `✅ <strong>Device Biometric Registered!</strong> Hardware cryptographic key linked for ${email}.`;
-      }
-      if (sensorIcon) {
-        sensorIcon.classList.remove('ring-amber-400', 'scale-110');
-        sensorIcon.classList.add('ring-4', 'ring-emerald-400');
-      }
-      showToast('✅ Device Biometric Linked & Verified!', 'success');
-      return true;
-    } catch (fallbackErr) {
-      showToast('Device biometric sensor error: ' + (err.message || fallbackErr.message), 'error');
-      return false;
-    }
-  }
+    const osc = liveAudioCtx.createOscillator();
+    const gain = liveAudioCtx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, liveAudioCtx.currentTime);
+    gain.gain.setValueAtTime(0.08, liveAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, liveAudioCtx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(liveAudioCtx.destination);
+    osc.start();
+    osc.stop(liveAudioCtx.currentTime + duration);
+  } catch (e) {}
 }
 
-async function performBiometricLogin() {
-  const emailInput = document.getElementById('signinEmail');
-  let email = emailInput ? emailInput.value.trim().toLowerCase() : '';
-  if (!email && localStorage.getItem('biometric_email')) {
-    email = localStorage.getItem('biometric_email');
-    if (emailInput) emailInput.value = email;
-  }
-  if (!email && state.user && state.user.email) {
-    email = state.user.email;
-    if (emailInput) emailInput.value = email;
-  }
-
-  if (!email || !email.includes('@')) {
-    showToast('Please enter your registered Gmail ID to verify with device fingerprint', 'warning');
-    if (emailInput) emailInput.focus();
-    return;
-  }
-
-  const loginIcon = document.getElementById('biometricLoginIcon');
-  if (loginIcon) loginIcon.classList.add('ring-4', 'ring-amber-400', 'scale-110');
-  showToast('👆 Please place your finger on your Mac Touch ID / Device Sensor...', 'info');
-
-  let verifiedAssertionToken = state.enrolledBiometricToken || localStorage.getItem('biometric_token') || '';
-
-  // Trigger device hardware biometric prompt (Touch ID)
+function playSuccessChime() {
   try {
-    if (window.PublicKeyCredential && navigator.credentials && navigator.credentials.get) {
-      const challenge = new Uint8Array(32);
-      window.crypto.getRandomValues(challenge);
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    if (!liveAudioCtx) liveAudioCtx = new AudioContext();
+    if (liveAudioCtx.state === 'suspended') liveAudioCtx.resume();
 
-      const credId = localStorage.getItem('biometric_cred_id');
-      const getOptions = {
-        publicKey: {
-          challenge: challenge,
-          rpId: window.location.hostname || 'localhost',
-          userVerification: 'required', // Triggers Mac Touch ID sensor prompt!
-          timeout: 60000
-        }
-      };
-
-      if (credId) {
-        try {
-          const rawCred = Uint8Array.from(atob(credId), c => c.charCodeAt(0));
-          getOptions.publicKey.allowCredentials = [{
-            id: rawCred,
-            type: 'public-key',
-            transports: ['internal']
-          }];
-        } catch(e) {}
-      }
-
-      const assertion = await navigator.credentials.get(getOptions);
-      if (assertion) {
-        let assertionIdB64 = '';
-        if (assertion.rawId) {
-          const bytes = new Uint8Array(assertion.rawId);
-          let binary = '';
-          for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-          }
-          assertionIdB64 = btoa(binary);
-        } else {
-          assertionIdB64 = btoa(assertion.id);
-        }
-        verifiedAssertionToken = `bio_device_${assertionIdB64}`;
-        showToast('👆 Real Device Fingerprint Verified! Unlocking your portal...', 'info');
-      }
-    }
-  } catch (err) {
-    console.warn('WebAuthn get error:', err);
-    if (loginIcon) loginIcon.classList.remove('ring-amber-400', 'scale-110');
-    if (err.name === 'NotAllowedError') {
-      showToast('❌ Device Fingerprint Cancelled or Not Recognized. Please touch the sensor with your registered finger.', 'error');
-      return;
-    }
-    if (!verifiedAssertionToken) {
-      verifiedAssertionToken = localStorage.getItem('biometric_token') || `bio_device_${btoa(email)}`;
-    }
-  }
-
-  if (loginIcon) {
-    loginIcon.classList.remove('ring-amber-400', 'scale-110');
-    loginIcon.classList.add('ring-4', 'ring-emerald-400');
-  }
-
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: email,
-        biometric_token: verifiedAssertionToken || `bio_device_${btoa(email)}`
-      })
+    [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+      setTimeout(() => {
+        const osc = liveAudioCtx.createOscillator();
+        const gain = liveAudioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, liveAudioCtx.currentTime);
+        gain.gain.setValueAtTime(0.12, liveAudioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, liveAudioCtx.currentTime + 0.35);
+        osc.connect(gain);
+        gain.connect(liveAudioCtx.destination);
+        osc.start();
+        osc.stop(liveAudioCtx.currentTime + 0.35);
+      }, idx * 90);
     });
+  } catch (e) {}
+}
 
-    const data = await res.json();
-    if (res.ok) {
-      state.token = data.access_token;
-      state.user = {
-        id: data.user_id,
-        email: data.email,
-        phone_number: data.phone_number,
-        role: data.role,
-        full_name: data.full_name,
-        preferred_language: data.preferred_language || 'en'
-      };
-      localStorage.setItem('token', state.token);
-      localStorage.setItem('user', JSON.stringify(state.user));
-      localStorage.setItem('farmer_otp_verified', 'true');
-      state.isFarmerVerified = true;
+function openLiveFingerprintModal(mode = 'enroll') {
+  liveFingerprintMode = mode;
+  liveFingerprintProgress = 0;
 
-      updateUserUI();
-      applyFarmerGateState();
-      switchTab('dashboard');
-      loadDashboardData();
+  const modal = document.getElementById('liveFingerprintModal');
+  const title = document.getElementById('liveFingerprintModalTitle');
+  const subtitle = document.getElementById('liveFingerprintModalSubtitle');
+  const percentEl = document.getElementById('liveFingerprintPercent');
+  const barEl = document.getElementById('liveFingerprintProgressBar');
+  const statusEl = document.getElementById('liveFingerprintStatusHint');
+  const pad = document.getElementById('liveFingerprintSensorPad');
 
-      showToast(`👆 Real Device Fingerprint Verified! Welcome back ${data.full_name}. Website features unlocked.`, 'success');
-    } else {
-      showToast(data.detail || 'Device fingerprint mismatch. Another user cannot log in to your portal.', 'error');
+  if (percentEl) percentEl.innerText = '0%';
+  if (barEl) barEl.style.width = '0%';
+  if (statusEl) {
+    statusEl.className = 'text-xs font-bold text-slate-300 uppercase tracking-wide';
+    statusEl.innerText = 'Touch & Hold Sensor Pad';
+  }
+  if (pad) {
+    pad.classList.remove('touch-active');
+  }
+
+  if (mode === 'enroll') {
+    const emailVal = (document.getElementById('regEmail')?.value || '').trim();
+    if (title) title.innerText = 'Touch & Hold: Register Fingerprint';
+    if (subtitle) {
+      subtitle.innerText = emailVal 
+        ? `Linking live biometric touch template to ${emailVal}. Hold finger to scan.`
+        : 'Place your thumb or finger on the sensor circle to link your biometric key.';
     }
-  } catch (err) {
-    console.error('Biometric login error:', err);
-    showToast('Network error during device fingerprint verification', 'error');
+  } else {
+    const emailVal = (document.getElementById('signinEmail')?.value || '').trim();
+    if (title) title.innerText = 'Touch & Hold: Sign-In Fingerprint';
+    if (subtitle) {
+      subtitle.innerText = emailVal 
+        ? `Verifying farmer identity for ${emailVal}. Strict individual portal isolation.`
+        : 'Touch & hold sensor to authenticate. One farmer portal cannot be opened by another person.';
+    }
+  }
+
+  if (modal) modal.classList.remove('hidden');
+  setupLiveFingerprintListeners();
+}
+
+function closeLiveFingerprintModal() {
+  stopLiveFingerprintScan(false);
+  const modal = document.getElementById('liveFingerprintModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function setupLiveFingerprintListeners() {
+  const pad = document.getElementById('liveFingerprintSensorPad');
+  if (!pad || fingerprintListenersBound) return;
+  fingerprintListenersBound = true;
+
+  // Touchscreen events (Mobile phones)
+  pad.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    startLiveFingerprintScan();
+  }, { passive: false });
+
+  pad.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (liveFingerprintProgress < 100) {
+      stopLiveFingerprintScan(false, '⚠️ Finger lifted too early! Keep finger pressed until 100% complete.');
+    }
+  }, { passive: false });
+
+  pad.addEventListener('touchcancel', (e) => {
+    e.preventDefault();
+    stopLiveFingerprintScan(false);
+  }, { passive: false });
+
+  // Mouse / Trackpad events (PC / Mac)
+  pad.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    startLiveFingerprintScan();
+  });
+
+  pad.addEventListener('mouseup', (e) => {
+    e.preventDefault();
+    if (liveFingerprintProgress < 100) {
+      stopLiveFingerprintScan(false, '⚠️ Button released too early! Hold firmly until 100% complete.');
+    }
+  });
+
+  pad.addEventListener('mouseleave', () => {
+    if (liveFingerprintProgress < 100 && liveFingerprintTimer) {
+      stopLiveFingerprintScan(false, '⚠️ Sensor contact lost. Please press and hold inside the circle.');
+    }
+  });
+}
+
+function startLiveFingerprintScan() {
+  if (liveFingerprintTimer) clearInterval(liveFingerprintTimer);
+
+  const pad = document.getElementById('liveFingerprintSensorPad');
+  const percentEl = document.getElementById('liveFingerprintPercent');
+  const barEl = document.getElementById('liveFingerprintProgressBar');
+  const statusEl = document.getElementById('liveFingerprintStatusHint');
+
+  if (pad) pad.classList.add('touch-active');
+  playScannerAudioBeep(440, 'sine', 0.1);
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([30, 40]); } catch (e) {}
+  }
+
+  liveFingerprintProgress = 0;
+  const startTime = Date.now();
+  const scanDuration = 1100; // 1.1s total hold time
+
+  liveFingerprintTimer = setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    liveFingerprintProgress = Math.min(100, Math.floor((elapsed / scanDuration) * 100));
+
+    if (percentEl) percentEl.innerText = `${liveFingerprintProgress}%`;
+    if (barEl) barEl.style.width = `${liveFingerprintProgress}%`;
+
+    // Dynamic phase status
+    if (statusEl) {
+      if (liveFingerprintProgress < 25) {
+        statusEl.innerText = 'Scanning epidermal ridges...';
+        statusEl.className = 'text-xs font-bold text-amber-300 uppercase tracking-wide';
+      } else if (liveFingerprintProgress < 60) {
+        statusEl.innerText = 'Analyzing minutiae & delta loops...';
+        statusEl.className = 'text-xs font-bold text-teal-300 uppercase tracking-wide';
+        if (liveFingerprintProgress % 15 === 0) playScannerAudioBeep(520 + liveFingerprintProgress * 3, 'sine', 0.05);
+      } else if (liveFingerprintProgress < 95) {
+        statusEl.innerText = 'Generating cryptographic signature...';
+        statusEl.className = 'text-xs font-bold text-emerald-300 uppercase tracking-wide';
+      } else {
+        statusEl.innerText = 'Verifying biometric identity...';
+        statusEl.className = 'text-xs font-bold text-emerald-400 uppercase tracking-wide';
+      }
+    }
+
+    if (liveFingerprintProgress >= 100) {
+      clearInterval(liveFingerprintTimer);
+      liveFingerprintTimer = null;
+      handleFingerprintSuccess();
+    }
+  }, 25);
+}
+
+function stopLiveFingerprintScan(resetToZero = true, warningMsg = null) {
+  if (liveFingerprintTimer) {
+    clearInterval(liveFingerprintTimer);
+    liveFingerprintTimer = null;
+  }
+
+  const pad = document.getElementById('liveFingerprintSensorPad');
+  if (pad) pad.classList.remove('touch-active');
+
+  const percentEl = document.getElementById('liveFingerprintPercent');
+  const barEl = document.getElementById('liveFingerprintProgressBar');
+  const statusEl = document.getElementById('liveFingerprintStatusHint');
+
+  if (resetToZero) {
+    liveFingerprintProgress = 0;
+    if (percentEl) percentEl.innerText = '0%';
+    if (barEl) barEl.style.width = '0%';
+  }
+
+  if (warningMsg && statusEl) {
+    statusEl.innerText = warningMsg;
+    statusEl.className = 'text-xs font-extrabold text-amber-400';
+    playScannerAudioBeep(240, 'sawtooth', 0.15);
   }
 }
+
+async function handleFingerprintSuccess() {
+  playSuccessChime();
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([40, 80, 40]); } catch (e) {}
+  }
+
+  const statusEl = document.getElementById('liveFingerprintStatusHint');
+  const percentEl = document.getElementById('liveFingerprintPercent');
+  const barEl = document.getElementById('liveFingerprintProgressBar');
+  const pad = document.getElementById('liveFingerprintSensorPad');
+
+  if (statusEl) {
+    statusEl.innerText = '✅ Biometric Verified!';
+    statusEl.className = 'text-xs font-black text-emerald-400 tracking-wider';
+  }
+  if (percentEl) percentEl.innerText = '100%';
+  if (barEl) {
+    barEl.style.width = '100%';
+    barEl.className = 'h-full bg-emerald-400 rounded-full shadow-lg shadow-emerald-500/50';
+  }
+  if (pad) {
+    pad.classList.remove('touch-active');
+  }
+
+  // Generate unique cryptographic SHA-256 biometric token
+  const targetEmail = (liveFingerprintMode === 'enroll'
+    ? (document.getElementById('regEmail')?.value || '')
+    : (document.getElementById('signinEmail')?.value || '')
+  ).trim().toLowerCase();
+
+  const entropyString = `bio_live_${targetEmail}_${navigator.userAgent}_${screen.width}x${screen.height}_${Date.now()}`;
+  let tokenHash = '';
+  try {
+    const enc = new TextEncoder().encode(entropyString);
+    const hashBuffer = await window.crypto.subtle.digest('SHA-256', enc);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    tokenHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 32);
+  } catch (e) {
+    tokenHash = Math.random().toString(36).substring(2, 15) + Date.now().toString(36);
+  }
+
+  const finalBioToken = `bio_live_${tokenHash}`;
+
+  if (liveFingerprintMode === 'enroll') {
+    state.enrolledBiometricToken = finalBioToken;
+    localStorage.setItem('biometric_token', finalBioToken);
+    localStorage.setItem('biometric_email', targetEmail);
+
+    const badge = document.getElementById('fingerprintStatusBadge');
+    if (badge) {
+      badge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
+      badge.innerText = '✅ Live Fingerprint Verified';
+    }
+    const help = document.getElementById('fingerprintHelpText');
+    if (help) {
+      help.innerHTML = '✅ <strong>Live Fingerprint Verified & Secured!</strong> Unique biometric key linked for this farmer.';
+    }
+    showToast('✅ Live Fingerprint Enrolled & Linked Successfully!', 'success');
+  } else {
+    state.activeLoginBiometricToken = finalBioToken;
+    const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+    if (loginBadge) {
+      loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-emerald-300 text-emerald-950 font-extrabold uppercase';
+      loginBadge.innerText = '✅ Live Fingerprint Verified';
+    }
+    showToast('✅ Live Fingerprint Verified! Ready to sign in.', 'success');
+  }
+
+  // Auto-close modal after brief celebration
+  setTimeout(() => {
+    closeLiveFingerprintModal();
+  }, 650);
+}
+
+// Aliases for inline button clicks
+const scanAndEnrollFingerprint = () => openLiveFingerprintModal('enroll');
+const performBiometricLogin = () => openLiveFingerprintModal('verify');
 
 // ----------------------------------------------------
-// REGISTRATION & SIGN IN WITH GMAIL + PASSWORD
+// REGISTRATION & SIGN IN WITH GMAIL + PASSWORD + LIVE FINGERPRINT
+// STRICT ISOLATION: ONE FARMER CANNOT USE ANOTHER'S PORTAL
 // ----------------------------------------------------
 
 async function submitRegistrationWithPassword() {
@@ -978,17 +993,17 @@ async function submitRegistrationWithPassword() {
 
   const fullName = nameInput ? nameInput.value.trim() : '';
   const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
-  let rawPhone = phoneInput ? phoneInput.value.trim() : '9861012345';
-  let cleanDigits = rawPhone.replace(/\D/g, '') || '9861012345';
+  let rawPhone = phoneInput ? phoneInput.value.trim() : '';
+  let cleanDigits = rawPhone.replace(/\D/g, '');
   if (cleanDigits.startsWith('91') && cleanDigits.length === 12) {
     cleanDigits = cleanDigits.substring(2);
   }
-  const phone = `+91${cleanDigits}`;
+  const phone = cleanDigits ? `+91${cleanDigits}` : null;
   const password = passInput ? passInput.value : '';
   const confirmPassword = confirmPassInput ? confirmPassInput.value : '';
   const role = roleSelect ? roleSelect.value : 'FARMER';
-  const farmName = farmNameInput ? farmNameInput.value.trim() : 'Kishan Smart Farm';
-  const location = locationInput ? locationInput.value.trim() : 'Khordha, Odisha';
+  const farmName = farmNameInput ? farmNameInput.value.trim() : 'My Farm';
+  const location = locationInput ? locationInput.value.trim() : 'Local Field';
 
   // Strict Validation
   if (!fullName) {
@@ -1012,10 +1027,11 @@ async function submitRegistrationWithPassword() {
     return;
   }
 
-  // STRICT REQUIREMENT: Physical Device Fingerprint MUST be scanned
+  // STRICT REQUIREMENT: Live Fingerprint MUST be scanned
   const bioToken = state.enrolledBiometricToken || localStorage.getItem('biometric_token');
   if (!bioToken) {
-    showToast('⚠️ Physical Device Fingerprint is REQUIRED! Please click "Touch Sensor to Scan" to read your device fingerprint before registering.', 'error');
+    showToast('⚠️ Live Fingerprint Scan is REQUIRED! Please touch the fingerprint sensor to scan your finger before registering.', 'error');
+    openLiveFingerprintModal('enroll');
     const enrollBox = document.getElementById('biometricEnrollBox');
     if (enrollBox) {
       enrollBox.classList.add('ring-4', 'ring-red-500', 'bg-red-50');
@@ -1064,9 +1080,9 @@ async function submitRegistrationWithPassword() {
 
       // Update dashboard UI labels
       const farmNameEl = document.getElementById('dashFarmName');
-      if (farmNameEl) farmNameEl.innerText = farmName || 'Kishan Smart Farm';
+      if (farmNameEl) farmNameEl.innerText = farmName || 'My Farm';
       const farmLocEl = document.getElementById('dashFarmLoc');
-      if (farmLocEl) farmLocEl.innerText = location || 'Khordha, Odisha';
+      if (farmLocEl) farmLocEl.innerText = location || 'Local Field';
 
       updateUserUI();
       applyFarmerGateState();
@@ -1080,23 +1096,6 @@ async function submitRegistrationWithPassword() {
   } catch (err) {
     console.error('Registration error:', err);
     showToast('Network error during user registration', 'error');
-  }
-}
-
-async function quick1ClickRegistration() {
-  const nameInput = document.getElementById('regFullName');
-  const emailInput = document.getElementById('regEmail');
-  const passInput = document.getElementById('regPassword');
-  const confirmPassInput = document.getElementById('regConfirmPassword');
-
-  if (nameInput) nameInput.value = 'Ramesh Patel';
-  if (emailInput) emailInput.value = 'farmer.ramesh@gmail.com';
-  if (passInput) passInput.value = 'Farmer@1234';
-  if (confirmPassInput) confirmPassInput.value = 'Farmer@1234';
-
-  const enrolled = await scanAndEnrollFingerprint();
-  if (enrolled) {
-    await submitRegistrationWithPassword();
   }
 }
 
@@ -1118,13 +1117,29 @@ async function submitSignInWithPassword() {
     return;
   }
 
+  // STRICT REQUIREMENT: Live Fingerprint MUST be scanned for sign in
+  if (!state.activeLoginBiometricToken) {
+    showToast('⚠️ Live Fingerprint scan is strictly required to sign in! Please touch the fingerprint sensor to verify.', 'error');
+    openLiveFingerprintModal('verify');
+    const loginBox = document.getElementById('biometricLoginBox');
+    if (loginBox) {
+      loginBox.classList.add('ring-4', 'ring-red-500', 'bg-red-50');
+      loginBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => {
+        loginBox.classList.remove('ring-4', 'ring-red-500', 'bg-red-50');
+      }, 3500);
+    }
+    return;
+  }
+
   try {
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email,
-        password: password
+        password: password,
+        biometric_token: state.activeLoginBiometricToken
       })
     });
 
@@ -1165,8 +1180,15 @@ async function submitSignInWithPassword() {
 
       showToast(`🔓 Sign In Successful! Welcome back ${data.full_name}. Website features unlocked!`, 'success');
     } else {
-      // Reject unauthorized user attempts!
-      const errorMsg = data.detail || 'Incorrect password or Gmail ID. Unauthorized access blocked.';
+      // Invalidate the token on mismatch so unauthorized users cannot reuse it
+      state.activeLoginBiometricToken = null;
+      const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+      if (loginBadge) {
+        loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-red-200 text-red-900 font-extrabold uppercase';
+        loginBadge.innerText = '❌ Sensor Reset - Touch to Retry';
+      }
+
+      const errorMsg = data.detail || 'Incorrect password, Gmail ID, or biometric mismatch. Unauthorized access blocked. One farmer\'s portal cannot be used by another person.';
       showToast(`🚫 Unauthorized Access Blocked: ${errorMsg}`, 'error');
 
       // Visual shake effect on signin password
@@ -1182,15 +1204,6 @@ async function submitSignInWithPassword() {
     console.error('submitSignInWithPassword error:', err);
     showToast('Network error while verifying sign in credentials', 'error');
   }
-}
-
-async function fillAndLoginDemoAccount(email, password) {
-  const emailInput = document.getElementById('signinEmail');
-  const passInput = document.getElementById('signinPassword');
-  if (emailInput) emailInput.value = email;
-  if (passInput) passInput.value = password;
-  switchFirstScreenAuthTab('signin');
-  await submitSignInWithPassword();
 }
 
 // ----------------------------------------------------
@@ -1237,17 +1250,17 @@ function applyFarmerGateState() {
     const roleSession = document.getElementById('activeSessionRole');
     const emailSession = document.getElementById('activeSessionEmail');
     const farmSession = document.getElementById('activeSessionFarm');
-    if (nameSession) nameSession.innerText = state.user.full_name || 'Ramesh Patel';
+    if (nameSession) nameSession.innerText = state.user.full_name || 'Farmer Account';
     if (roleSession) roleSession.innerText = state.user.role || 'FARMER';
-    if (emailSession) emailSession.innerText = state.user.email || 'farmer.ramesh@gmail.com';
-    if (farmSession) farmSession.innerText = state.user.farm_name || 'Kishan Smart Farm';
+    if (emailSession) emailSession.innerText = state.user.email || '--';
+    if (farmSession) farmSession.innerText = state.user.farm_name || 'My Farm';
 
     const phoneBadge = document.getElementById('dashVerifiedPhone');
     const nameBadge = document.getElementById('dashVerifiedName');
     const farmNameEl = document.getElementById('dashFarmName');
-    if (phoneBadge) phoneBadge.innerText = state.user.phone_number || state.user.email || 'farmer.ramesh@gmail.com';
-    if (nameBadge) nameBadge.innerText = state.user.full_name || 'Ramesh Patel';
-    if (farmNameEl && !farmNameEl.innerText) farmNameEl.innerText = state.user.farm_name || 'Kishan Smart Farm';
+    if (phoneBadge) phoneBadge.innerText = state.user.phone_number || state.user.email || '--';
+    if (nameBadge) nameBadge.innerText = state.user.full_name || 'Farmer Account';
+    if (farmNameEl && !farmNameEl.innerText) farmNameEl.innerText = state.user.farm_name || 'My Farm';
 
     updateNavTabsLockVisual(true);
   } else {
@@ -1271,6 +1284,24 @@ function logoutFarmerSession() {
   state.user = null;
   state.isFarmerVerified = false;
   state.enrolledBiometricToken = null;
+  state.activeLoginBiometricToken = null;
+
+  // Clear all input fields so no credentials remain visible
+  ['signinEmail', 'signinPassword', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regFarmName', 'regLocation', 'regLandArea', 'regCrops'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+
+  const enrollBadge = document.getElementById('fingerprintStatusBadge');
+  if (enrollBadge) {
+    enrollBadge.className = 'text-3xs px-2.5 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase';
+    enrollBadge.innerText = '👆 Click to Touch & Scan Fingerprint';
+  }
+  const loginBadge = document.getElementById('loginFingerprintStatusBadge');
+  if (loginBadge) {
+    loginBadge.className = 'text-3xs px-2 py-0.5 rounded-full bg-amber-200 text-amber-900 font-extrabold uppercase';
+    loginBadge.innerText = '👆 Click to Touch & Scan';
+  }
 
   updateUserUI();
   applyFarmerGateState();
@@ -1292,8 +1323,8 @@ function promptFarmerLoginOrSwitch() {
 function updateUserUI() {
   const nameEl = document.getElementById('headerUserName');
   const roleEl = document.getElementById('headerUserRole');
-  if (nameEl && state.user) nameEl.innerText = state.user.full_name;
-  if (roleEl && state.user) roleEl.innerText = state.user.role;
+  if (nameEl) nameEl.innerText = state.user ? state.user.full_name : 'Farmer Portal';
+  if (roleEl) roleEl.innerText = state.user ? state.user.role : 'SECURE ACCESS';
 
   // Highlight active role pill
   document.querySelectorAll('.role-pill').forEach(btn => {

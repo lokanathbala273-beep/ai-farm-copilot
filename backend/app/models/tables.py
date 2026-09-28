@@ -30,6 +30,7 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.FARMER, nullable=False)
     is_active = Column(Boolean, default=True)
     preferred_language = Column(String(10), default="en")  # en, od, hi
+    biometric_token = Column(String(255), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationships

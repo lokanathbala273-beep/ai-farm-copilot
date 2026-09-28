@@ -248,3 +248,85 @@ body {
   100% { opacity: 1.0; transform: scale(1.12); }
 }
 
+/* ============================================================== */
+/* LIVE BIOMETRIC FINGERPRINT TOUCH SCANNER (MOBILE & PC) */
+/* ============================================================== */
+.fingerprint-sensor-pad {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #064e3b 0%, #022c22 70%, #01140e 100%);
+  border: 3px solid #10b981;
+  box-shadow: 0 0 25px rgba(16, 185, 129, 0.4), inset 0 0 20px rgba(16, 185, 129, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+
+.fingerprint-sensor-pad:hover {
+  transform: scale(1.04);
+  box-shadow: 0 0 35px rgba(16, 185, 129, 0.6), inset 0 0 25px rgba(16, 185, 129, 0.4);
+}
+
+.fingerprint-sensor-pad.touch-active {
+  transform: scale(0.96);
+  border-color: #34d399;
+  box-shadow: 0 0 45px rgba(52, 211, 153, 0.8), inset 0 0 35px rgba(52, 211, 153, 0.6);
+}
+
+.fingerprint-laser-line {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 4px;
+  background: linear-gradient(90deg, transparent, #34d399, #6ee7b7, #34d399, transparent);
+  box-shadow: 0 0 15px #34d399, 0 0 25px #10b981;
+  display: none;
+  z-index: 10;
+}
+
+.touch-active .fingerprint-laser-line {
+  display: block;
+  animation: fingerprintLaserSweep 1.1s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+}
+
+@keyframes fingerprintLaserSweep {
+  0% { top: 8%; opacity: 0.9; }
+  100% { top: 88%; opacity: 1; }
+}
+
+.fingerprint-ripple {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid rgba(52, 211, 153, 0.6);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.touch-active .fingerprint-ripple {
+  animation: fingerprintRipple 1.2s cubic-bezier(0, 0.2, 0.8, 1) infinite;
+}
+
+@keyframes fingerprintRipple {
+  0% { transform: scale(0.6); opacity: 0.9; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+.fingerprint-svg-ridges {
+  transition: all 0.3s ease;
+  filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.6));
+}
+
+.touch-active .fingerprint-svg-ridges {
+  filter: drop-shadow(0 0 14px rgba(52, 211, 153, 0.95)) brightness(1.2);
+}
+

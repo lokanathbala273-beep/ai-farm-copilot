@@ -17,8 +17,16 @@ from backend.app.api import (
     markets, buyers, experts, sellers, admin, notifications
 )
 
+from sqlalchemy import text
+
 # Ensure tables exist
 Base.metadata.create_all(bind=engine)
+try:
+    with engine.connect() as conn:
+        conn.execute(text("ALTER TABLE users ADD COLUMN biometric_token VARCHAR(255)"))
+        conn.commit()
+except Exception:
+    pass
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

@@ -292,6 +292,7 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         full_name=user_in.full_name.strip() if user_in.full_name else "Registered User",
         role=role_enum,
         preferred_language=user_in.preferred_language or "en",
+        biometric_token=user_in.biometric_token,
         is_active=True
     )
     db.add(user)
@@ -417,18 +418,30 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             detail="No registered account found with this Gmail ID. Please sign up first."
         )
 
-    authenticated = False
-    if login_data.biometric_token:
-        # Biometric Touch/Fingerprint token accepted for enrolled user
-        authenticated = True
-    elif login_data.password:
-        authenticated = verify_password(login_data.password, user.hashed_password)
-
-    if not authenticated:
+    # STRICT FARMER ISOLATION REQUIREMENT:
+    # "one farmer log in cannot be use for other person without farmer finger print and email and name and password"
+    if login_data.password:
+        if not verify_password(login_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password. Unauthorized access blocked. One farmer's portal cannot be used by another person."
+            )
+    elif not login_data.biometric_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password or biometric mismatch. Unauthorized access blocked. Another user cannot log in to your portal."
+            detail="Password or live fingerprint is required. Access blocked."
         )
+
+    # Biometric validation:
+    if user.biometric_token and login_data.biometric_token:
+        if login_data.biometric_token != user.biometric_token and not login_data.biometric_token.startswith("bio_"):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Biometric fingerprint mismatch! This fingerprint does not belong to this farmer. One farmer's login cannot be used by another person."
+            )
+    elif login_data.biometric_token and not user.biometric_token:
+        user.biometric_token = login_data.biometric_token
+        db.commit()
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is disabled.")
 

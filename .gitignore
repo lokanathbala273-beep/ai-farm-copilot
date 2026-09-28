@@ -52,5 +52,11 @@ Thumbs.db
 .env
 .env.local
 
-# Logs
+# Logs & uploads
 *.log
+uploads/leaves/*
+uploads/products/*
+uploads/soil_reports/*
+!uploads/leaves/.gitkeep
+!uploads/products/.gitkeep
+!uploads/soil_reports/.gitkeep
