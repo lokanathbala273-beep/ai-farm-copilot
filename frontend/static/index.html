@@ -1840,7 +1840,7 @@
 
       <!-- Live Touch Sensor Pad Container (1-Touch Instant) -->
       <div class="flex flex-col items-center justify-center py-3 relative z-10">
-        <div id="liveFingerprintSensorPad" onclick="handleInstantFingerprintPadClick()" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition" title="Place finger here to scan">
+        <div id="liveFingerprintSensorPad" class="fingerprint-sensor-pad cursor-pointer hover:scale-105 transition select-none" title="Place finger here to scan">
           <!-- Laser sweep beam -->
           <div class="fingerprint-laser-line"></div>
           <!-- Tactile Ripple -->
@@ -1874,7 +1874,7 @@
       </div>
 
       <!-- Live Touch Sensor Single Action Button -->
-      <button type="button" id="liveFingerprintTouchBtn" onclick="handleInstantFingerprintPadClick()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
+      <button type="button" id="liveFingerprintTouchBtn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold rounded-2xl text-xs sm:text-sm shadow-lg shadow-emerald-900/40 transition flex items-center justify-center gap-2 relative z-10 active:scale-98">
         <span>👆</span> <span id="liveFingerprintTouchBtnText">Touch / Scan Fingerprint Live</span>
       </button>
 
@@ -1969,7 +1969,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20260928_v3"></script>
+  <script src="/static/js/app.js?v=20260928_v4"></script>
 </body>
 </html>
 

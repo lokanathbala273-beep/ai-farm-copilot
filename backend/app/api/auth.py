@@ -471,7 +471,7 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
                         v2 = [float(x) for x in login_data.face_token.replace("FACE_VEC_", "").split(",") if x.strip()]
                         if len(v1) == len(v2) and len(v1) > 0:
                             mae = sum(abs(a - b) for a, b in zip(v1, v2)) / len(v1)
-                            if mae > 0.16:  # Visual difference too high = different person
+                            if mae > 0.12:  # Strict visual difference threshold: > 0.12 = different person
                                 raise HTTPException(
                                     status_code=status.HTTP_401_UNAUTHORIZED,
                                     detail=f"Face recognition mismatch (distance: {mae:.2f})! This face does not match the registered farmer. Another person cannot open this portal."
