@@ -39,6 +39,35 @@ def get_consultation_queue(
         .order_by(ExpertConsultation.created_at.desc())
         .all()
     )
+
+    if not consultations:
+        # Seed an initial demonstration case for pathologist review
+        farmer = db.query(User).filter(User.role == "FARMER").first() or db.query(User).first()
+        field = db.query(Field).first()
+        if farmer and field:
+            pred = DiseasePrediction(
+                field_id=field.id,
+                crop="Tomato",
+                disease="Early Blight",
+                confidence=0.94,
+                severity="Moderate",
+                image_url="/static/assets/leaf_tomato_early_blight.svg",
+                symptoms="Concentric circular brown target rings observed on lower foliar canopy of tomato vines.",
+                needs_expert_review=True
+            )
+            db.add(pred)
+            db.commit()
+            db.refresh(pred)
+            c = ExpertConsultation(
+                prediction_id=pred.id,
+                farmer_id=farmer.id,
+                status="PENDING",
+                farmer_query=f"Farmer {farmer.full_name} submitted Tomato leaf scan for verified clinical diagnosis & IPM fungicide dosage from Dr. P.K. Mohapatra."
+            )
+            db.add(c)
+            db.commit()
+            consultations = [c]
+
     results = []
     for c in consultations:
         pred = db.query(DiseasePrediction).filter(DiseasePrediction.id == c.prediction_id).first()
