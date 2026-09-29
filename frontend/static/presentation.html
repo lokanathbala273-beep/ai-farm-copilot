@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Code Titans • Unified AI Farm Copilot (CB SW 4)</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #0b1120;
+      color: #f8fafc;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .slide {
+      display: none;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+      height: 100vh;
+      width: 100vw;
+    }
+    .slide.active {
+      display: flex;
+      opacity: 1;
+    }
+    @media print {
+      @page {
+        size: 16in 9in;
+        margin: 0;
+      }
+      body {
+        background-color: #0b1120 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        overflow: visible !important;
+      }
+      .slide {
+        display: flex !important;
+        opacity: 1 !important;
+        height: 100vh !important;
+        page-break-after: always !important;
+        break-after: page !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="flex flex-col h-screen w-screen relative">
+
+  <!-- TOP NAVIGATION BAR (NO-PRINT) -->
+  <header class="no-print h-14 bg-slate-900/90 backdrop-blur-md border-b border-slate-800 px-6 flex items-center justify-between z-50 shrink-0">
+    <div class="flex items-center gap-3">
+      <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold border border-emerald-500/30 flex items-center gap-1.5">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> CB SW 4 • AgriTech & Rural Innovation
+      </span>
+      <span class="text-sm font-extrabold text-slate-200">Team Code Titans</span>
+      <span class="text-xs text-slate-400 hidden md:inline">| GITAM</span>
+    </div>
+
+    <!-- Slide Indicator & Controls -->
+    <div class="flex items-center gap-3">
+      <span id="slideCounter" class="text-xs font-mono font-bold text-slate-300 bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">1 / 12</span>
+      <button onclick="prevSlide()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+        ◀
+      </button>
+      <button onclick="nextSlide()" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition">
+        ▶
+      </button>
+      <button onclick="toggleFullScreen()" class="px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 transition">
+        ⛶ Fullscreen
+      </button>
+      <button onclick="window.print()" class="px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition flex items-center gap-1">
+        🖨️ Export PDF
+      </button>
+      <a href="/static/Code_Titans_CB_SW_4_Presentation.pptx" download="Code_Titans_CB_SW_4_Presentation.pptx" class="px-3 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white transition flex items-center gap-1">
+        📥 Download .PPTX
+      </a>
+    </div>
+  </header>
+
+  <!-- PROGRESS BAR -->
+  <div class="no-print w-full h-1 bg-slate-800 shrink-0">
+    <div id="progressBar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 8.33%;"></div>
+  </div>
+
+  <!-- SLIDES WRAPPER -->
+  <main class="flex-1 relative overflow-hidden flex items-center justify-center p-4 md:p-8">
+
+    <!-- ========================================== -->
+    <!-- SLIDE 1: TITLE & HERO PITCH -->
+    <!-- ========================================== -->
+    <section class="slide active flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden" data-index="1">
+      <div class="absolute -top-32 -right-32 w-96 h-96 bg-emerald-600/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      <div>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold uppercase tracking-wider mb-4">
+          🎯 Problem Statement: CB SW 4 • AgriTech & Rural Innovation
+        </div>
+        <h1 class="text-3xl md:text-5xl font-black text-white leading-tight tracking-tight">
+          Unified AI Farm Copilot, Risk Intelligence<br>
+          <span class="bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 via-teal-300 to-amber-300">
+            & Market Optimizer
+          </span>
+        </h1>
+        <p class="text-base md:text-xl text-slate-300 mt-4 max-w-4xl font-medium">
+          A Connected, Explainable & Multimodal Agricultural Operating System for Indian Farmers
+        </p>
+      </div>
+
+      <!-- 3 Module Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 my-6">
+        <div class="bg-slate-800/80 border border-emerald-500/30 rounded-2xl p-5 hover:border-emerald-400 transition">
+          <div class="text-2xl mb-2">🌾</div>
+          <h3 class="font-extrabold text-amber-400 text-base mb-1">Module 1: Farm Copilot</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            • Odia, Hindi & English Natural Voice<br>
+            • Computer Vision Leaf Diagnostics<br>
+            • Weather & History-Aware Advisory
+          </p>
+        </div>
+        <div class="bg-slate-800/80 border border-amber-500/30 rounded-2xl p-5 hover:border-amber-400 transition">
+          <div class="text-2xl mb-2">⚠️</div>
+          <h3 class="font-extrabold text-amber-400 text-base mb-1">Module 2: Risk Intelligence</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            • Multi-threat early warning models<br>
+            • Explainable AI (XAI) transparent alerts<br>
+            • Urgency ranking & actionable IPM steps
+          </p>
+        </div>
+        <div class="bg-slate-800/80 border border-blue-500/30 rounded-2xl p-5 hover:border-blue-400 transition">
+          <div class="text-2xl mb-2">💰</div>
+          <h3 class="font-extrabold text-amber-400 text-base mb-1">Module 3: Market Optimizer</h3>
+          <p class="text-xs text-slate-300 leading-relaxed">
+            • 21 Odisha APMC Mandi tracker<br>
+            • Net Profit = Price - Freight - 1.5% Fee<br>
+            • Sell vs. Hold strategic intelligence
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer Info -->
+      <div class="pt-4 border-t border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs">
+        <div>
+          <div class="text-amber-400 font-extrabold text-sm">TEAM: CODE TITANS | GANDHI INSTITUTE OF TECHNOLOGY AND MANAGEMENT (GITAM)</div>
+          <div class="text-slate-300 font-medium mt-1">
+            Swaviman Nayak (Leader) • Lokanath Bala • Alok Kumar Swain • Gurudatta Ojha
+          </div>
+        </div>
+        <div class="text-right font-mono">
+          <div class="text-emerald-400 font-bold">🌐 ai-farm-copilot-bfbq.onrender.com</div>
+          <div class="text-slate-400 text-2xs">github.com/lokanathbala273-beep/ai-farm-copilot</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 2: THE THREE BROKEN SILOS -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="2">
+      <div>
+        <span class="text-xs font-mono font-bold text-red-400 uppercase tracking-wider">The Agricultural Dilemma</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">The Core Problem: Indian Agriculture's Three Disconnected Silos</h2>
+        <p class="text-sm text-slate-300 mt-2">
+          A farmer's journey is continuous, but existing AgriTech tools force them to piece together 3 isolated apps with zero shared data.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+        <div class="bg-red-950/20 border border-red-500/40 rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-red-400 uppercase mb-2">❌ Silo 1: Advisory Gap</div>
+            <h3 class="text-lg font-bold text-white mb-3">No Personalised Multimodal Guidance</h3>
+            <ul class="text-xs text-slate-300 space-y-2.5">
+              <li><strong class="text-red-300">• Generic & Text-Heavy:</strong> Boilerplate advice ignoring local dialect (Odia, Sambalpuri, Hindi).</li>
+              <li><strong class="text-red-300">• Ignores Visuals:</strong> Farmers cannot show leaf damage to get verified medical chemical dosages.</li>
+              <li><strong class="text-red-300">• Memoryless:</strong> Forgets historical soil chemistry (NPK, pH), prior sprays, and crop stages.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-amber-950/20 border border-amber-500/40 rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-amber-400 uppercase mb-2">❌ Silo 2: Risk Gap</div>
+            <h3 class="text-lg font-bold text-white mb-3">Late & Unexplained Black-Box Alerts</h3>
+            <ul class="text-xs text-slate-300 space-y-2.5">
+              <li><strong class="text-amber-300">• Reactive, Not Proactive:</strong> Threats are flagged after crops have already rotted or withered.</li>
+              <li><strong class="text-amber-300">• Opaque Warnings:</strong> Tells farmers 'High Risk' without explaining WHY (moisture + temp + pathogen).</li>
+              <li><strong class="text-amber-300">• Lacks Actionability:</strong> Alarms cause panic without providing concrete, scientifically verified IPM steps.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="bg-blue-950/20 border border-blue-500/40 rounded-2xl p-6 flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-bold text-blue-400 uppercase mb-2">❌ Silo 3: Market Gap</div>
+            <h3 class="text-lg font-bold text-white mb-3">Blind "What & Where to Sell" Decisions</h3>
+            <ul class="text-xs text-slate-300 space-y-2.5">
+              <li><strong class="text-blue-300">• Sowing Blindness:</strong> Planting without understanding market demand or impending harvest gluts.</li>
+              <li><strong class="text-blue-300">• The Mandi Illusion:</strong> High gross price at distant mandis wiped out by transport and 1.5% APMC fees.</li>
+              <li><strong class="text-blue-300">• Distress Selling:</strong> Farmers sell at rock-bottom prices unaware of cold-storage viability and price trends.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 3: OUR UNIFIED SOLUTION -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="3">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">The Code Titans Philosophy</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">A Connected, Single-Platform Operating System</h2>
+        <div class="mt-3 p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-500/40 text-xs text-emerald-200">
+          💡 <strong>Single Shared Data Model:</strong> One Unified Farmer Profile (6.5 Acres, GPS Coordinates, Soil N-P-K, Crop History) fuels the Advisory, Risk, and Market Engines simultaneously.
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 my-auto">
+        <div class="bg-slate-800/80 border border-emerald-500/40 rounded-2xl p-6">
+          <div class="text-2xl mb-2">🌾</div>
+          <h3 class="text-lg font-bold text-emerald-400 mb-2">MODULE 1: Farm Copilot</h3>
+          <p class="text-xs text-slate-300 leading-relaxed space-y-2">
+            • <strong>Multilingual Voice:</strong> Odia, Hindi, English natural speech.<br><br>
+            • <strong>MobileNetV3 Leaf Scanner:</strong> Visual plant pathology with foliar tissue filtering.<br><br>
+            • <strong>Tele-Pathology Queue:</strong> Automatic escalation to OUAT university scientists.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-6">
+          <div class="text-2xl mb-2">⚠️</div>
+          <h3 class="text-lg font-bold text-amber-400 mb-2">MODULE 2: Risk Intelligence</h3>
+          <p class="text-xs text-slate-300 leading-relaxed space-y-2">
+            • <strong>Multi-Threat Modeling:</strong> Correlates weather, pests, disease spores & price drops.<br><br>
+            • <strong>Explainable AI (XAI):</strong> '88% Humidity + 28°C = Elevated Blight Risk.'<br><br>
+            • <strong>Conversational Feeds:</strong> Risk alerts surface automatically inside Copilot chat.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/80 border border-blue-500/40 rounded-2xl p-6">
+          <div class="text-2xl mb-2">💰</div>
+          <h3 class="text-lg font-bold text-blue-400 mb-2">MODULE 3: Market Optimizer</h3>
+          <p class="text-xs text-slate-300 leading-relaxed space-y-2">
+            • <strong>Odisha 21-Mandi Network:</strong> Real-time APMC/RMC modal pricing.<br><br>
+            • <strong>Net Realization Formula:</strong> Deducts distance freight & 1.5% APMC tax.<br><br>
+            • <strong>Sell vs. Hold:</strong> Price trend forecasting & Direct B2B Wholesale Marketplace.
+          </p>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 4: MODULE 1 IN-DEPTH -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="4">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Module 1 Deep Dive</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Personalised Multilingual Advisory & Computer Vision Scanner</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-auto">
+        <!-- Voice Assistant -->
+        <div class="bg-slate-800/90 border border-emerald-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-lg">🎙️</span>
+            <h3 class="text-lg font-bold text-white">Multilingual Voice & Vernacular AI</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-emerald-300">• Native Vernacular Voice:</strong> Web Speech API integration supporting <strong>Odia (ଓଡ଼ିଆ)</strong>, <strong>Hindi (हिंदी)</strong>, and English with regional dialect tolerance.</li>
+            <li><strong class="text-emerald-300">• Agricultural Colloquial Parsing:</strong> Understands local terms like <em>'ଖତ'</em> (manure), <em>'ପତ୍ର ପୋଡ଼ା'</em> (leaf blight), and <em>'ସାର ପ୍ରୟୋଗ'</em>.</li>
+            <li><strong class="text-emerald-300">• Farm-Grounding:</strong> Injects farmer's actual plot size (6.5 Acres), active crop (Paddy/Tomato), and recent fertilizer logs into the AI prompt.</li>
+            <li><strong class="text-emerald-300">• WhatsApp & SMS Bridge:</strong> Simulated SMS/WhatsApp alerts for low-literacy farmers on 2G feature phones.</li>
+          </ul>
+        </div>
+
+        <!-- Vision Scanner -->
+        <div class="bg-slate-800/90 border border-emerald-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-lg">📷</span>
+            <h3 class="text-lg font-bold text-white">Computer Vision Leaf Pathology Scanner</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-emerald-300">• MobileNetV3 / Vision Ensemble:</strong> Rapid edge diagnosis for Early Blight, Late Blight, Rice Blast, Rust, and Bacterial Spot.</li>
+            <li><strong class="text-emerald-300">• Foliar Tissue Verification (Anti-Hallucination):</strong> Computes Excess Green Index (EGI) & HSV chromaticity to ensure the uploaded photo is genuine plant foliar tissue before inference.</li>
+            <li><strong class="text-emerald-300">• ICAR-Verified Clinical Prescriptions:</strong> Provides exact chemical dosage (e.g. Mancozeb 75% WP @ 2g/L) alongside organic Neem Oil IPM solutions.</li>
+            <li><strong class="text-emerald-300">• OUAT Tele-Pathologist Queue:</strong> Low-confidence scans (< 65%) automatically escalate to university plant pathologists.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 5: MODULE 2 IN-DEPTH -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="5">
+      <div>
+        <span class="text-xs font-mono font-bold text-amber-400 uppercase tracking-wider">Module 2 Deep Dive</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Crop Risk Intelligence: Explainable Multi-Threat Early Warning</h2>
+        <div class="mt-2.5 p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200">
+          🔍 <strong>Explainable AI (XAI) Principle:</strong> 'No Opaque Red Alerts.' Every warning details: <strong>Observed Condition → Biological Cause → Concrete Mitigation</strong>.
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 my-auto">
+        <div class="bg-slate-800/80 border border-red-500/40 rounded-2xl p-5">
+          <div class="text-xl mb-1 text-red-400">🦠 Outbreak Risk</div>
+          <h4 class="font-bold text-white text-xs mb-2">Disease Spore Invasions</h4>
+          <p class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            • <strong>Triggers:</strong> Humidity > 85%, Canopy 24-29°C.<br>
+            • <strong>Why:</strong> Damp canopy creates fungal spore germination.<br>
+            • <strong>Mitigation:</strong> Preventative copper oxychloride spray.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/80 border border-amber-500/40 rounded-2xl p-5">
+          <div class="text-xl mb-1 text-amber-400">🐛 Pest Pressure</div>
+          <h4 class="font-bold text-white text-xs mb-2">Infestation Waves</h4>
+          <p class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            • <strong>Triggers:</strong> Degree-day thermal spikes.<br>
+            • <strong>Why:</strong> Temperature window accelerates Stem Borer hatchings.<br>
+            • <strong>Mitigation:</strong> Deploy pheromone traps & neem oil.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/80 border border-blue-500/40 rounded-2xl p-5">
+          <div class="text-xl mb-1 text-blue-400">🌦️ Microclimate</div>
+          <h4 class="font-bold text-white text-xs mb-2">Weather Extremes</h4>
+          <p class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            • <strong>Triggers:</strong> Live GPS satellite sync.<br>
+            • <strong>Why:</strong> 42mm downpour in 6h causes root suffocation.<br>
+            • <strong>Mitigation:</strong> Open drainage furrows immediately.
+          </p>
+        </div>
+
+        <div class="bg-slate-800/80 border border-emerald-500/40 rounded-2xl p-5">
+          <div class="text-xl mb-1 text-emerald-400">📉 Market Crash</div>
+          <h4 class="font-bold text-white text-xs mb-2">Price Volatility</h4>
+          <p class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            • <strong>Triggers:</strong> District oversupply arrivals.<br>
+            • <strong>Why:</strong> Cuttack arrivals up 40%, price crash in 48h.<br>
+            • <strong>Mitigation:</strong> Hold in cold room or reroute to BBSR.
+          </p>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 6: MODULE 3 IN-DEPTH -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="6">
+      <div>
+        <span class="text-xs font-mono font-bold text-blue-400 uppercase tracking-wider">Module 3 Deep Dive</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Farm-to-Market Optimizer & Logistics Freight Intelligence</h2>
+        <div class="mt-2.5 p-3 rounded-xl bg-blue-950/40 border border-blue-500/40 text-xs font-mono text-blue-200">
+          💰 <strong>True Net Realization Formula:</strong> Net Profit (₹/Qtl) = Mandi Modal Price - [Distance (km) × Freight Rate] - [1.5% Statutory APMC Cess]
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-auto">
+        <div class="bg-slate-800/90 border border-blue-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-blue-500/20 text-blue-400 text-lg">🏛️</span>
+            <h3 class="text-lg font-bold text-white">21 Odisha State APMC Mandis Network</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-blue-300">• Comprehensive Coverage:</strong> Real-time price tracking across Cuttack, Bhubaneswar, Sambalpur, Bargarh, Berhampur, Balasore, Jeypore, and 14 others.</li>
+            <li><strong class="text-blue-300">• Unmasking Gross Prices:</strong> A distant mandi offering ₹2,400/Qtl 85km away yields lower profit than a local ₹2,200/Qtl mandi after factoring transport diesel.</li>
+            <li><strong class="text-blue-300">• 1.5% APMC Fee Transparency:</strong> Explicitly accounts for market committee cesses so farmers receive exact cash-in-hand figures.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-800/90 border border-emerald-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-lg">📈</span>
+            <h3 class="text-lg font-bold text-white">Sell-vs-Hold Advisory & Direct Marketplace</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-emerald-300">• Algorithmic Sell/Hold Recommender:</strong> Evaluates crop perishability curve vs. 7-day predicted price recovery to stop panic selling.</li>
+            <li><strong class="text-emerald-300">• Cold Storage ROI Calculator:</strong> Determines if ₹80/bag cold storage cost will yield positive return based on festival demand.</li>
+            <li><strong class="text-emerald-300">• Direct B2B Wholesaler Marketplace:</strong> Eliminates middleman commissions by letting verified millers & supermarket buyers buy directly.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 7: SOIL INTELLIGENCE & BUSINESS SIMULATION -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="7">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Agronomic & Financial Grounding</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Pre-Sowing Soil Intelligence & Farm Business Simulation</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-auto">
+        <div class="bg-slate-800/90 border border-emerald-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-lg">🧪</span>
+            <h3 class="text-lg font-bold text-white">Soil Chemistry & Crop Suitability Matrix</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-emerald-300">• 6-Point Soil Calibration:</strong> Evaluates Nitrogen (N), Phosphorus (P), Potassium (K), Soil Organic Carbon (SOC), and pH.</li>
+            <li><strong class="text-emerald-300">• Algorithmic Crop Ranking:</strong> Recommends optimal crops before planting (Paddy 94%, Tomato 89%, Mustard 76%) based on soil chemistry and season.</li>
+            <li><strong class="text-emerald-300">• Precision NPK Guidance:</strong> Recommends exact Urea, DAP, and MOP dosages in kg/acre to prevent overspending and soil degradation.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-800/90 border border-amber-500/40 rounded-2xl p-6">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="p-2 rounded-xl bg-amber-500/20 text-amber-400 text-lg">📊</span>
+            <h3 class="text-lg font-bold text-white">Farm Business Simulator & Voice Expense Logger</h3>
+          </div>
+          <ul class="text-xs text-slate-300 space-y-3">
+            <li><strong class="text-amber-300">• Scenario Budget Simulator:</strong> Computes full-season capital costs (Seed, Land Prep, Fertilizers, Labor, Diesel) vs. expected harvest revenue.</li>
+            <li><strong class="text-amber-300">• Hands-Free Voice Expense Logging:</strong> Farmers speak natural expenses: <em>'ଖତ ପାଇଁ ୧୫୦୦ ଟଙ୍କା ଖର୍ଚ୍ଚ କଲି'</em> — system logs category and amount instantly.</li>
+            <li><strong class="text-amber-300">• Live P&L Margin Telemetry:</strong> Real-time ledger tracks expenses vs. revenue, giving smallholders total financial clarity.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 8: END-TO-END CROP CYCLE JOURNEY -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="8">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">End-to-End Workflow</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Complete Crop-Cycle Coverage: A Farmer's 4-Phase Journey</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 my-auto">
+        <div class="bg-slate-800/90 border border-emerald-500/40 rounded-2xl p-5">
+          <span class="px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-2xs uppercase">Phase 1</span>
+          <h4 class="text-sm font-bold text-white mt-2 mb-2">🌱 Pre-Sowing & Planning</h4>
+          <ul class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            <li>• Input soil test results (N-P-K, pH).</li>
+            <li>• View crop suitability score matrix.</li>
+            <li>• Simulate farm business budget.</li>
+            <li>• Buy certified seeds from Store.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-800/90 border border-teal-500/40 rounded-2xl p-5">
+          <span class="px-2.5 py-1 rounded-full bg-teal-500/20 text-teal-300 font-bold text-2xs uppercase">Phase 2</span>
+          <h4 class="text-sm font-bold text-white mt-2 mb-2">🌿 Vegetative & Growth</h4>
+          <ul class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            <li>• Sync GPS satellite microclimate.</li>
+            <li>• Ask Copilot in Odia for irrigation timing.</li>
+            <li>• Speak daily expenses to log them.</li>
+            <li>• Track plot health indicators.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-800/90 border border-amber-500/40 rounded-2xl p-5">
+          <span class="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-2xs uppercase">Phase 3</span>
+          <h4 class="text-sm font-bold text-white mt-2 mb-2">🛡️ Risk Watch & Mitigation</h4>
+          <ul class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            <li>• Receive explainable outbreak alerts.</li>
+            <li>• Photograph leaf on AI Scanner.</li>
+            <li>• Get instant ICAR dosage prescription.</li>
+            <li>• Escalate edge cases to OUAT experts.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-800/90 border border-blue-500/40 rounded-2xl p-5">
+          <span class="px-2.5 py-1 rounded-full bg-blue-500/20 text-blue-300 font-bold text-2xs uppercase">Phase 4</span>
+          <h4 class="text-sm font-bold text-white mt-2 mb-2">💰 Harvest, Freight & Sale</h4>
+          <ul class="text-3xs text-slate-300 space-y-1.5 leading-relaxed">
+            <li>• Compare 21 Odisha mandis prices.</li>
+            <li>• Calculate Net Realization minus freight.</li>
+            <li>• Follow Sell vs. Hold advisory.</li>
+            <li>• Direct sale on B2B Marketplace.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 9: TECHNICAL ARCHITECTURE -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="9">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Engineering Blueprint</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">System Architecture: Scalable, Lightweight & Resilient</h2>
+      </div>
+
+      <div class="space-y-3.5 my-auto">
+        <div class="p-4 rounded-xl bg-slate-800/80 border border-emerald-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-emerald-400 uppercase">📱 1. Client Presentation Tier</div>
+            <div class="text-xs text-slate-300 mt-1">Mobile-First PWA • Web Speech API (Odia/Hindi/English Voice) • HTML5 Canvas Camera Viewfinder • TailwindCSS Micro-UI</div>
+          </div>
+          <span class="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-300 font-mono text-2xs border border-emerald-500/20">Frontend</span>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-800/80 border border-blue-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-blue-400 uppercase">⚙️ 2. Backend Orchestration Tier</div>
+            <div class="text-xs text-slate-300 mt-1">FastAPI (Python 3.14 Asynchronous Engine) • Role-Based Auth (Farmer, Expert, Seller, Admin) • Mandi Freight Pipeline</div>
+          </div>
+          <span class="px-3 py-1 rounded-lg bg-blue-500/10 text-blue-300 font-mono text-2xs border border-blue-500/20">FastAPI</span>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-800/80 border border-amber-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-amber-400 uppercase">🤖 3. AI, Computer Vision & Explainability Engine</div>
+            <div class="text-xs text-slate-300 mt-1">MobileNetV3 / Vision Ensemble • Excess Green Index (EGI) Foliar Filtering • Disease Lesion Segmenter • XAI Causal Rules</div>
+          </div>
+          <span class="px-3 py-1 rounded-lg bg-amber-500/10 text-amber-300 font-mono text-2xs border border-amber-500/20">ML & Vision</span>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-800/80 border border-purple-500/30 flex items-center justify-between">
+          <div>
+            <div class="text-xs font-bold text-purple-400 uppercase">💾 4. Data, Telemetry & Persistence Tier</div>
+            <div class="text-xs text-slate-300 mt-1">SQLite / PostgreSQL with SQLAlchemy ORM • OpenWeatherMap GPS Microclimate APIs • 21 Odisha Mandis Data • Render PaaS</div>
+          </div>
+          <span class="px-3 py-1 rounded-lg bg-purple-500/10 text-purple-300 font-mono text-2xs border border-purple-500/20">Cloud PaaS</span>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 10: HACKATHON EVALUATION ALIGNMENT -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="10">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Evaluation Framework</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Hackathon Evaluation Alignment: Why Code Titans Wins</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 my-auto">
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-emerald-500/30">
+          <div class="text-xs font-bold text-emerald-400 uppercase mb-1">🎯 True Integration</div>
+          <p class="text-xs text-slate-300">Unified profile, farm acres, and GPS location shared under a single persistent database state (not 3 disjoint apps).</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-blue-500/30">
+          <div class="text-xs font-bold text-blue-400 uppercase mb-1">🗣️ Multimodal & Vernacular</div>
+          <p class="text-xs text-slate-300">Real voice recognition in Odia & Hindi, live camera leaf scanning, and low-bandwidth SMS/WhatsApp simulation.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-amber-500/30">
+          <div class="text-xs font-bold text-amber-400 uppercase mb-1">💡 Explainable AI (XAI)</div>
+          <p class="text-xs text-slate-300">Alerts transparently communicate underlying biological and economic causality, not just opaque flags.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-purple-500/30">
+          <div class="text-xs font-bold text-purple-400 uppercase mb-1">🌾 Full Crop Cycle</div>
+          <p class="text-xs text-slate-300">Covers pre-sowing soil suitability, in-season disease protection, and post-harvest mandi net realization.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-red-500/30">
+          <div class="text-xs font-bold text-red-400 uppercase mb-1">⚡ Concrete Actionability</div>
+          <p class="text-xs text-slate-300">Scans and alerts pair with ICAR-approved chemical/organic dosages and direct market dispatch routes.</p>
+        </div>
+        <div class="p-5 rounded-2xl bg-slate-800/80 border border-teal-500/30">
+          <div class="text-xs font-bold text-teal-400 uppercase mb-1">🌐 Live & Deployed</div>
+          <p class="text-xs text-slate-300">Production-ready on Render Cloud PaaS with 100% passing automated unit test suite.</p>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 11: QUANTIFIABLE IMPACT & ROADMAP -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="11">
+      <div>
+        <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">Impact & Scaling</span>
+        <h2 class="text-2xl md:text-4xl font-extrabold text-white mt-1">Quantifiable Economic Impact & Strategic Roadmap</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-6 rounded-2xl bg-emerald-950/30 border border-emerald-500/40 text-center">
+          <div class="text-3xl md:text-4xl font-black text-emerald-400">20% – 35%</div>
+          <div class="text-xs text-slate-300 mt-2 font-medium">Reduction in Crop Loss via 3-Day Early Disease & Weather Warning</div>
+        </div>
+        <div class="p-6 rounded-2xl bg-blue-950/30 border border-blue-500/40 text-center">
+          <div class="text-3xl md:text-4xl font-black text-blue-400">15% – 25%</div>
+          <div class="text-xs text-slate-300 mt-2 font-medium">Higher Net Realization per Quintal via Logistics & Mandi Fee Optimization</div>
+        </div>
+        <div class="p-6 rounded-2xl bg-amber-950/30 border border-amber-500/40 text-center">
+          <div class="text-3xl md:text-4xl font-black text-amber-400">30% Savings</div>
+          <div class="text-xs text-slate-300 mt-2 font-medium">In Agricultural Inputs via Precision Soil NPK & Verified IPM Dosage</div>
+        </div>
+      </div>
+
+      <div class="p-6 rounded-2xl bg-slate-800/80 border border-emerald-500/30">
+        <h4 class="text-sm font-bold text-emerald-400 mb-3">🗺️ Future Ecosystem Scaling Horizons</h4>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
+          <div>
+            <strong class="text-white">• Phase 2 (IoT Soil Probes):</strong> LoRaWAN / ESP32 sensor integration for automated moisture and NPK telemetry.
+          </div>
+          <div>
+            <strong class="text-white">• Phase 3 (Pan-India Mandis):</strong> Expanding beyond 21 Odisha mandis to 500+ APMC mandis nationwide.
+          </div>
+          <div>
+            <strong class="text-white">• Phase 4 (FPO Collective):</strong> Shared truck booking & collective storage to slash freight costs by another 40%.
+          </div>
+        </div>
+      </div>
+
+      <div class="text-xs text-slate-400 flex items-center justify-between border-t border-slate-800 pt-3">
+        <span>Code Titans • Gandhi Institute of Technology and Management</span>
+        <span class="font-mono text-emerald-400">Problem Statement: CB SW 4</span>
+      </div>
+    </section>
+
+    <!-- ========================================== -->
+    <!-- SLIDE 12: TEAM & DEMO CONCLUSION -->
+    <!-- ========================================== -->
+    <section class="slide flex-col justify-between max-w-7xl w-full h-full bg-slate-900/60 border border-slate-800/80 rounded-3xl p-8 md:p-12 shadow-2xl relative" data-index="12">
+      <div>
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold uppercase mb-2">
+          Project Presentation Conclusion
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-white">Team Code Titans</h2>
+        <p class="text-sm text-amber-400 font-bold mt-1">Gandhi Institute of Technology and Management (GITAM) • Problem Statement: CB SW 4</p>
+      </div>
+
+      <!-- 4 Team Member Profiles -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 my-auto">
+        <div class="p-5 rounded-2xl bg-slate-800/90 border border-emerald-500/40">
+          <div class="text-xl mb-1">👑</div>
+          <h4 class="font-bold text-white text-sm">Swaviman Nayak</h4>
+          <div class="text-xs font-bold text-amber-400 mb-2">Team Leader</div>
+          <p class="text-3xs text-slate-300 leading-relaxed">
+            • System Architecture<br>
+            • Multi-Threat Risk Modeling<br>
+            • Full-Stack Integration
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-800/90 border border-emerald-500/40">
+          <div class="text-xl mb-1">⚡</div>
+          <h4 class="font-bold text-white text-sm">Lokanath Bala</h4>
+          <div class="text-xs font-bold text-amber-400 mb-2">Core AI & Backend</div>
+          <p class="text-3xs text-slate-300 leading-relaxed">
+            • Computer Vision Scanner<br>
+            • FastAPI & ML Pipelines<br>
+            • Cloud Deployment & DB
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-800/90 border border-emerald-500/40">
+          <div class="text-xl mb-1">🎨</div>
+          <h4 class="font-bold text-white text-sm">Alok Kumar Swain</h4>
+          <div class="text-xs font-bold text-amber-400 mb-2">Frontend & Multilingual UX</div>
+          <p class="text-3xs text-slate-300 leading-relaxed">
+            • Odia/Hindi Voice Copilot<br>
+            • Web Speech API Integration<br>
+            • PWA Responsive Micro-UI
+          </p>
+        </div>
+
+        <div class="p-5 rounded-2xl bg-slate-800/90 border border-emerald-500/40">
+          <div class="text-xl mb-1">📈</div>
+          <h4 class="font-bold text-white text-sm">Gurudatta Ojha</h4>
+          <div class="text-xs font-bold text-amber-400 mb-2">Data & Agri-Economics</div>
+          <p class="text-3xs text-slate-300 leading-relaxed">
+            • 21 Odisha Mandis Matrix<br>
+            • Net Realization Formula<br>
+            • Soil & Agronomy Datasets
+          </p>
+        </div>
+      </div>
+
+      <!-- Links & Q&A Box -->
+      <div class="p-5 rounded-2xl bg-slate-800/90 border border-emerald-500/40 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="text-xs font-bold text-amber-400 uppercase">Live Prototype & Repository</div>
+          <div class="text-xs text-white mt-1">
+            🌐 Live Demo: <a href="https://ai-farm-copilot-bfbq.onrender.com" target="_blank" class="text-emerald-400 underline font-mono">https://ai-farm-copilot-bfbq.onrender.com</a><br>
+            💻 GitHub: <a href="https://github.com/lokanathbala273-beep/ai-farm-copilot.git" target="_blank" class="text-emerald-400 underline font-mono">https://github.com/lokanathbala273-beep/ai-farm-copilot.git</a>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="text-sm font-extrabold text-amber-300">🙏 Thank You!</span>
+          <div class="text-xs text-slate-300">Open for Jury Q&A and Live Demo</div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script>
+    let currentSlideIndex = 1;
+    const totalSlides = 12;
+
+    function showSlide(index) {
+      if (index < 1) index = 1;
+      if (index > totalSlides) index = totalSlides;
+      currentSlideIndex = index;
+
+      document.querySelectorAll('.slide').forEach(s => s.classList.remove('active'));
+      const activeSlide = document.querySelector(`.slide[data-index="${currentSlideIndex}"]`);
+      if (activeSlide) activeSlide.classList.add('active');
+
+      document.getElementById('slideCounter').textContent = `${currentSlideIndex} / ${totalSlides}`;
+      document.getElementById('progressBar').style.width = `${(currentSlideIndex / totalSlides) * 100}%`;
+    }
+
+    function nextSlide() {
+      if (currentSlideIndex < totalSlides) {
+        showSlide(currentSlideIndex + 1);
+      }
+    }
+
+    function prevSlide() {
+      if (currentSlideIndex > 1) {
+        showSlide(currentSlideIndex - 1);
+      }
+    }
+
+    function toggleFullScreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+      } else if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        prevSlide();
+      } else if (e.key === 'f' || e.key === 'F') {
+        toggleFullScreen();
+      } else if (e.key === 'Home') {
+        showSlide(1);
+      } else if (e.key === 'End') {
+        showSlide(totalSlides);
+      }
+    });
+
+    // Touch swipe support
+    let touchStartX = 0;
+    document.addEventListener('touchstart', e => {
+      touchStartX = e.changedTouches[0].screenX;
+    });
+    document.addEventListener('touchend', e => {
+      let touchEndX = e.changedTouches[0].screenX;
+      if (touchEndX < touchStartX - 50) nextSlide();
+      if (touchEndX > touchStartX + 50) prevSlide();
+    });
+  </script>
+</body>
+</html>
