@@ -10,6 +10,7 @@ from backend.app.models.database import get_db
 from backend.app.models.tables import User, UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token")
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/token", auto_error=False)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
@@ -55,6 +56,25 @@ def get_current_user(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user account")
     return user
+
+def get_optional_current_user(
+    token: Optional[str] = Depends(oauth2_scheme_optional),
+    db: Session = Depends(get_db)
+) -> Optional[User]:
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id_str = payload.get("sub")
+        if user_id_str is None:
+            return None
+        user_id = int(user_id_str)
+        user = db.query(User).filter(User.id == user_id).first()
+        if user and user.is_active:
+            return user
+        return None
+    except Exception:
+        return None
 
 def require_roles(allowed_roles: List[UserRole]):
     def role_checker(current_user: User = Depends(get_current_user)) -> User:

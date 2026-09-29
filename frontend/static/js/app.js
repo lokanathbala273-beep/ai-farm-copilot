@@ -1218,12 +1218,82 @@ async function loadDashboardData() {
       const incEl = document.getElementById('dashNetIncome');
       if (incEl) incEl.innerText = `₹${incData.total_net_income.toLocaleString()}`;
     }
+
+    // Attempt automatic live location sync if browser permissions allow
+    checkAndAutoSyncLiveLocation();
   } catch (err) {
     console.error('Error loading dashboard:', err);
   }
 }
 
-// Share Farmer Live GPS Location
+// Helper: Reverse Geocoding via BigDataCloud free client API
+async function reverseGeocode(lat, lon) {
+  try {
+    const res = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`);
+    if (res.ok) {
+      const data = await res.json();
+      const city = data.city || data.locality || data.principalSubdivision;
+      const district = data.localityInfo?.administrative?.find(a => a.adminLevel === 5)?.name || '';
+      const stateName = data.principalSubdivision || '';
+      if (city && district && district !== city) return `${city}, ${district}, ${stateName}`;
+      if (city && stateName) return `${city}, ${stateName}`;
+      if (city) return city;
+    }
+  } catch (e) {
+    console.warn('Reverse geocoding error:', e);
+  }
+  return `Live Field (${lat}° N, ${lon}° E)`;
+}
+
+// Client-side direct Open-Meteo fallback for zero-latency live weather
+async function fetchDirectOpenMeteo(lat, lon) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,rain,weather_code,wind_speed_10m&hourly=precipitation_probability&daily=precipitation_probability_max,temperature_2m_max,temperature_2m_min,precipitation_sum,weather_code&forecast_days=3&timezone=auto`;
+    const res = await fetch(url);
+    if (res.ok) {
+      const data = await res.json();
+      const cur = data.current || {};
+      const daily = data.daily || {};
+      const hourly = data.hourly || {};
+      const dailyProbs = daily.precipitation_probability_max || [];
+      const todayProb = dailyProbs[0] || 0;
+      const curTime = cur.time || '';
+      const hTimes = hourly.time || [];
+      const hProbs = hourly.precipitation_probability || [];
+      let curProb = todayProb;
+      if (curTime && hTimes.includes(curTime)) {
+        curProb = hProbs[hTimes.indexOf(curTime)];
+      }
+      const effProb = Math.max(curProb, Math.round(todayProb * 0.8));
+
+      const wmoMap = {
+        0: 'Clear Sky ☀️', 1: 'Mainly Clear 🌤️', 2: 'Partly Cloudy ⛅', 3: 'Overcast ☁️',
+        45: 'Foggy 🌫️', 51: 'Light Drizzle 🌦️', 53: 'Moderate Drizzle 🌦️', 55: 'Dense Drizzle 🌧️',
+        61: 'Slight Rain 🌧️', 63: 'Moderate Rain 🌧️', 65: 'Heavy Rain ⛈️',
+        80: 'Rain Showers 🌦️', 81: 'Heavy Showers 🌧️', 95: 'Thunderstorm ⚡⛈️'
+      };
+      const cond = wmoMap[cur.weather_code] || 'Partly Cloudy ⛅';
+
+      return {
+        source: 'Open-Meteo Live Satellite Direct',
+        temperature: cur.temperature_2m,
+        apparent_temperature: cur.apparent_temperature || cur.temperature_2m,
+        humidity: cur.relative_humidity_2m,
+        wind_speed_kmh: cur.wind_speed_10m || 10,
+        rain_probability_pct: effProb,
+        rain_probability_max_today: todayProb,
+        rainfall_mm: (daily.precipitation_sum && daily.precipitation_sum[0]) || 0,
+        condition: cond,
+        weather_code: cur.weather_code || 2
+      };
+    }
+  } catch (e) {
+    console.warn('Client direct Open-Meteo fetch error:', e);
+  }
+  return null;
+}
+
+// Share Farmer Live GPS Location (Real-time Exact Coordinates, Real Temp & Rain Chance)
 async function shareLiveLocation() {
   const btn = document.getElementById('btnShareLiveGps');
   const statusEl = document.getElementById('dashLiveGpsStatus');
@@ -1231,11 +1301,11 @@ async function shareLiveLocation() {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>📡</span> <span>Connecting Satellite GPS...</span>';
+    btn.innerHTML = '<span>📡</span> <span>Connecting Satellite GPS & Radar...</span>';
   }
 
   if (!navigator.geolocation) {
-    showToast('Geolocation is not supported by this browser. Using Regional Agro-Station coordinates.', 'warning');
+    showToast('Geolocation is not supported by your browser. Using Regional Agro-Station coordinates.', 'warning');
     if (btn) {
       btn.disabled = false;
       btn.innerHTML = '<span>📍</span> <span>Share Live GPS Location</span>';
@@ -1245,7 +1315,7 @@ async function shareLiveLocation() {
 
   const geoOptions = {
     enableHighAccuracy: true,
-    timeout: 10000,
+    timeout: 12000,
     maximumAge: 0
   };
 
@@ -1253,8 +1323,11 @@ async function shareLiveLocation() {
     async (position) => {
       const lat = parseFloat(position.coords.latitude.toFixed(4));
       const lon = parseFloat(position.coords.longitude.toFixed(4));
-      const acc = Math.round(position.coords.accuracy || 15);
-      const liveName = `Live GPS (${lat}° N, ${lon}° E)`;
+      const acc = Math.round(position.coords.accuracy || 10);
+
+      // Perform real reverse geocoding to resolve exact city and district
+      const detectedCity = await reverseGeocode(lat, lon);
+      const liveName = detectedCity || `Live GPS (${lat}° N, ${lon}° E)`;
 
       state.currentLat = lat;
       state.currentLon = lon;
@@ -1264,13 +1337,16 @@ async function shareLiveLocation() {
       if (farmNameEl) farmNameEl.innerText = 'Kishan Smart Farm';
 
       const farmLocEl = document.getElementById('dashFarmLoc');
-      if (farmLocEl) farmLocEl.innerText = liveName;
+      if (farmLocEl) farmLocEl.innerText = `${liveName} (Live GPS)`;
 
       const weatherLocEl = document.getElementById('dashWeatherLocation');
       if (weatherLocEl) weatherLocEl.innerText = liveName;
 
+      const coordsEl = document.getElementById('dashWeatherCoords');
+      if (coordsEl) coordsEl.innerText = `${lat}° N, ${lon}° E`;
+
       if (statusEl) {
-        statusEl.innerText = `📍 Live GPS: ${lat}° N, ${lon}° E (Real-time Fix)`;
+        statusEl.innerText = `📍 Live GPS Fix: ${liveName} (${lat}° N, ${lon}° E)`;
       }
       if (accEl) {
         accEl.innerText = `Satellite Fix Accuracy: ±${acc}m (High Precision)`;
@@ -1296,7 +1372,10 @@ async function shareLiveLocation() {
       // Fetch real weather and recalculate risk alerts for shared live location
       await fetchLocalizedWeather(lat, lon, liveName);
 
-      showToast(`📍 Live GPS synchronized! Real-time weather and risk alerts updated for Kishan Smart Farm.`, 'success');
+      const rainVal = document.getElementById('dashWeatherRain')?.innerText || '--%';
+      const tempVal = document.getElementById('dashWeatherTemp')?.innerText || '--°C';
+
+      showToast(`📍 Live GPS Connected: ${liveName}! Real Temp: ${tempVal}, Rain Chance (बारिश): ${rainVal}.`, 'success');
 
       if (btn) {
         btn.disabled = false;
@@ -1325,6 +1404,9 @@ async function shareLiveLocation() {
       const weatherLocEl = document.getElementById('dashWeatherLocation');
       if (weatherLocEl) weatherLocEl.innerText = zoneName;
 
+      const coordsEl = document.getElementById('dashWeatherCoords');
+      if (coordsEl) coordsEl.innerText = `${lat.toFixed(2)}° N, ${lon.toFixed(2)}° E`;
+
       if (statusEl) {
         statusEl.innerText = `📍 Regional Agro-Zone: ${lat.toFixed(4)}° N, ${lon.toFixed(4)}° E (${zoneName})`;
       }
@@ -1343,6 +1425,27 @@ async function shareLiveLocation() {
       }
     },
     geoOptions
+  );
+}
+
+// Auto-request live location on page load if browser allows
+function checkAndAutoSyncLiveLocation() {
+  if (!navigator.geolocation) return;
+  // If browser permission is available, attempt a low-friction fix
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const lat = parseFloat(pos.coords.latitude.toFixed(4));
+      const lon = parseFloat(pos.coords.longitude.toFixed(4));
+      const detectedCity = await reverseGeocode(lat, lon);
+      state.currentLat = lat;
+      state.currentLon = lon;
+      state.currentLocationName = detectedCity;
+      await fetchLocalizedWeather(lat, lon, detectedCity);
+    },
+    () => {
+      // Permission not yet granted; will sync on button click
+    },
+    { timeout: 5000, maximumAge: 60000, enableHighAccuracy: false }
   );
 }
 
@@ -1365,6 +1468,9 @@ async function changeAgroZonePreset(val) {
 
   const weatherLocEl = document.getElementById('dashWeatherLocation');
   if (weatherLocEl) weatherLocEl.innerText = zoneName;
+
+  const coordsEl = document.getElementById('dashWeatherCoords');
+  if (coordsEl) coordsEl.innerText = `${lat.toFixed(2)}° N, ${lon.toFixed(2)}° E`;
 
   const statusEl = document.getElementById('dashLiveGpsStatus');
   const accEl = document.getElementById('dashGpsAccuracy');
@@ -1397,35 +1503,71 @@ async function changeAgroZonePreset(val) {
   showToast(`Switched microclimate zone to ${zoneName}. Recalculating crop disease risk...`, 'info');
 }
 
-// Fetch localized microclimate weather and risk alerts
+// Fetch localized microclimate weather and risk alerts with dual backend & direct fallback
 async function fetchLocalizedWeather(lat, lon, locationName) {
   try {
     const url = `/weather?lat=${lat}&lon=${lon}&location_name=${encodeURIComponent(locationName || '')}`;
     const res = await apiFetch(url);
     if (res.ok) {
       const data = await res.json();
-      renderWeatherWidget(data.weather);
-      renderSmartAlerts(data.smart_alerts);
+      if (data && data.weather) {
+        renderWeatherWidget(data.weather);
+        renderSmartAlerts(data.smart_alerts);
+        return;
+      }
     }
   } catch (err) {
-    console.error('Failed to fetch localized weather:', err);
+    console.warn('Backend weather fetch error, attempting direct client fetch:', err);
+  }
+
+  // Fallback: Direct client-side Open-Meteo live request
+  const directW = await fetchDirectOpenMeteo(lat, lon);
+  if (directW) {
+    renderWeatherWidget(directW);
   }
 }
 
 function renderWeatherWidget(weather) {
+  if (!weather) return;
   const tempEl = document.getElementById('dashWeatherTemp');
+  const feelsLikeEl = document.getElementById('dashWeatherFeelsLike');
   const rhEl = document.getElementById('dashWeatherHumidity');
   const windEl = document.getElementById('dashWeatherWind');
   const rainEl = document.getElementById('dashWeatherRain');
   const condEl = document.getElementById('dashWeatherCond');
   const locEl = document.getElementById('dashWeatherLocation');
+  const coordsEl = document.getElementById('dashWeatherCoords');
 
-  if (tempEl) tempEl.innerText = `${weather.temperature.toFixed(1)}°C`;
-  if (rhEl) rhEl.innerText = `${weather.humidity.toFixed(0)}%`;
-  if (windEl) windEl.innerText = `${weather.wind_speed_kmh} km/h`;
-  if (rainEl) rainEl.innerText = `${weather.rain_probability_pct}%`;
-  if (condEl) condEl.innerText = weather.condition;
+  // Mini Glance Widget
+  const tempVal = typeof weather.temperature === 'number' ? weather.temperature.toFixed(1) : weather.temperature;
+  const feelsVal = typeof weather.apparent_temperature === 'number' ? weather.apparent_temperature.toFixed(1) : tempVal;
+  const rainVal = typeof weather.rain_probability_pct === 'number' ? weather.rain_probability_pct.toFixed(0) : (weather.rain_probability_pct || 0);
+
+  if (tempEl) tempEl.innerText = `${tempVal}°C`;
+  if (feelsLikeEl) feelsLikeEl.innerText = `Feels like: ${feelsVal}°C`;
+  if (rhEl) rhEl.innerText = `${weather.humidity ? weather.humidity.toFixed(0) : '--'}%`;
+  if (windEl) windEl.innerText = `${weather.wind_speed_kmh || '--'} km/h`;
+  if (rainEl) rainEl.innerText = `${rainVal}%`;
+  if (condEl) condEl.innerText = weather.condition || 'Partly Cloudy ⛅';
   if (locEl) locEl.innerText = state.currentLocationName || 'Shared Live Location';
+  if (coordsEl && state.currentLat && state.currentLon) {
+    coordsEl.innerText = `${state.currentLat.toFixed(2)}° N, ${state.currentLon.toFixed(2)}° E`;
+  }
+
+  // Location Tracker Card Summary Bar
+  const locCityEl = document.getElementById('locBarCityName');
+  const locCondEl = document.getElementById('locBarCondition');
+  const locCoordsEl = document.getElementById('locBarCoordinates');
+  const locTempEl = document.getElementById('locBarTemp');
+  const locRainEl = document.getElementById('locBarRainProb');
+
+  if (locCityEl) locCityEl.innerText = `📍 ${state.currentLocationName || 'Live GPS Location'}`;
+  if (locCondEl) locCondEl.innerText = weather.condition || 'Partly Cloudy ⛅';
+  if (locCoordsEl && state.currentLat && state.currentLon) {
+    locCoordsEl.innerText = `Coordinates: ${state.currentLat}° N, ${state.currentLon}° E (Live GPS Telemetry)`;
+  }
+  if (locTempEl) locTempEl.innerText = `${tempVal}°C`;
+  if (locRainEl) locRainEl.innerText = `${rainVal}%`;
 }
 
 function renderSmartAlerts(alerts) {

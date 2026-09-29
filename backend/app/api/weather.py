@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from backend.app.models.database import get_db
 from backend.app.models.tables import User, Farm, FarmerProfile
-from backend.app.auth.security import get_current_user
+from backend.app.auth.security import get_optional_current_user
 from backend.app.services.weather_service import weather_service
 
 router = APIRouter(prefix="/weather", tags=["Weather Intelligence"])
@@ -14,7 +14,7 @@ def get_current_weather(
     lon: Optional[float] = Query(None, description="Farmer live device GPS longitude"),
     location_name: Optional[str] = Query(None, description="Optional detected location name"),
     farm_id: Optional[int] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     target_lat = lat
@@ -22,9 +22,11 @@ def get_current_weather(
     region_label = location_name or "Live GPS Location"
     crops = ["Rice", "Tomato", "Potato"]
 
-    profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
-    if profile:
-        crops = profile.current_crops or crops
+    profile = None
+    if current_user:
+        profile = db.query(FarmerProfile).filter(FarmerProfile.user_id == current_user.id).first()
+        if profile:
+            crops = profile.current_crops or crops
 
     # If coordinates not provided directly in query, check farm
     if target_lat is None or target_lon is None:
