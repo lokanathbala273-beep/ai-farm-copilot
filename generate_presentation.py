@@ -133,18 +133,30 @@ def create_deck(output_filename="Code_Titans_CB_SW_4_Presentation.pptx"):
     accent_bar.fill.fore_color.rgb = C_EMERALD_MED
     accent_bar.line.fill.background()
 
-    # Problem Statement Badge
-    badge1 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.0), Inches(0.7), Inches(5.2), Inches(0.42))
+    # Problem Statement Badge & Hackverse 2K26 Event Badge
+    badge1 = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(1.0), Inches(0.7), Inches(5.4), Inches(0.42))
     badge1.fill.solid()
     badge1.fill.fore_color.rgb = C_EMERALD_DARK
     badge1.line.color.rgb = C_EMERALD_MED
     badge1.line.width = Pt(1.5)
     p_b1 = badge1.text_frame.paragraphs[0]
-    p_b1.text = "🎯 PROBLEM STATEMENT: CB SW 4 • AGRI-TECH & RURAL INNOVATION"
-    p_b1.font.size = Pt(11)
+    p_b1.text = "🎯 PROBLEM STATEMENT: CB SW 4 • AGRI-TECH"
+    p_b1.font.size = Pt(10.5)
     p_b1.font.bold = True
     p_b1.font.color.rgb = C_WHITE
     p_b1.alignment = PP_ALIGN.CENTER
+
+    badge_event = slide1.shapes.add_shape(MSO_SHAPE.ROUNDED_RECTANGLE, Inches(6.6), Inches(0.7), Inches(5.7), Inches(0.42))
+    badge_event.fill.solid()
+    badge_event.fill.fore_color.rgb = RGBColor(30, 41, 59)
+    badge_event.line.color.rgb = C_GOLD
+    badge_event.line.width = Pt(1.5)
+    p_be = badge_event.text_frame.paragraphs[0]
+    p_be.text = "🏆 HACKVERSE 2K26 • ONLINE MID-EVALUATION (GCEK)"
+    p_be.font.size = Pt(10.5)
+    p_be.font.bold = True
+    p_be.font.color.rgb = C_GOLD
+    p_be.alignment = PP_ALIGN.CENTER
 
     # Main Project Title
     t_box1 = slide1.shapes.add_textbox(Inches(1.0), Inches(1.2), Inches(11.3), Inches(1.8))
