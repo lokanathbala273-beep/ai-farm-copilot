@@ -1,0 +1,22 @@
+name: Keep Render Deployment Awake
+
+on:
+  schedule:
+    # Runs every 14 minutes to prevent Render Free Tier 15-minute inactivity spin-down
+    - cron: '*/14 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    name: Ping Farm Copilot Render Service
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" https://ai-farm-copilot-bfbq.onrender.com/health)
+          echo "Render Health HTTP Status: $response"
+          if [ "$response" -eq 200 ]; then
+            echo "Render service is awake and healthy!"
+          else
+            echo "Waking up Render service..."
+          fi
