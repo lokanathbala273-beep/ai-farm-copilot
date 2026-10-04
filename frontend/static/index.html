@@ -49,7 +49,7 @@
     <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
       
       <!-- Logo & Title -->
-      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('dashboard')">
+      <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab(typeof getRoleDefaultTab === 'function' && state.user ? getRoleDefaultTab(state.user.role) : 'dashboard')">
         <div class="w-10 h-10 rounded-xl bg-emerald-600 flex items-center justify-center text-xl shadow-inner">
           🌾
         </div>
@@ -63,9 +63,9 @@
       </div>
 
       <!-- Quick 1-Click Demo Role Switcher (Farmer, Expert, Seller, Buyer, Admin) -->
-      <div id="headerQuickRoles" class="hidden items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs overflow-x-auto no-scrollbar">
+      <div id="headerQuickRoles" class="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs overflow-x-auto no-scrollbar">
         <button onclick="quickDemoPhoneLogin('FARMER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="FARMER">
-          👨‍🌾 Farmer (Priority 1)
+          👨‍🌾 Farmer
         </button>
         <button onclick="quickDemoPhoneLogin('AGRICULTURAL_EXPERT')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="AGRICULTURAL_EXPERT">
           🩺 Expert
@@ -115,39 +115,43 @@
     </div>
   </header>
 
-  <!-- MAIN NAVIGATION TABS (Mobile Friendly Scrollable Bar - Only Visible After Sign In) -->
+  <!-- MAIN NAVIGATION TABS (Strictly Isolated by Role) -->
   <nav id="mainAppNav" class="hidden bg-white/95 backdrop-blur-md border-b border-slate-200/80 sticky top-14 z-30 shadow-xs">
     <div class="max-w-7xl mx-auto px-4 flex items-center gap-1 md:gap-2 overflow-x-auto no-scrollbar py-2 text-xs md:text-sm font-medium">
-      <button onclick="switchTab('dashboard')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="dashboard">
+      <!-- FARMER ONLY TABS -->
+      <button onclick="switchTab('dashboard')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="dashboard" data-role-group="FARMER">
         <span>🌾</span> <span data-i18n="nav.my_farm">My Farm</span>
       </button>
-      <button onclick="switchTab('scanner')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="scanner">
+      <button onclick="switchTab('scanner')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="scanner" data-role-group="FARMER">
         <span>📷</span> <span data-i18n="nav.check_disease">Check Disease</span>
       </button>
-      <button onclick="switchTab('copilot')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="copilot">
+      <button onclick="switchTab('copilot')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="copilot" data-role-group="FARMER">
         <span>🎙️</span> <span data-i18n="nav.copilot">AI Co-Pilot</span>
       </button>
-      <button onclick="switchTab('soil')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="soil">
+      <button onclick="switchTab('soil')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="soil" data-role-group="FARMER">
         <span>🧪</span> <span data-i18n="nav.soil">Soil Health</span>
       </button>
-      <button onclick="switchTab('business')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="business">
+      <button onclick="switchTab('business')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="business" data-role-group="FARMER">
         <span>📊</span> <span data-i18n="nav.business">Farm Business</span>
       </button>
-      <button onclick="switchTab('market')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="market">
+      <button onclick="switchTab('market')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="market" data-role-group="FARMER">
         <span>💰</span> <span data-i18n="nav.market">Market Optimizer</span>
       </button>
-      <button onclick="switchTab('marketplace')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="marketplace">
+      <button onclick="switchTab('marketplace')" class="nav-tab farmer-only-nav px-3.5 py-2 rounded-xl text-slate-600 hover:text-emerald-700 hover:bg-emerald-50 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="marketplace" data-role-group="FARMER">
         <span>🛒</span> <span data-i18n="nav.marketplace">Sell Produce</span>
       </button>
       
-      <!-- Role Portals (Conditional) -->
-      <button id="nav-expert_portal" onclick="switchTab('expert_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="expert_portal">
-        <span>🩺</span> <span data-i18n="nav.ask_expert">Expert Portal</span>
+      <!-- DEDICATED ROLE PORTALS (Strictly isolated per role) -->
+      <button id="nav-expert_portal" onclick="switchTab('expert_portal')" class="nav-tab hidden px-3.5 py-2 rounded-xl text-purple-700 bg-purple-50 hover:bg-purple-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="expert_portal" data-role-group="AGRICULTURAL_EXPERT">
+        <span>🩺</span> <span data-i18n="nav.ask_expert">Expert Advice</span>
       </button>
-      <button id="nav-seller_portal" onclick="switchTab('seller_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="seller_portal">
+      <button id="nav-seller_portal" onclick="switchTab('seller_portal')" class="nav-tab hidden px-3.5 py-2 rounded-xl text-blue-700 bg-blue-50 hover:bg-blue-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="seller_portal" data-role-group="SELLER">
         <span>🏪</span> <span data-i18n="nav.seller_store">Input Store</span>
       </button>
-      <button id="nav-admin_portal" onclick="switchTab('admin_portal')" class="nav-tab px-3.5 py-2 rounded-xl text-slate-800 bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="admin_portal">
+      <button id="nav-buyer_portal" onclick="switchTab('buyer_portal')" class="nav-tab hidden px-3.5 py-2 rounded-xl text-amber-800 bg-amber-50 hover:bg-amber-100 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="buyer_portal" data-role-group="BUYER">
+        <span>🛒</span> <span>Buyer Portal</span>
+      </button>
+      <button id="nav-admin_portal" onclick="switchTab('admin_portal')" class="nav-tab hidden px-3.5 py-2 rounded-xl text-slate-800 bg-slate-100 hover:bg-slate-200 flex items-center gap-1.5 whitespace-nowrap transition border-b-2 border-transparent" data-tab="admin_portal" data-role-group="ADMIN">
         <span>⚙️</span> <span data-i18n="nav.admin_portal">Admin Portal</span>
       </button>
     </div>
@@ -1318,14 +1322,17 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- 7. BUYER MARKETPLACE SECTION -->
+    <!-- 7. FARMER SELL PRODUCE SECTION (FARMER ONLY) -->
     <!-- ============================================== -->
     <section id="section-marketplace" class="app-section hidden space-y-6">
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Fresh Produce Marketplace</h2>
-            <p class="text-xs md:text-sm text-slate-500 mt-1">Direct digital marketplace connecting verified farmers with wholesalers, food processors, and traders.</p>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">👨‍🌾 Farmer Direct Selling</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Sell My Farm Produce</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">List your farm harvest lots directly from your profile for verified wholesale buyers and traders.</p>
           </div>
           <button onclick="openProduceListingModalFromProfile()" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold rounded-xl shadow-md transition flex items-center gap-2">
             <span>🌾</span> <span>+ List Produce Directly from Profile</span>
@@ -1333,26 +1340,37 @@
         </div>
 
         <div id="marketplaceGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mt-6">
-          <!-- Dynamically populated marketplace items -->
+          <!-- Dynamically populated farmer produce listings -->
         </div>
       </div>
     </section>
 
     <!-- ============================================== -->
-    <!-- 8. EXPERT PORTAL SECTION -->
+    <!-- 8. EXPERT ADVICE PORTAL SECTION (EXPERT ONLY) -->
     <!-- ============================================== -->
     <section id="section-expert_portal" class="app-section hidden space-y-6">
+      <!-- Expert Session Header Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-purple-50 border border-purple-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
+        <div class="flex items-center gap-2 text-purple-900 font-bold">
+          <span class="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
+          <span>🩺 Verified Agricultural Expert Portal: <span id="expertPortalUserName" class="font-extrabold">Dr. P.K. Mohapatra (OUAT Pathologist)</span></span>
+        </div>
+        <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-purple-200 text-xs font-bold transition flex items-center gap-1">
+          <span>🔒</span> <span>Sign Out</span>
+        </button>
+      </div>
+
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl md:text-2xl font-extrabold text-purple-900" data-i18n="expert_portal.title">Agricultural Expert & Pathologist Portal</h2>
-            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="expert_portal.subtitle">Review farmer disease scans, low-confidence cases, and provide verified prescriptions.</p>
+            <h2 class="text-xl md:text-2xl font-extrabold text-purple-900" data-i18n="expert_portal.title">Expert Advice & Plant Pathology Clinical Queue</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="expert_portal.subtitle">Review farmer leaf disease scans, low-confidence AI cases, and issue verified IPM prescriptions.</p>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-bold bg-purple-100 text-purple-800">Dr. P.K. Mohapatra</span>
+          <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">🩺 Dr. P.K. Mohapatra • OUAT</span>
         </div>
 
         <div class="mt-6">
-          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="expert_portal.pending_queue">Cases Awaiting Pathologist Review</h3>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="expert_portal.pending_queue">Cases Awaiting Pathologist Advice & Prescription</h3>
           <div id="expertQueueContainer" class="space-y-4">
             <!-- Dynamically populated expert cases -->
           </div>
@@ -1361,20 +1379,31 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- 9. SELLER PORTAL SECTION -->
+    <!-- 9. SELLER INPUT STORE SECTION (SELLER ONLY) -->
     <!-- ============================================== -->
     <section id="section-seller_portal" class="app-section hidden space-y-6">
+      <!-- Seller Session Header Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-50 border border-blue-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
+        <div class="flex items-center gap-2 text-blue-900 font-bold">
+          <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+          <span>🏪 Verified Input Store Seller Portal: <span id="sellerPortalUserName" class="font-extrabold">Sunil Agrochemicals & Seeds</span></span>
+        </div>
+        <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-blue-200 text-xs font-bold transition flex items-center gap-1">
+          <span>🔒</span> <span>Sign Out</span>
+        </button>
+      </div>
+
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl md:text-2xl font-extrabold text-blue-900" data-i18n="seller_portal.title">Agrochemical & Seed Seller Portal</h2>
-            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="seller_portal.subtitle">Manage approved agricultural inputs, prices, and inventory stock.</p>
+            <h2 class="text-xl md:text-2xl font-extrabold text-blue-900" data-i18n="seller_portal.title">Input Store — Agrochemical & Seed Seller Portal</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="seller_portal.subtitle">Manage approved agricultural inputs, fertilizers, fungicides, pricing, and live inventory stock.</p>
           </div>
-          <span class="px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Kisan Agro Inputs</span>
+          <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">🏪 Kisan Agro Input Store</span>
         </div>
 
         <div class="mt-6">
-          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="seller_portal.inventory">Active Inventory Stock</h3>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="seller_portal.inventory">Active Input Store Inventory Stock</h3>
           <div id="sellerProductsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
             <!-- Dynamically populated products -->
           </div>
@@ -1383,9 +1412,85 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- 10. SYSTEM ADMIN PORTAL SECTION -->
+    <!-- 9B. DEDICATED BUYER PORTAL SECTION (BUYER ONLY) -->
+    <!-- ============================================== -->
+    <section id="section-buyer_portal" class="app-section hidden space-y-6">
+      <!-- Buyer Session Header Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
+        <div class="flex items-center gap-2 text-amber-900 font-bold">
+          <span class="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
+          <span>🛒 Verified Wholesale Buyer Portal: <span id="buyerPortalUserName" class="font-extrabold">Utkal Wholesale Agro Traders</span></span>
+        </div>
+        <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-amber-200 text-xs font-bold transition flex items-center gap-1">
+          <span>🔒</span> <span>Sign Out</span>
+        </button>
+      </div>
+
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-amber-100 text-amber-800 uppercase tracking-wider border border-amber-200">🛒 Direct Wholesale Buyer Interface</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-slate-900">Direct Crop Procurement & Buyer Portal</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">Browse verified farmer harvest lots across Odisha, inspect quality grades, and place direct farm-gate purchase orders.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="buyerCropFilter" onchange="filterBuyerPortalListings()" class="p-2.5 rounded-xl border border-slate-300 text-xs font-bold bg-slate-50 text-slate-800 focus:ring-2 focus:ring-amber-500">
+              <option value="ALL">🌾 All Available Crops</option>
+              <option value="Tomato">🍅 Tomato</option>
+              <option value="Paddy">🌾 Paddy / Rice</option>
+              <option value="Potato">🥔 Potato</option>
+              <option value="Onion">🧅 Onion</option>
+              <option value="Brinjal">🍆 Brinjal</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Buyer Procurement KPIs -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div class="p-4 bg-amber-50/70 rounded-2xl border border-amber-200">
+            <span class="text-amber-800 text-2xs uppercase font-bold block">Available Farmer Lots</span>
+            <strong id="buyerTotalLots" class="text-2xl font-black text-slate-900">0</strong>
+          </div>
+          <div class="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200">
+            <span class="text-emerald-800 text-2xs uppercase font-bold block">Total Volume Available</span>
+            <strong id="buyerTotalQuintals" class="text-2xl font-black text-emerald-900">0 Qtl</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-500 text-2xs uppercase font-bold block">Procurement Mode</span>
+            <strong class="text-sm font-black text-slate-800 block mt-1">Direct Farm-Gate (0% Broker)</strong>
+          </div>
+          <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+            <span class="text-slate-500 text-2xs uppercase font-bold block">Buyer Trading Hub</span>
+            <strong class="text-sm font-black text-amber-800 block mt-1">Odisha APMC & Wholesale</strong>
+          </div>
+        </div>
+
+        <div>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4">Verified Farmer Harvest Lots Ready for Purchase</h3>
+          <div id="buyerPortalListingsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
+            <!-- Dynamically populated buyer procurement cards -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================== -->
+    <!-- 10. SYSTEM ADMIN PORTAL SECTION (ADMIN ONLY) -->
     <!-- ============================================== -->
     <section id="section-admin_portal" class="app-section hidden space-y-6">
+      <!-- Admin Session Header Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-100 border border-slate-300 px-4 py-3 rounded-2xl text-xs shadow-2xs">
+        <div class="flex items-center gap-2 text-slate-900 font-bold">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse"></span>
+          <span>⚙️ Verified System Administrator Portal: <span id="adminPortalUserName" class="font-extrabold">System Administrator</span></span>
+        </div>
+        <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-slate-300 text-xs font-bold transition flex items-center gap-1">
+          <span>🔒</span> <span>Sign Out</span>
+        </button>
+      </div>
+
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div>
           <h2 class="text-xl md:text-2xl font-extrabold text-slate-900" data-i18n="admin_portal.title">System Administration & AI Model Registry</h2>
@@ -1426,7 +1531,7 @@
     </section>
 
     <!-- ============================================== -->
-    <!-- 11. MY FARM & FIELDS SECTION -->
+    <!-- 11. MY FARM & FIELDS SECTION (FARMER ONLY) -->
     <!-- ============================================== -->
     <section id="section-my_farm" class="app-section hidden space-y-6">
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -1735,7 +1840,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20260929_v2"></script>
+  <script src="/static/js/app.js?v=20261004_v3"></script>
 </body>
 </html>
 

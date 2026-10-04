@@ -34,6 +34,23 @@ function isUserAuthenticated() {
   return !!(state.token && state.user && (state.user.email || state.user.id));
 }
 
+// Strict Role-to-Default-Tab & Allowed-Tabs Mapping
+function getRoleDefaultTab(role) {
+  if (role === 'AGRICULTURAL_EXPERT') return 'expert_portal';
+  if (role === 'SELLER') return 'seller_portal';
+  if (role === 'BUYER') return 'buyer_portal';
+  if (role === 'ADMIN') return 'admin_portal';
+  return 'dashboard';
+}
+
+const ROLE_ALLOWED_TABS = {
+  'FARMER': ['dashboard', 'scanner', 'copilot', 'soil', 'business', 'market', 'marketplace', 'my_farm'],
+  'AGRICULTURAL_EXPERT': ['expert_portal'],
+  'SELLER': ['seller_portal'],
+  'BUYER': ['buyer_portal'],
+  'ADMIN': ['admin_portal']
+};
+
 // Initialize Application
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTranslations(state.currentLang);
@@ -44,10 +61,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (isUserAuthenticated()) {
     updateUserUI();
     applyFarmerGateState();
-    if (state.user.role === 'FARMER') {
+    const role = state.user.role || 'FARMER';
+    const defaultTab = getRoleDefaultTab(role);
+    switchTab(defaultTab);
+    if (role === 'FARMER') {
       loadDashboardData();
-    } else {
-      switchTab(state.activeTab || 'dashboard');
     }
   } else {
     // Strictly lock entire website for unauthenticated / new user
@@ -197,7 +215,7 @@ const DEMO_PHONE_DIRECTORY = {
     pass: 'Buyer@1234',
     name: 'Utkal Wholesale Agro Traders',
     role: 'BUYER',
-    defaultTab: 'marketplace'
+    defaultTab: 'buyer_portal'
   },
   'ADMIN': {
     phone: '+919876543210',
@@ -367,21 +385,15 @@ async function submitPhoneOtp() {
       localStorage.setItem('user', JSON.stringify(state.user));
 
       closePhoneLoginModal();
+      localStorage.setItem('farmer_otp_verified', 'true');
+      state.isFarmerVerified = true;
       updateUserUI();
+      applyFarmerGateState();
 
       // Route to view based on authenticated role
+      const targetTab = getRoleDefaultTab(data.role);
+      switchTab(targetTab);
       if (data.role === 'FARMER') {
-        localStorage.setItem('farmer_otp_verified', 'true');
-        state.isFarmerVerified = true;
-        applyFarmerGateState();
-        switchTab('dashboard');
-        loadDashboardData();
-      } else if (data.role === 'AGRICULTURAL_EXPERT') switchTab('expert_portal');
-      else if (data.role === 'SELLER') switchTab('seller_portal');
-      else if (data.role === 'ADMIN') switchTab('admin_portal');
-      else if (data.role === 'BUYER') switchTab('marketplace');
-      else {
-        switchTab('dashboard');
         loadDashboardData();
       }
 
@@ -619,7 +631,13 @@ function switchFirstScreenAuthTab(tab) {
 }
 
 function openRegistrationInterface(tab = 'signup') {
-  switchTab('dashboard');
+  document.querySelectorAll('.app-section').forEach(sec => sec.classList.add('hidden'));
+  const dashSec = document.getElementById('section-dashboard');
+  if (dashSec) dashSec.classList.remove('hidden');
+
+  const dashPrivate = document.getElementById('farmerPrivateDashboard');
+  if (dashPrivate) dashPrivate.classList.add('hidden');
+
   if (tab === 'signin') {
     showSignInForm();
   } else {
@@ -832,10 +850,13 @@ async function submitRegistrationWithPassword() {
 
       updateUserUI();
       applyFarmerGateState();
-      switchTab('dashboard');
-      loadDashboardData();
+      const targetTab = getRoleDefaultTab(data.role);
+      switchTab(targetTab);
+      if (data.role === 'FARMER') {
+        loadDashboardData();
+      }
 
-      showToast(`🎉 Registration Complete! Welcome ${data.full_name} (${data.role}). Entire portal unlocked!`, 'success');
+      showToast(`🎉 Registration Complete! Welcome ${data.full_name} (${data.role}). Portal unlocked!`, 'success');
     } else {
       showToast(data.detail || 'Registration failed. Please verify credentials.', 'error');
     }
@@ -892,23 +913,13 @@ async function submitSignInWithPassword() {
       updateUserUI();
       applyFarmerGateState();
 
+      const targetTab = getRoleDefaultTab(data.role);
+      switchTab(targetTab);
       if (data.role === 'FARMER') {
-        switchTab('dashboard');
-        loadDashboardData();
-      } else if (data.role === 'AGRICULTURAL_EXPERT') {
-        switchTab('expert_portal');
-      } else if (data.role === 'SELLER') {
-        switchTab('seller_portal');
-      } else if (data.role === 'ADMIN') {
-        switchTab('admin_portal');
-      } else if (data.role === 'BUYER') {
-        switchTab('marketplace');
-      } else {
-        switchTab('dashboard');
         loadDashboardData();
       }
 
-      showToast(`🔓 Sign In Successful! Welcome back ${data.full_name}. Website features unlocked!`, 'success');
+      showToast(`🔓 Sign In Successful! Welcome back ${data.full_name} (${data.role}).`, 'success');
     } else {
       const errorMsg = data.detail || 'Incorrect password or Gmail ID. Access denied.';
       showToast(`🚫 Unauthorized Access Blocked: ${errorMsg}`, 'error');
@@ -956,6 +967,7 @@ function updateNavTabsLockVisual(isUnlocked) {
 
 function applyFarmerGateState() {
   const isAuth = isUserAuthenticated();
+  const role = state.user ? state.user.role : 'FARMER';
   const portalEl = document.getElementById('firstScreenAuthPortal');
   const bannerEl = document.getElementById('activeSessionBanner');
   const tabSignupEl = document.getElementById('tabContent-signup');
@@ -964,14 +976,28 @@ function applyFarmerGateState() {
   const navEl = document.getElementById('mainAppNav');
   const quickRolesEl = document.getElementById('headerQuickRoles');
 
+  if (quickRolesEl) quickRolesEl.classList.remove('hidden');
+
   if (isAuth) {
-    if (dashEl) dashEl.classList.remove('hidden');
-    if (bannerEl) bannerEl.classList.remove('hidden');
+    // Only show Farmer Private Dashboard & Farmer Session Banner if role is strictly FARMER
+    if (dashEl) {
+      if (role === 'FARMER') {
+        dashEl.classList.remove('hidden');
+      } else {
+        dashEl.classList.add('hidden');
+      }
+    }
+    if (bannerEl) {
+      if (role === 'FARMER') {
+        bannerEl.classList.remove('hidden');
+      } else {
+        bannerEl.classList.add('hidden');
+      }
+    }
     if (portalEl) portalEl.classList.add('hidden');
     if (tabSignupEl) tabSignupEl.classList.add('hidden');
     if (tabSigninEl) tabSigninEl.classList.add('hidden');
     if (navEl) navEl.classList.remove('hidden');
-    if (quickRolesEl) quickRolesEl.classList.remove('hidden');
 
     const nameSession = document.getElementById('activeSessionName');
     const roleSession = document.getElementById('activeSessionRole');
@@ -989,6 +1015,17 @@ function applyFarmerGateState() {
     if (nameBadge) nameBadge.innerText = state.user.full_name || 'Farmer Account';
     if (farmNameEl && !farmNameEl.innerText) farmNameEl.innerText = state.user.farm_name || 'My Farm';
 
+    // Update role-specific portal header user names
+    const expName = document.getElementById('expertPortalUserName');
+    if (expName && role === 'AGRICULTURAL_EXPERT') expName.innerText = `${state.user.full_name} (OUAT Pathologist)`;
+    const selName = document.getElementById('sellerPortalUserName');
+    if (selName && role === 'SELLER') selName.innerText = state.user.full_name;
+    const buyName = document.getElementById('buyerPortalUserName');
+    if (buyName && role === 'BUYER') buyName.innerText = state.user.full_name;
+    const admName = document.getElementById('adminPortalUserName');
+    if (admName && role === 'ADMIN') admName.innerText = state.user.full_name;
+
+    adjustNavigationForRole();
     updateNavTabsLockVisual(true);
   } else {
     // 1st screen presentation for new / unverified user: strictly show Sign Up / Sign In portal
@@ -998,7 +1035,6 @@ function applyFarmerGateState() {
     if (tabSignupEl) tabSignupEl.classList.remove('hidden');
     if (tabSigninEl) tabSigninEl.classList.add('hidden');
     if (navEl) navEl.classList.add('hidden');
-    if (quickRolesEl) quickRolesEl.classList.add('hidden');
 
     updateNavTabsLockVisual(false);
   }
@@ -1057,19 +1093,20 @@ function updateUserUI() {
     }
   });
 
-  // Adjust visible navigation items according to role
+  // Adjust visible navigation items strictly according to role
   adjustNavigationForRole();
 }
 
 function adjustNavigationForRole() {
   const role = state.user ? state.user.role : 'FARMER';
-  const expertNav = document.getElementById('nav-expert_portal');
-  const sellerNav = document.getElementById('nav-seller_portal');
-  const adminNav = document.getElementById('nav-admin_portal');
-
-  if (expertNav) expertNav.classList.toggle('hidden', role !== 'AGRICULTURAL_EXPERT' && role !== 'ADMIN');
-  if (sellerNav) sellerNav.classList.toggle('hidden', role !== 'SELLER' && role !== 'ADMIN');
-  if (adminNav) adminNav.classList.toggle('hidden', role !== 'ADMIN');
+  document.querySelectorAll('#mainAppNav .nav-tab').forEach(btn => {
+    const tabRoleGroup = btn.getAttribute('data-role-group') || 'FARMER';
+    if (tabRoleGroup === role) {
+      btn.classList.remove('hidden');
+    } else {
+      btn.classList.add('hidden');
+    }
+  });
 }
 
 function getTabDisplayName(tabId) {
@@ -1080,15 +1117,16 @@ function getTabDisplayName(tabId) {
     'business': 'Farm Business Planner',
     'market': 'Market Optimizer',
     'marketplace': 'Sell Produce Marketplace',
-    'expert_portal': 'Agricultural Expert Portal',
-    'seller_portal': 'Input Store Portal',
+    'expert_portal': 'Expert Advice Portal',
+    'seller_portal': 'Seller Input Store Portal',
+    'buyer_portal': 'Buyer Procurement Portal',
     'admin_portal': 'System Admin Portal',
     'my_farm': 'My Smart Farm'
   };
   return names[tabId] || tabId;
 }
 
-// Navigation Tabs with Strict Unauthenticated Access Gate
+// Navigation Tabs with Strict Unauthenticated Access Gate & Strict Role Isolation
 function switchTab(tabId) {
   // STRICT GATE: If user is not authenticated and tries to open any tab other than dashboard
   if (!isUserAuthenticated() && tabId !== 'dashboard') {
@@ -1101,6 +1139,15 @@ function switchTab(tabId) {
       portal.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
     return;
+  }
+
+  // STRICT ROLE ISOLATION: Ensure authenticated user only accesses tabs belonging to their role
+  if (isUserAuthenticated() && state.user && state.user.role) {
+    const role = state.user.role;
+    const allowed = ROLE_ALLOWED_TABS[role] || ['dashboard'];
+    if (!allowed.includes(tabId)) {
+      tabId = getRoleDefaultTab(role);
+    }
   }
 
   state.activeTab = tabId;
@@ -1116,10 +1163,10 @@ function switchTab(tabId) {
     }
   });
 
-  // Tab specific data loads (only when authenticated or dashboard)
+  // Tab specific data loads
   if (tabId === 'dashboard') {
     applyFarmerGateState();
-    if (isUserAuthenticated()) {
+    if (isUserAuthenticated() && state.user?.role === 'FARMER') {
       loadDashboardData();
     }
   }
@@ -1131,6 +1178,7 @@ function switchTab(tabId) {
   else if (tabId === 'marketplace') initMarketplaceView();
   else if (tabId === 'expert_portal') initExpertPortalView();
   else if (tabId === 'seller_portal') initSellerPortalView();
+  else if (tabId === 'buyer_portal') initBuyerPortalView();
   else if (tabId === 'admin_portal') initAdminPortalView();
   else if (tabId === 'my_farm') initMyFarmView();
 
@@ -2663,8 +2711,89 @@ async function initMarketplaceView() {
         </div>
       </div>
 
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+        <span class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-800 font-extrabold border border-emerald-200 w-full text-center">
+          ✔ Active in Buyer Procurement Portal
+        </span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+// ----------------------------------------------------
+// 7B. DEDICATED BUYER PORTAL MODULE (BUYER ONLY)
+// ----------------------------------------------------
+async function initBuyerPortalView() {
+  const res = await apiFetch('/buyers/listings');
+  const container = document.getElementById('buyerPortalListingsGrid');
+  if (!res.ok || !container) return;
+
+  const listings = await res.json();
+  window.allBuyerListings = listings || [];
+
+  const totalLotsEl = document.getElementById('buyerTotalLots');
+  const totalQtlEl = document.getElementById('buyerTotalQuintals');
+  if (totalLotsEl) totalLotsEl.innerText = listings.length;
+  if (totalQtlEl) {
+    const sumQtl = listings.reduce((acc, item) => acc + (parseFloat(item.quantity_quintals) || 0), 0);
+    totalQtlEl.innerText = `${sumQtl.toFixed(0)} Qtl`;
+  }
+
+  renderBuyerPortalListings(listings);
+}
+
+function filterBuyerPortalListings() {
+  const cropFilter = document.getElementById('buyerCropFilter')?.value || 'ALL';
+  const listings = window.allBuyerListings || [];
+  if (cropFilter === 'ALL') {
+    renderBuyerPortalListings(listings);
+  } else {
+    const filtered = listings.filter(item => item.crop && item.crop.toLowerCase().includes(cropFilter.toLowerCase()));
+    renderBuyerPortalListings(filtered);
+  }
+}
+
+function renderBuyerPortalListings(listings) {
+  const container = document.getElementById('buyerPortalListingsGrid');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (!listings || listings.length === 0) {
+    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No matching farmer harvest lots currently available.</p>';
+    return;
+  }
+
+  listings.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-amber-400 transition';
+    card.innerHTML = `
+      <div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="px-2.5 py-0.5 rounded-full text-3xs font-extrabold bg-amber-100 text-amber-900 uppercase tracking-wide flex items-center gap-1">
+            <span>🌾</span> <span>Verified Farmer Lot</span>
+          </span>
+          <span class="px-2.5 py-0.5 rounded-full text-3xs font-bold bg-slate-100 text-slate-700">${item.grade}</span>
+        </div>
+        <h4 class="font-black text-slate-900 text-lg mt-2">${item.crop} <span class="text-xs text-slate-500 font-normal">(${item.variety})</span></h4>
+        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} (${item.farmer_phone || '+91-9437012345'})</p>
+        <p class="text-xs text-slate-500 mt-0.5">📍 Farm Location: ${item.farm_location}</p>
+        <p class="text-xs text-slate-600 mt-2.5 line-clamp-2">${item.description || 'Direct farm harvest ready for immediate wholesale dispatch.'}</p>
+        
+        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+          <div class="p-2 bg-slate-50 rounded-xl">
+            <span class="text-slate-400 block text-3xs uppercase font-bold">Available Quantity</span>
+            <span class="font-extrabold text-slate-800 text-sm">${item.quantity_quintals} Qtl</span>
+          </div>
+          <div class="p-2 bg-amber-50 rounded-xl border border-amber-200/60">
+            <span class="text-amber-800 block text-3xs uppercase font-bold">Farmer Ask Price</span>
+            <span class="font-extrabold text-amber-950 text-sm">₹${item.expected_price_per_quintal}/Qtl</span>
+          </div>
+        </div>
+      </div>
+
       <div class="mt-4 pt-3 border-t border-slate-100">
-        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal})" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal})" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
           <span>🛒</span> <span>Place Purchase Offer</span>
         </button>
       </div>
@@ -2708,7 +2837,7 @@ async function submitBuyerOrder() {
   });
 
   if (res.ok) {
-    showToast('✅ Purchase order inquiry sent with your verified location coordinates!', 'success');
+    showToast('✅ Purchase order inquiry sent to Farmer with your verified buyer coordinates!', 'success');
     document.getElementById('buyerOrderModal')?.classList.add('hidden');
   } else {
     showToast('Failed to submit order', 'error');
@@ -2751,9 +2880,7 @@ async function submitCaseToExpertPathologist() {
     });
 
     if (res.ok) {
-      showToast('🩺 Disease case submitted to Dr. P.K. Mohapatra & Pathologist Review Queue!', 'success');
-      switchTab('expert_portal');
-      initExpertPortalView();
+      showToast('🩺 Disease case submitted to Dr. P.K. Mohapatra (Expert Portal Queue)!', 'success');
     } else {
       showToast('Failed to submit case to expert portal', 'error');
     }
@@ -2763,7 +2890,7 @@ async function submitCaseToExpertPathologist() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<span>🩺</span> <span>Send to Pathologist Review</span>';
+      btn.innerHTML = '<span>✔</span> <span>Case Sent to Expert Queue</span>';
     }
   }
 }
