@@ -43,7 +43,6 @@ function isUserAuthenticated() {
 // Strict Role-to-Default-Tab & Allowed-Tabs Mapping
 function getRoleDefaultTab(role) {
   if (role === 'AGRICULTURAL_EXPERT') return 'expert_portal';
-  if (role === 'SELLER') return 'seller_portal';
   if (role === 'BUYER') return 'buyer_portal';
   if (role === 'ADMIN') return 'admin_portal';
   return 'dashboard';
@@ -52,7 +51,6 @@ function getRoleDefaultTab(role) {
 const ROLE_ALLOWED_TABS = {
   'FARMER': ['dashboard', 'scanner', 'copilot', 'soil', 'business', 'market', 'marketplace', 'my_farm'],
   'AGRICULTURAL_EXPERT': ['expert_portal'],
-  'SELLER': ['seller_portal'],
   'BUYER': ['buyer_portal'],
   'ADMIN': ['admin_portal']
 };
@@ -63,6 +61,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSpeechRecognition();
   setupEventListeners();
   init3DScene();
+
+  // Ensure Leaf Disease Expert field is hidden by default when Farmer is selected
+  handleRegRoleChange();
+  selectSignInRole('FARMER');
 
   // Always start unauthenticated on 1st Login / Registration screen
   updateUserUI();
@@ -209,7 +211,6 @@ function setAuthModalRole(role) {
   const roleBtns = {
     'FARMER': document.getElementById('authRoleBtn-FARMER'),
     'AGRICULTURAL_EXPERT': document.getElementById('authRoleBtn-AGRICULTURAL_EXPERT'),
-    'SELLER': document.getElementById('authRoleBtn-SELLER'),
     'BUYER': document.getElementById('authRoleBtn-BUYER'),
     'ADMIN': document.getElementById('authRoleBtn-ADMIN')
   };
@@ -587,6 +588,22 @@ const performBiometricLogin = () => {};
 // STRICT ISOLATION: ONE FARMER CANNOT USE ANOTHER'S PORTAL
 // ----------------------------------------------------
 
+function handleRegRoleChange() {
+  const roleSelect = document.getElementById('regRole');
+  const selectedRole = roleSelect ? roleSelect.value : 'FARMER';
+  const leafExpertContainer = document.getElementById('regLeafExpertContainer');
+  const farmNameInput = document.getElementById('regFarmName');
+
+  if (leafExpertContainer) {
+    if (selectedRole === 'AGRICULTURAL_EXPERT') {
+      leafExpertContainer.classList.remove('hidden');
+    } else {
+      leafExpertContainer.classList.add('hidden');
+      if (farmNameInput) farmNameInput.value = '';
+    }
+  }
+}
+
 async function submitRegistrationWithPassword() {
   const nameInput = document.getElementById('regFullName');
   const emailInput = document.getElementById('regEmail');
@@ -610,7 +627,7 @@ async function submitRegistrationWithPassword() {
   const password = passInput ? passInput.value : '';
   const confirmPassword = confirmPassInput ? confirmPassInput.value : '';
   const role = roleSelect ? roleSelect.value : 'FARMER';
-  const leafExpertOrEst = farmNameInput ? farmNameInput.value.trim() : '';
+  const leafExpertOrEst = (role === 'AGRICULTURAL_EXPERT' && farmNameInput) ? farmNameInput.value.trim() : '';
   const location = locationInput ? locationInput.value.trim() : 'Khordha, Odisha';
 
   // Strict Validation
@@ -702,7 +719,6 @@ function selectSignInRole(role) {
   const roleLabels = {
     'FARMER': 'Create / Sign In as Farmer & Open Farmer Interface',
     'AGRICULTURAL_EXPERT': 'Create / Sign In as Expert & Open Expert Advice Interface',
-    'SELLER': 'Create / Sign In as Seller & Open Input Store Interface',
     'BUYER': 'Create / Sign In as Buyer & Open Buyer Portal Interface',
     'ADMIN': 'Create / Sign In as Admin & Open Admin Portal Interface'
   };
@@ -712,15 +728,26 @@ function selectSignInRole(role) {
     btnLabel.innerText = roleLabels[state.signinSelectedRole] || 'Create / Sign In to Selected Role Portal';
   }
 
-  const allRoles = ['FARMER', 'AGRICULTURAL_EXPERT', 'SELLER', 'BUYER', 'ADMIN'];
+  // Show "Leaf Disease Expert (Specialist Crop / Disease)" ONLY when Expert is selected; hide completely for Farmer / Buyer / Admin
+  const signinLeafExpertContainer = document.getElementById('signinLeafExpertContainer');
+  const signinLeafExpertInput = document.getElementById('signinLeafExpert');
+  if (signinLeafExpertContainer) {
+    if (state.signinSelectedRole === 'AGRICULTURAL_EXPERT') {
+      signinLeafExpertContainer.classList.remove('hidden');
+    } else {
+      signinLeafExpertContainer.classList.add('hidden');
+      if (signinLeafExpertInput) signinLeafExpertInput.value = '';
+    }
+  }
+
+  const allRoles = ['FARMER', 'AGRICULTURAL_EXPERT', 'BUYER', 'ADMIN'];
   allRoles.forEach(r => {
     const card = document.getElementById(`signinRoleCard-${r}`);
     if (!card) return;
-    const isAdminSpan = r === 'ADMIN' ? ' col-span-2 sm:col-span-1' : '';
     if (r === state.signinSelectedRole) {
-      card.className = `signin-role-card p-3 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition ring-2 ring-emerald-300${isAdminSpan}`;
+      card.className = 'signin-role-card p-3 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition ring-2 ring-emerald-300';
     } else {
-      card.className = `signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-bold text-xs flex flex-col items-center justify-center gap-1 transition${isAdminSpan}`;
+      card.className = 'signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-bold text-xs flex flex-col items-center justify-center gap-1 transition';
     }
   });
 }
@@ -736,7 +763,7 @@ async function submitSignInWithPassword() {
   const password = passInput ? passInput.value : '';
   const selectedRole = (roleInput ? roleInput.value : state.signinSelectedRole) || 'FARMER';
   const enteredName = nameInput ? nameInput.value.trim() : '';
-  const enteredLeafExpert = leafExpertInput ? leafExpertInput.value.trim() : '';
+  const enteredLeafExpert = (selectedRole === 'AGRICULTURAL_EXPERT' && leafExpertInput) ? leafExpertInput.value.trim() : '';
 
   if (!email || !email.includes('@')) {
     showToast('Please enter your registered Gmail ID', 'warning');
@@ -897,12 +924,6 @@ function applyFarmerGateState() {
       if (expName) expName.innerText = `${state.user.full_name} — ${specText}`;
       if (expBadge) expBadge.innerText = `🌿 ${specText}`;
     }
-    const selName = document.getElementById('sellerPortalUserName');
-    const selBadge = document.getElementById('sellerPortalBadge');
-    if (role === 'SELLER') {
-      if (selName) selName.innerText = state.user.full_name;
-      if (selBadge) selBadge.innerText = `🏪 ${state.user.farm_name || state.user.full_name}`;
-    }
     const buyName = document.getElementById('buyerPortalUserName');
     if (buyName && role === 'BUYER') buyName.innerText = state.user.full_name;
     const admName = document.getElementById('adminPortalUserName');
@@ -948,6 +969,11 @@ function logoutFarmerSession() {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+
+  const regRoleSelect = document.getElementById('regRole');
+  if (regRoleSelect) regRoleSelect.value = 'FARMER';
+  handleRegRoleChange();
+  selectSignInRole('FARMER');
 
   updateUserUI();
   applyFarmerGateState();
@@ -1011,7 +1037,6 @@ function getTabDisplayName(tabId) {
     'market': 'Market Optimizer',
     'marketplace': 'Sell Produce Marketplace',
     'expert_portal': 'Expert Advice Portal',
-    'seller_portal': 'Seller Input Store Portal',
     'buyer_portal': 'Buyer Procurement Portal',
     'admin_portal': 'System Admin Portal',
     'my_farm': 'My Smart Farm'
@@ -1070,7 +1095,6 @@ function switchTab(tabId) {
   else if (tabId === 'market') initMarketView();
   else if (tabId === 'marketplace') initMarketplaceView();
   else if (tabId === 'expert_portal') initExpertPortalView();
-  else if (tabId === 'seller_portal') initSellerPortalView();
   else if (tabId === 'buyer_portal') initBuyerPortalView();
   else if (tabId === 'admin_portal') initAdminPortalView();
   else if (tabId === 'my_farm') initMyFarmView();
@@ -3047,62 +3071,7 @@ async function submitExpertPrescription(consultationId, predictionId, currentDis
 }
 
 // ----------------------------------------------------
-// 9. AGROCHEMICAL SELLER PORTAL MODULE (SELLER LOCATIONS)
-// ----------------------------------------------------
-async function initSellerPortalView() {
-  const res = await apiFetch('/sellers/products?seller_only=true');
-  const container = document.getElementById('sellerProductsGrid');
-  if (!res.ok || !container) return;
-
-  const prods = await res.json();
-  container.innerHTML = '';
-  const defaultSellerName = state.user?.specialization || state.user?.farm_name || state.user?.full_name || 'Verified Agro Input Store';
-  prods.forEach(p => {
-    const card = document.createElement('div');
-    card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition';
-    card.innerHTML = `
-      <div>
-        <div class="flex items-center justify-between">
-          <span class="text-3xs font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 uppercase tracking-wide">${p.product_type}</span>
-          <span class="text-xs font-bold text-slate-500">Stock: ${p.stock} units</span>
-        </div>
-        <h4 class="font-extrabold text-slate-900 text-base mt-2">${p.product_name}</h4>
-        <p class="text-xs text-slate-500 mt-0.5">Active: ${p.active_ingredient}</p>
-        <p class="text-xs text-slate-600 mt-1"><strong>Target:</strong> ${p.target_crop} (${p.target_disease})</p>
-        
-        <!-- Seller Verified Location Coordinates -->
-        <div class="mt-3 p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-2xs space-y-0.5">
-          <div class="font-bold text-blue-950 flex items-center gap-1">
-            <span>🏪</span> <span>${p.seller_name || defaultSellerName}</span>
-          </div>
-          <div class="text-slate-600">📍 ${p.seller_location || 'Jatni, Khordha, Odisha - 752050'}</div>
-          <div class="text-slate-500">🚚 ${p.service_radius || 'Delivery Coverage: 45 km radius across Khordha'}</div>
-          <div class="text-blue-800 font-semibold">🛡️ ${p.license_number || 'OD-AGRI-RET-2024-8841 (OSAMB)'}</div>
-        </div>
-
-        <div class="mt-3 font-black text-slate-900 text-lg">₹${p.price} <span class="text-xs text-slate-400 font-normal">/ ${p.pack_size}</span></div>
-      </div>
-
-      <div class="flex items-center gap-2 mt-4 pt-3 border-t border-slate-100">
-        <button onclick="updateProductStock(${p.id}, ${p.stock - 5})" class="flex-1 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-bold">-5 Stock</button>
-        <button onclick="updateProductStock(${p.id}, ${p.stock + 10})" class="flex-1 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 rounded-lg text-xs font-bold">+10 Stock</button>
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-async function updateProductStock(id, newStock) {
-  if (newStock < 0) newStock = 0;
-  const res = await apiFetch(`/sellers/products/${id}/stock?new_stock=${newStock}`, { method: 'PUT' });
-  if (res.ok) {
-    showToast('Inventory updated!', 'success');
-    initSellerPortalView();
-  }
-}
-
-// ----------------------------------------------------
-// 10. SYSTEM ADMIN PORTAL MODULE
+// 9. SYSTEM ADMIN PORTAL MODULE
 // ----------------------------------------------------
 async function initAdminPortalView() {
   const res = await apiFetch('/admin/overview');
