@@ -176,53 +176,8 @@ async function switchLanguage(lang) {
 // Priority 1: FARMER, followed by EXPERT, SELLER, BUYER, ADMIN
 // ----------------------------------------------------
 
-const DEMO_PHONE_DIRECTORY = {
-  'FARMER': {
-    phone: '+919861012345',
-    display: '+91-9861012345',
-    email: 'farmer.ramesh@gmail.com',
-    pass: 'Farmer@1234',
-    name: 'Ramesh Patel',
-    role: 'FARMER',
-    defaultTab: 'dashboard'
-  },
-  'AGRICULTURAL_EXPERT': {
-    phone: '+919437012345',
-    display: '+91-9437012345',
-    email: 'dr.mohapatra@gmail.com',
-    pass: 'Expert@1234',
-    name: 'Dr. Debabrata Mohapatra',
-    role: 'AGRICULTURAL_EXPERT',
-    defaultTab: 'expert_portal'
-  },
-  'SELLER': {
-    phone: '+919124012345',
-    display: '+91-9124012345',
-    email: 'seller.kisan@gmail.com',
-    pass: 'Seller@1234',
-    name: 'Sunil Agrochemicals & Seeds',
-    role: 'SELLER',
-    defaultTab: 'seller_portal'
-  },
-  'BUYER': {
-    phone: '+919937012345',
-    display: '+91-9937012345',
-    email: 'buyer.trading@gmail.com',
-    pass: 'Buyer@1234',
-    name: 'Utkal Wholesale Agro Traders',
-    role: 'BUYER',
-    defaultTab: 'buyer_portal'
-  },
-  'ADMIN': {
-    phone: '+919876543210',
-    display: '+91-9876543210',
-    email: 'admin@gmail.com',
-    pass: 'Admin@1234',
-    name: 'System Administrator',
-    role: 'ADMIN',
-    defaultTab: 'admin_portal'
-  }
-};
+// Demo directory purged - only real registered user accounts are allowed
+const DEMO_PHONE_DIRECTORY = {};
 
 function openPhoneLoginModal(preferredRole = 'FARMER') {
   const modal = document.getElementById('modalPhoneAuth');
@@ -403,137 +358,12 @@ async function submitPhoneOtp() {
   }
 }
 
-// 1-Click Authenticated Role Switcher
+// Direct demo logins disabled — users must sign in or create an account with their selected role
 async function quickDemoPhoneLogin(role = 'FARMER') {
-  const profile = DEMO_PHONE_DIRECTORY[role];
-  if (!profile) return;
-
-  // Direct login with pre-seeded role credentials
-  if (profile.email && profile.pass) {
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: profile.email,
-          password: profile.pass
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        state.token = data.access_token;
-        state.user = {
-          id: data.user_id,
-          email: data.email,
-          phone_number: data.phone_number || profile.phone,
-          role: data.role,
-          full_name: data.full_name,
-          preferred_language: data.preferred_language || 'en'
-        };
-        localStorage.setItem('token', state.token);
-        localStorage.setItem('user', JSON.stringify(state.user));
-        localStorage.setItem('farmer_otp_verified', 'true');
-        state.isFarmerVerified = true;
-
-        closePhoneLoginModal();
-        updateUserUI();
-        applyFarmerGateState();
-        switchTab(profile.defaultTab);
-
-        if (role === 'FARMER') {
-          loadDashboardData();
-        }
-
-        showToast(`🔓 Switched to ${data.full_name} (${data.role}) - Portal unlocked!`, 'success');
-        return;
-      }
-    } catch (err) {
-      console.warn('Role direct login fallback to OTP:', err);
-    }
-  }
-
-  // Fallback to OTP verify
-  try {
-    const res = await fetch('/api/auth/otp/verify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        phone_number: profile.phone,
-        otp_code: '123456',
-        role: profile.role,
-        full_name: profile.name
-      })
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      state.token = data.access_token;
-      state.user = {
-        id: data.user_id,
-        email: data.email,
-        phone_number: data.phone_number,
-        role: data.role,
-        full_name: data.full_name,
-        preferred_language: data.preferred_language
-      };
-      localStorage.setItem('token', state.token);
-      localStorage.setItem('user', JSON.stringify(state.user));
-      localStorage.setItem('farmer_otp_verified', 'true');
-      state.isFarmerVerified = true;
-
-      closePhoneLoginModal();
-      updateUserUI();
-      applyFarmerGateState();
-      switchTab(profile.defaultTab);
-
-      if (role === 'FARMER') {
-        loadDashboardData();
-      }
-
-      showToast(`Logged in: ${data.full_name} (${data.role})`, 'success');
-    }
-  } catch (err) {
-    console.error('quickDemoPhoneLogin error:', err);
-  }
+  openRegistrationInterface('signin');
+  selectSignInRole(role);
 }
-
-// Legacy demo login compatibility
-async function quickDemoLegacyLogin(role) {
-  const accounts = {
-    'FARMER': { email: 'farmer.ramesh@aifarm.org', pass: 'Farmer@1234' },
-    'AGRICULTURAL_EXPERT': { email: 'dr.mohapatra@aifarm.org', pass: 'Expert@1234' },
-    'SELLER': { email: 'seller.kisan@aifarm.org', pass: 'Seller@1234' },
-    'BUYER': { email: 'buyer.trading@aifarm.org', pass: 'Buyer@1234' },
-    'ADMIN': { email: 'admin@aifarm.org', pass: 'Admin@1234' }
-  };
-  const creds = accounts[role];
-  if (!creds) return;
-  try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: creds.email, password: creds.pass })
-    });
-    if (res.ok) {
-      const data = await res.json();
-      state.token = data.access_token;
-      state.user = {
-        id: data.user_id,
-        email: data.email,
-        role: data.role,
-        full_name: data.full_name,
-        preferred_language: data.preferred_language
-      };
-      localStorage.setItem('token', state.token);
-      localStorage.setItem('user', JSON.stringify(state.user));
-      updateUserUI();
-    }
-  } catch (e) {
-    console.error('legacy login error', e);
-  }
-}
-
-// Alias quickDemoLogin to quickDemoPhoneLogin for seamless 1st priority compatibility
+const quickDemoLegacyLogin = quickDemoPhoneLogin;
 const quickDemoLogin = quickDemoPhoneLogin;
 
 // ----------------------------------------------------
@@ -780,8 +610,8 @@ async function submitRegistrationWithPassword() {
   const password = passInput ? passInput.value : '';
   const confirmPassword = confirmPassInput ? confirmPassInput.value : '';
   const role = roleSelect ? roleSelect.value : 'FARMER';
-  const farmName = farmNameInput ? farmNameInput.value.trim() : 'My Farm';
-  const location = locationInput ? locationInput.value.trim() : 'Local Field';
+  const leafExpertOrEst = farmNameInput ? farmNameInput.value.trim() : '';
+  const location = locationInput ? locationInput.value.trim() : 'Khordha, Odisha';
 
   // Strict Validation
   if (!fullName) {
@@ -815,7 +645,8 @@ async function submitRegistrationWithPassword() {
         full_name: fullName,
         phone_number: phone,
         role: role,
-        farm_name: farmName,
+        leaf_disease_expert: leafExpertOrEst,
+        farm_name: leafExpertOrEst,
         location: location
       })
     });
@@ -826,11 +657,12 @@ async function submitRegistrationWithPassword() {
       state.user = {
         id: data.user_id,
         email: data.email,
-        phone_number: data.phone_number,
+        phone_number: data.phone_number || phone,
         role: data.role,
         full_name: data.full_name || fullName,
         preferred_language: data.preferred_language || 'en',
-        farm_name: farmName,
+        specialization: data.specialization || leafExpertOrEst || 'Crop Leaf Disease Specialist',
+        farm_name: data.farm_name || leafExpertOrEst || `${fullName}'s Farm`,
         location: location
       };
       localStorage.setItem('token', state.token);
@@ -840,7 +672,7 @@ async function submitRegistrationWithPassword() {
 
       // Update dashboard UI labels
       const farmNameEl = document.getElementById('dashFarmName');
-      if (farmNameEl) farmNameEl.innerText = farmName || 'My Farm';
+      if (farmNameEl) farmNameEl.innerText = state.user.farm_name;
       const farmLocEl = document.getElementById('dashFarmLoc');
       if (farmLocEl) farmLocEl.innerText = location || 'Local Field';
 
@@ -852,7 +684,7 @@ async function submitRegistrationWithPassword() {
         loadDashboardData();
       }
 
-      showToast(`🎉 Registration Complete! Welcome ${data.full_name} (${data.role}). Portal unlocked!`, 'success');
+      showToast(`🎉 Account Created! Welcome ${data.full_name} (${data.role}).`, 'success');
     } else {
       showToast(data.detail || 'Registration failed. Please verify credentials.', 'error');
     }
@@ -868,16 +700,16 @@ function selectSignInRole(role) {
   if (roleInput) roleInput.value = state.signinSelectedRole;
 
   const roleLabels = {
-    'FARMER': 'Sign In as Farmer & Open Farmer Interface',
-    'AGRICULTURAL_EXPERT': 'Sign In as Expert & Open Expert Advice Interface',
-    'SELLER': 'Sign In as Seller & Open Input Store Interface',
-    'BUYER': 'Sign In as Buyer & Open Buyer Portal Interface',
-    'ADMIN': 'Sign In as Admin & Open Admin Portal Interface'
+    'FARMER': 'Create / Sign In as Farmer & Open Farmer Interface',
+    'AGRICULTURAL_EXPERT': 'Create / Sign In as Expert & Open Expert Advice Interface',
+    'SELLER': 'Create / Sign In as Seller & Open Input Store Interface',
+    'BUYER': 'Create / Sign In as Buyer & Open Buyer Portal Interface',
+    'ADMIN': 'Create / Sign In as Admin & Open Admin Portal Interface'
   };
 
   const btnLabel = document.getElementById('signinSubmitBtnLabel');
   if (btnLabel) {
-    btnLabel.innerText = roleLabels[state.signinSelectedRole] || 'Sign In to Selected Role Portal';
+    btnLabel.innerText = roleLabels[state.signinSelectedRole] || 'Create / Sign In to Selected Role Portal';
   }
 
   const allRoles = ['FARMER', 'AGRICULTURAL_EXPERT', 'SELLER', 'BUYER', 'ADMIN'];
@@ -897,10 +729,14 @@ async function submitSignInWithPassword() {
   const emailInput = document.getElementById('signinEmail');
   const passInput = document.getElementById('signinPassword');
   const roleInput = document.getElementById('signinRole');
+  const nameInput = document.getElementById('signinFullName');
+  const leafExpertInput = document.getElementById('signinLeafExpert');
 
   const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const password = passInput ? passInput.value : '';
   const selectedRole = (roleInput ? roleInput.value : state.signinSelectedRole) || 'FARMER';
+  const enteredName = nameInput ? nameInput.value.trim() : '';
+  const enteredLeafExpert = leafExpertInput ? leafExpertInput.value.trim() : '';
 
   if (!email || !email.includes('@')) {
     showToast('Please enter your registered Gmail ID', 'warning');
@@ -920,7 +756,10 @@ async function submitSignInWithPassword() {
       body: JSON.stringify({
         email: email,
         password: password,
-        role: selectedRole
+        role: selectedRole,
+        full_name: enteredName || undefined,
+        leaf_disease_expert: enteredLeafExpert || undefined,
+        farm_name: enteredLeafExpert || undefined
       })
     });
 
@@ -934,7 +773,9 @@ async function submitSignInWithPassword() {
         phone_number: data.phone_number,
         role: effectiveRole,
         full_name: data.full_name,
-        preferred_language: data.preferred_language || 'en'
+        preferred_language: data.preferred_language || 'en',
+        specialization: data.specialization || enteredLeafExpert || 'Crop Leaf Disease Specialist',
+        farm_name: data.farm_name || enteredLeafExpert || `${data.full_name}'s Farm`
       };
       localStorage.setItem('token', state.token);
       localStorage.setItem('user', JSON.stringify(state.user));
@@ -1048,11 +889,20 @@ function applyFarmerGateState() {
     if (nameBadge) nameBadge.innerText = state.user.full_name || 'Farmer Account';
     if (farmNameEl && state.user.farm_name) farmNameEl.innerText = state.user.farm_name;
 
-    // Update role-specific portal header user names
+    // Update role-specific portal header user names & specialist badges
     const expName = document.getElementById('expertPortalUserName');
-    if (expName && role === 'AGRICULTURAL_EXPERT') expName.innerText = `${state.user.full_name} (OUAT Pathologist)`;
+    const expBadge = document.getElementById('expertPortalSpecialistBadge');
+    if (role === 'AGRICULTURAL_EXPERT') {
+      const specText = state.user.specialization || 'Crop Leaf Disease Specialist';
+      if (expName) expName.innerText = `${state.user.full_name} — ${specText}`;
+      if (expBadge) expBadge.innerText = `🌿 ${specText}`;
+    }
     const selName = document.getElementById('sellerPortalUserName');
-    if (selName && role === 'SELLER') selName.innerText = state.user.full_name;
+    const selBadge = document.getElementById('sellerPortalBadge');
+    if (role === 'SELLER') {
+      if (selName) selName.innerText = state.user.full_name;
+      if (selBadge) selBadge.innerText = `🏪 ${state.user.farm_name || state.user.full_name}`;
+    }
     const buyName = document.getElementById('buyerPortalUserName');
     if (buyName && role === 'BUYER') buyName.innerText = state.user.full_name;
     const admName = document.getElementById('adminPortalUserName');
@@ -1094,7 +944,7 @@ function logoutFarmerSession() {
   state.activeLoginFaceToken = null;
 
   // Clear all input fields so no credentials remain visible
-  ['signinEmail', 'signinPassword', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regFarmName', 'regLocation', 'regLandArea', 'regCrops'].forEach(id => {
+  ['signinEmail', 'signinPassword', 'signinFullName', 'signinLeafExpert', 'regFullName', 'regEmail', 'regPhone', 'regPassword', 'regConfirmPassword', 'regFarmName', 'regLocation', 'regLandArea', 'regCrops'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
@@ -1718,6 +1568,11 @@ let webcamStream = null;
 
 function initScannerView() {
   loadCropsSelector();
+  const cropSelect = document.getElementById('scannerCropSelect');
+  const currentCrop = document.getElementById('resCropName')?.innerText || cropSelect?.value || '';
+  const currentDisease = document.getElementById('resDiseaseName')?.innerText || '';
+  loadRegisteredExpertsForScanner(currentCrop !== '---' ? currentCrop : '', currentDisease !== '---' ? currentDisease : '');
+  loadFarmerConsultationsHistory();
 }
 
 async function loadCropsSelector() {
@@ -2015,6 +1870,16 @@ function renderDiagnosticResult(res) {
         treatmentsContainer.appendChild(item);
       });
     }
+  }
+
+  // Load registered Leaf Disease Experts matched to this crop & leaf disease
+  loadRegisteredExpertsForScanner(res.crop || '', res.disease || '');
+  loadFarmerConsultationsHistory();
+
+  // Pre-fill problem input with detected crop & leaf disease if empty
+  const problemInput = document.getElementById('farmerExpertProblemInput');
+  if (problemInput && !problemInput.value.trim()) {
+    problemInput.value = `नमस्ते Expert जी, मेरी ${res.crop} फसल की पत्तियों में "${res.disease}" (${res.severity} severity) के लक्षण दिख रहे हैं (${res.symptoms || 'पत्तियों पर धब्बे'})। कृपया सही दवा और खुराक बताएं।`;
   }
 
   // Scroll smoothly down to results
@@ -2851,6 +2716,14 @@ function openBuyerOrderModal(listingId, crop, price) {
   document.getElementById('buyerOrderListingId').value = listingId;
   document.getElementById('buyerOrderCropName').innerText = crop;
   document.getElementById('buyerOrderPrice').value = price;
+  const firmInput = document.getElementById('buyerOrderFirmName');
+  const phoneInput = document.getElementById('buyerOrderPhone');
+  if (firmInput && !firmInput.value) {
+    firmInput.value = state.user?.specialization || state.user?.farm_name || state.user?.full_name || '';
+  }
+  if (phoneInput && !phoneInput.value) {
+    phoneInput.value = state.user?.phone_number || '';
+  }
   modal.classList.remove('hidden');
 }
 
@@ -2859,10 +2732,10 @@ async function submitBuyerOrder() {
   const qty = parseFloat(document.getElementById('buyerOrderQty')?.value);
   const price = parseFloat(document.getElementById('buyerOrderPrice')?.value);
   const notes = document.getElementById('buyerOrderNotes')?.value || '';
-  const firmName = document.getElementById('buyerOrderFirmName')?.value || 'Utkal Agro Wholesalers';
-  const buyerPhone = document.getElementById('buyerOrderPhone')?.value || '+91-9937012345';
-  const buyerLocation = document.getElementById('buyerOrderLocation')?.value || 'Aiginia Mandi Yard, Bhubaneswar, Khordha, Odisha';
-  const buyerHub = document.getElementById('buyerOrderHub')?.value || 'Coastal Odisha Wholesale Hub';
+  const firmName = document.getElementById('buyerOrderFirmName')?.value || state.user?.specialization || state.user?.full_name || 'Verified Buyer';
+  const buyerPhone = document.getElementById('buyerOrderPhone')?.value || state.user?.phone_number || '';
+  const buyerLocation = document.getElementById('buyerOrderLocation')?.value || 'Bhubaneswar, Khordha, Odisha';
+  const buyerHub = document.getElementById('buyerOrderHub')?.value || 'Odisha Wholesale Hub';
 
   const res = await apiFetch('/buyers/orders', {
     method: 'POST',
@@ -2890,20 +2763,155 @@ async function submitBuyerOrder() {
 // ----------------------------------------------------
 // 8. AGRICULTURAL EXPERT & PATHOLOGIST PORTAL
 // ----------------------------------------------------
+async function loadRegisteredExpertsForScanner(crop = '', disease = '') {
+  const scannerListEl = document.getElementById('scannerExpertsListContainer');
+  const standaloneListEl = document.getElementById('scannerStandaloneExpertsList');
+  try {
+    const query = new URLSearchParams();
+    if (crop) query.set('crop', crop);
+    if (disease) query.set('disease', disease);
+    const res = await apiFetch(`/experts/list?${query.toString()}`);
+    if (!res.ok) return;
+    const experts = await res.json();
+
+    const selectedInput = document.getElementById('selectedExpertIdForCase');
+    if (experts.length > 0 && selectedInput && !selectedInput.value) {
+      selectedInput.value = experts[0].expert_id;
+    }
+
+    const renderExpertCards = (targetEl, isInteractive) => {
+      if (!targetEl) return;
+      targetEl.innerHTML = '';
+      if (!experts || experts.length === 0) {
+        targetEl.innerHTML = `
+          <div class="p-3.5 rounded-xl bg-white border border-purple-200 text-xs text-slate-600">
+            अभी कोई Leaf Disease Expert लॉग-इन/रजिस्टर्ड नहीं है। जैसे ही कोई Expert लॉग-इन पेज पर <strong>"Leaf Disease Expert"</strong> में अपनी फसल/रोग विशेषज्ञता भरकर अकाउंट बनाएगा या लॉग-इन करेगा, उसका नाम और विशेषज्ञता यहाँ दिखाई देगी। आप फिर भी अपना सवाल नीचे भेज सकते हैं।
+          </div>
+        `;
+        return;
+      }
+
+      const activeExpertId = parseInt(document.getElementById('selectedExpertIdForCase')?.value || experts[0].expert_id);
+      experts.forEach(exp => {
+        const isSelected = exp.expert_id === activeExpertId;
+        const card = document.createElement('div');
+        card.className = `p-3.5 rounded-xl border transition cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-2 ${
+          isSelected
+            ? 'bg-purple-100/90 border-purple-600 ring-2 ring-purple-500/40 shadow-xs'
+            : 'bg-white border-purple-200 hover:border-purple-400'
+        }`;
+        const safeName = (exp.expert_name || 'Leaf Disease Expert').replace(/'/g, "\\'");
+        const safeSpec = (exp.specialization || 'Crop Leaf Disease Specialist').replace(/'/g, "\\'");
+        card.onclick = () => selectExpertForConsultation(exp.expert_id, safeName, safeSpec, crop, disease);
+        card.innerHTML = `
+          <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-700 text-white flex items-center justify-center font-black text-base shrink-0">
+              👨‍🔬
+            </div>
+            <div>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="font-extrabold text-slate-900 text-sm">${exp.expert_name}</span>
+                ${exp.is_specialist_match ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300 text-3xs font-black uppercase">★ Matched Disease Specialist</span>' : ''}
+              </div>
+              <div class="text-xs font-bold text-purple-900 mt-0.5">
+                🌿 Leaf Disease Expert Specialist: <span class="underline decoration-purple-400">${exp.specialization || 'All Crop Leaf Diseases'}</span>
+              </div>
+              <div class="text-2xs text-slate-500 mt-0.5">
+                📍 ${exp.institution || 'Verified Leaf Disease Specialist'} ${exp.expert_phone ? `• 📞 ${exp.expert_phone}` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="shrink-0">
+            <span class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-extrabold ${
+              isSelected ? 'bg-purple-700 text-white' : 'bg-purple-50 text-purple-800 border border-purple-200'
+            }">
+              ${isSelected ? '✔ Selected Expert' : 'Select Expert'}
+            </span>
+          </div>
+        `;
+        targetEl.appendChild(card);
+      });
+    };
+
+    renderExpertCards(scannerListEl, true);
+    renderExpertCards(standaloneListEl, false);
+  } catch (err) {
+    console.error('Error loading registered experts:', err);
+  }
+}
+
+function selectExpertForConsultation(expertId, expertName, expertSpec, crop = '', disease = '') {
+  const selectedInput = document.getElementById('selectedExpertIdForCase');
+  if (selectedInput) selectedInput.value = expertId;
+  showToast(`👨‍🔬 Selected ${expertName} (${expertSpec})`, 'info');
+  loadRegisteredExpertsForScanner(crop, disease);
+}
+
+async function loadFarmerConsultationsHistory() {
+  const container = document.getElementById('farmerConsultationsHistory');
+  if (!container) return;
+  try {
+    const res = await apiFetch('/experts/queue');
+    if (!res.ok) return;
+    const cases = await res.json();
+    container.innerHTML = '';
+    if (!cases || cases.length === 0) {
+      container.innerHTML = '<p class="text-xs text-slate-500">आपने अभी तक किसी Leaf Disease Expert को कोई सवाल नहीं भेजा है।</p>';
+      return;
+    }
+    cases.forEach(c => {
+      const isCompleted = c.status === 'COMPLETED';
+      const item = document.createElement('div');
+      item.className = `p-3.5 rounded-xl border ${isCompleted ? 'bg-emerald-50/60 border-emerald-200' : 'bg-slate-50 border-slate-200'} text-xs space-y-1.5`;
+      item.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <span class="font-extrabold text-slate-900">${c.crop} • ${c.ai_disease}</span>
+          <span class="px-2.5 py-0.5 rounded-full text-3xs font-black uppercase ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}">
+            ${isCompleted ? '✔ Expert Reply Received' : '⏳ Sent to Expert'}
+          </span>
+        </div>
+        <div class="text-purple-900 font-bold">
+          👨‍🔬 To Expert: ${c.expert_name || 'Leaf Disease Expert'} (${c.expert_specialization || 'Crop Leaf Disease Specialist'})
+        </div>
+        <div class="text-slate-700 bg-white p-2 rounded-lg border border-slate-200">
+          <strong>आपका सवाल (Your Problem):</strong> "${c.farmer_query}"
+        </div>
+        ${isCompleted && c.expert_prescription ? `
+          <div class="p-2.5 rounded-lg bg-emerald-100/80 border border-emerald-300 text-emerald-950">
+            <strong>🩺 ${c.expert_name} (${c.expert_specialization}) की सलाह / Prescription:</strong>
+            <div class="mt-1 font-medium">${c.expert_prescription}</div>
+          </div>
+        ` : ''}
+      `;
+      container.appendChild(item);
+    });
+  } catch (err) {
+    console.error('Error loading farmer consultations history:', err);
+  }
+}
+
 async function submitCaseToExpertPathologist() {
-  const crop = document.getElementById('resCropName')?.innerText || 'Tomato';
-  const disease = document.getElementById('resDiseaseName')?.innerText || 'Early Blight';
-  const confText = document.getElementById('resConfidence')?.innerText || '94%';
-  const confidence = parseFloat(confText.replace('%', '')) / 100.0 || 0.94;
-  const severity = document.getElementById('resSeverity')?.innerText || 'Moderate';
-  const symptoms = document.getElementById('resSymptoms')?.innerText || 'Concentric rings and dark brown necrosis on leaves.';
-  const farmerName = state.user?.full_name || 'Lokanath Bala (Farmer)';
-  const farmerPhone = state.user?.phone_number || '+91-9861012345';
+  const cropSelect = document.getElementById('scannerCropSelect');
+  const rawCrop = document.getElementById('resCropName')?.innerText || cropSelect?.value || 'Tomato';
+  const crop = rawCrop !== '---' ? rawCrop : (cropSelect?.value || 'Tomato');
+  const rawDisease = document.getElementById('resDiseaseName')?.innerText || 'Leaf Disease';
+  const disease = rawDisease !== '---' ? rawDisease : 'Leaf Disease';
+  const confText = document.getElementById('resConfidence')?.innerText || '90%';
+  const confidence = parseFloat(confText.replace('%', '')) / 100.0 || 0.90;
+  const severityEl = document.getElementById('resSeverity')?.innerText || 'Moderate';
+  const severity = severityEl !== '---' ? severityEl : 'Moderate';
+  const symptoms = document.getElementById('resSymptoms')?.innerText || 'Leaf spots and disease symptoms reported by farmer.';
+  const farmerName = state.user?.full_name || 'Farmer';
+  const farmerPhone = state.user?.phone_number || '';
+  const selectedExpertIdVal = document.getElementById('selectedExpertIdForCase')?.value;
+  const expertId = selectedExpertIdVal ? parseInt(selectedExpertIdVal) : null;
+  const customProblem = document.getElementById('farmerExpertProblemInput')?.value?.trim();
+  const farmerQuery = customProblem || `मेरी ${crop} फसल की पत्तियों में ${disease} की समस्या है। कृपया उचित उपचार और दवा की सलाह दें।`;
 
   const btn = document.getElementById('btnSubmitToPathologist');
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳</span> <span>Submitting Case...</span>';
+    btn.innerHTML = '<span>⏳</span> <span>Sending Problem to Expert...</span>';
   }
 
   try {
@@ -2916,29 +2924,42 @@ async function submitCaseToExpertPathologist() {
         confidence,
         severity,
         symptoms,
+        expert_id: expertId,
         farmer_name: farmerName,
         farmer_phone: farmerPhone,
-        farmer_query: `Farmer ${farmerName} requested clinical pathology review & verified IPM chemical prescription from Dr. P.K. Mohapatra.`
+        farmer_query: farmerQuery
       })
     });
 
     if (res.ok) {
-      showToast('🩺 Disease case submitted to Dr. P.K. Mohapatra (Expert Portal Queue)!', 'success');
+      const data = await res.json();
+      showToast(`🩺 आपका सवाल ${data.expert_name || 'Leaf Disease Expert'} (${data.expert_specialization || 'Specialist'}) को सफलतापूर्वक भेज दिया गया है!`, 'success');
+      loadFarmerConsultationsHistory();
     } else {
-      showToast('Failed to submit case to expert portal', 'error');
+      showToast('Failed to send problem to expert', 'error');
     }
   } catch (e) {
     console.error(e);
-    showToast('Network error submitting case to pathologist', 'error');
+    showToast('Network error sending problem to expert', 'error');
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerHTML = '<span>✔</span> <span>Case Sent to Expert Queue</span>';
+      btn.innerHTML = '<span>✔</span> <span>Problem Sent to Leaf Disease Expert</span>';
     }
   }
 }
 
 async function initExpertPortalView() {
+  const expertNameEl = document.getElementById('expertPortalUserName');
+  const expertBadgeEl = document.getElementById('expertPortalSpecialistBadge');
+  if (expertNameEl && state.user?.full_name) {
+    expertNameEl.innerText = state.user.full_name;
+  }
+  if (expertBadgeEl) {
+    const spec = state.user?.specialization || state.user?.farm_name || 'Crop Leaf Disease Specialist';
+    expertBadgeEl.innerText = `🌿 Leaf Disease Expert: ${spec}`;
+  }
+
   const res = await apiFetch('/experts/queue');
   const container = document.getElementById('expertQueueContainer');
   if (!res.ok || !container) return;
@@ -2946,34 +2967,42 @@ async function initExpertPortalView() {
   const cases = await res.json();
   container.innerHTML = '';
   if (cases.length === 0) {
-    container.innerHTML = '<p class="text-slate-500 text-center py-8">No pending review cases in your queue. Scan leaves in the Disease Scanner to submit cases.</p>';
+    container.innerHTML = '<p class="text-slate-500 text-center py-8">अभी किसी किसान का सवाल पेंडिंग नहीं है (No farmer leaf disease problems in queue yet). जब किसान Check Disease पेज से आपको अपनी समस्या भेजेंगे, तो वह यहाँ दिखाई देगी।</p>';
     return;
   }
+
+  const loggedExpertName = state.user?.full_name || 'Leaf Disease Expert';
+  const loggedExpertSpec = state.user?.specialization || state.user?.farm_name || 'Crop Leaf Disease Specialist';
 
   cases.forEach(c => {
     const card = document.createElement('div');
     const isCompleted = c.status === 'COMPLETED';
+    const displayExpertName = c.expert_name || loggedExpertName;
+    const displayExpertSpec = c.expert_specialization || loggedExpertSpec;
     card.className = `p-5 bg-white rounded-2xl border ${isCompleted ? 'border-emerald-200 bg-emerald-50/20' : 'border-purple-200'} shadow-sm flex flex-col md:flex-row gap-5 items-start justify-between`;
     
     card.innerHTML = `
       <div class="flex gap-4 items-start">
         <img src="${c.image_url || '/static/assets/leaf_tomato_early_blight.svg'}" class="w-24 h-24 object-cover rounded-xl border border-slate-200 shadow-xs" onerror="this.src='/static/assets/leaf_tomato_early_blight.svg'">
         <div>
-          <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-center gap-2">
             <span class="text-xs font-black px-2.5 py-0.5 rounded-full ${isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'} uppercase tracking-wide">
-              ${c.status === 'COMPLETED' ? '✔ PRESCRIBED & RESOLVED' : '⏳ AWAITING PATHOLOGIST REVIEW'}
+              ${c.status === 'COMPLETED' ? '✔ PRESCRIBED & RESOLVED' : '⏳ FARMER QUESTION AWAITING YOUR ADVICE'}
+            </span>
+            <span class="text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-900 border border-emerald-200">
+              🌿 Specialist: ${displayExpertSpec}
             </span>
             <span class="text-xs text-slate-400 font-mono">${c.created_at ? c.created_at.split('T')[0] : 'Today'}</span>
           </div>
           <h4 class="font-extrabold text-slate-900 text-lg mt-1">${c.crop} • ${c.ai_disease}</h4>
           <p class="text-xs text-slate-500">AI Confidence: <strong>${Math.round(c.ai_confidence * 100)}%</strong> • Severity: <strong>${c.severity}</strong></p>
-          <p class="text-xs text-slate-700 mt-1">👨‍🌾 <strong>Farmer:</strong> ${c.farmer_name} (${c.farmer_phone})</p>
+          <p class="text-xs text-slate-800 font-semibold mt-1">👨‍🌾 <strong>Farmer:</strong> ${c.farmer_name} ${c.farmer_phone ? `(${c.farmer_phone})` : ''}</p>
           <p class="text-xs text-purple-900 bg-purple-50 p-2.5 rounded-xl mt-2 border border-purple-200">
-            "${c.farmer_query}"
+            <strong>Farmer's Question / Problem:</strong> "${c.farmer_query}"
           </p>
           ${isCompleted ? `
             <div class="mt-2.5 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-950">
-              <strong>🩺 Dr. P.K. Mohapatra's Clinical Prescription:</strong>
+              <strong>🩺 ${displayExpertName} (${displayExpertSpec}) - Clinical Prescription:</strong>
               <div class="mt-1">${c.expert_prescription || 'Prescription recorded.'}</div>
             </div>
           ` : ''}
@@ -2982,10 +3011,10 @@ async function initExpertPortalView() {
 
       ${!isCompleted ? `
         <div class="w-full md:w-80 shrink-0 space-y-2">
-          <label class="block text-2xs font-extrabold uppercase tracking-wider text-purple-900">Dr. P.K. Mohapatra's Clinical Prescription</label>
-          <textarea id="expertPrescription_${c.consultation_id}" class="w-full text-xs p-3 border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-xs" rows="3" placeholder="Type verified clinical diagnosis, IPM chemical spray schedule, and dosage...">${c.expert_prescription || ''}</textarea>
+          <label class="block text-2xs font-extrabold uppercase tracking-wider text-purple-900">${displayExpertName} (${displayExpertSpec}) - Prescription</label>
+          <textarea id="expertPrescription_${c.consultation_id}" class="w-full text-xs p-3 border border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-xs" rows="3" placeholder="Type verified leaf disease diagnosis, medicine name, and dosage for the farmer...">${c.expert_prescription || ''}</textarea>
           <button onclick="submitExpertPrescription(${c.consultation_id}, ${c.prediction_id}, '${c.ai_disease}')" class="w-full py-2.5 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs shadow-md transition flex items-center justify-center gap-1.5">
-            <span>✔</span> <span>Send Prescription & Notify Farmer</span>
+            <span>✔</span> <span>Send Advice & Prescription to Farmer</span>
           </button>
         </div>
       ` : `
@@ -3027,6 +3056,7 @@ async function initSellerPortalView() {
 
   const prods = await res.json();
   container.innerHTML = '';
+  const defaultSellerName = state.user?.specialization || state.user?.farm_name || state.user?.full_name || 'Verified Agro Input Store';
   prods.forEach(p => {
     const card = document.createElement('div');
     card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-blue-300 transition';
@@ -3043,9 +3073,9 @@ async function initSellerPortalView() {
         <!-- Seller Verified Location Coordinates -->
         <div class="mt-3 p-2.5 bg-blue-50/70 rounded-xl border border-blue-200 text-2xs space-y-0.5">
           <div class="font-bold text-blue-950 flex items-center gap-1">
-            <span>🏪</span> <span>${p.seller_name || 'Kisan Agro Inputs Hub'}</span>
+            <span>🏪</span> <span>${p.seller_name || defaultSellerName}</span>
           </div>
-          <div class="text-slate-600">📍 ${p.seller_location || 'Mandi Road, Jatni, Khordha, Odisha - 752050'}</div>
+          <div class="text-slate-600">📍 ${p.seller_location || 'Jatni, Khordha, Odisha - 752050'}</div>
           <div class="text-slate-500">🚚 ${p.service_radius || 'Delivery Coverage: 45 km radius across Khordha'}</div>
           <div class="text-blue-800 font-semibold">🛡️ ${p.license_number || 'OD-AGRI-RET-2024-8841 (OSAMB)'}</div>
         </div>

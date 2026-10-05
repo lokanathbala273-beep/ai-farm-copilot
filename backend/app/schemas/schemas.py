@@ -11,6 +11,8 @@ class Token(BaseModel):
     role: str
     full_name: str
     preferred_language: str
+    specialization: Optional[str] = None
+    farm_name: Optional[str] = None
 
 class TokenData(BaseModel):
     user_id: Optional[int] = None
@@ -21,11 +23,13 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
     phone: Optional[str] = None
+    phone_number: Optional[str] = None
     role: str = "FARMER"  # FARMER, AGRICULTURAL_EXPERT, SELLER, BUYER, ADMIN
     preferred_language: str = "en"
     
-    # Optional farmer specific fields on register
-    farm_name: Optional[str] = "Kishan Smart Farm"
+    # Leaf Disease Expert specialization / Farm / Establishment name
+    leaf_disease_expert: Optional[str] = None
+    farm_name: Optional[str] = None
     location: Optional[str] = "Khordha, Odisha"
     state: Optional[str] = "Odisha"
     district: Optional[str] = "Khordha"
@@ -45,13 +49,16 @@ class UserLogin(BaseModel):
     email: str
     password: Optional[str] = None
     role: Optional[str] = "FARMER"
+    full_name: Optional[str] = None
+    leaf_disease_expert: Optional[str] = None
+    farm_name: Optional[str] = None
     biometric_token: Optional[str] = None
     face_token: Optional[str] = None
 
 class OtpSendRequest(BaseModel):
     phone: Optional[str] = None
     phone_number: Optional[str] = None
-    role: Optional[str] = "FARMER"  # 1st priority FARMER, then EXPERT, SELLER, BUYER, ADMIN
+    role: Optional[str] = "FARMER"
     full_name: Optional[str] = None
 
 class OtpSendResponse(BaseModel):
@@ -60,7 +67,7 @@ class OtpSendResponse(BaseModel):
     phone: str
     phone_number: Optional[str] = None
     expires_in_seconds: int = 300
-    simulated_otp: Optional[str] = None  # Exposed for demo / offline instant test
+    simulated_otp: Optional[str] = None
     demo_otp: Optional[str] = None
 
 class OtpVerifyRequest(BaseModel):

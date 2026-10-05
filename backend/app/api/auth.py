@@ -128,21 +128,6 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
     # Find or create user by phone number
     user = db.query(User).filter(User.phone == phone).first()
 
-    # If not found by phone, check standard demo accounts by email mapping
-    phone_demo_emails = {
-        "9861012345": "farmer.ramesh@aifarm.org",
-        "9437012345": "dr.mohapatra@aifarm.org",
-        "9124012345": "seller.kisan@aifarm.org",
-        "9937012345": "buyer.trading@aifarm.org",
-        "9876543210": "admin@aifarm.org"
-    }
-
-    if not user and phone in phone_demo_emails:
-        user = db.query(User).filter(User.email == phone_demo_emails[phone]).first()
-        if user:
-            user.phone = phone
-            db.commit()
-
     # Determine desired role (FARMER has 1st priority)
     role_enum = UserRole.FARMER
     role_requested = (req.role or (latest_otp.role if latest_otp else "FARMER")).upper()
@@ -153,7 +138,7 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
 
     # Create new user if not existing
     if not user:
-        full_name = req.full_name or (latest_otp.full_name if latest_otp and latest_otp.full_name else f"Farmer {phone[-4:]}")
+        full_name = req.full_name or (latest_otp.full_name if latest_otp and latest_otp.full_name else f"User {phone[-4:]}")
         user = User(
             email=f"{phone}@aifarm.org",
             phone=phone,
@@ -173,6 +158,9 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
     if req.preferred_language:
         user.preferred_language = req.preferred_language
     db.commit()
+
+    user_specialization = None
+    user_farm_name = None
 
     # Ensure role-specific profile exists
     if user.role == UserRole.FARMER:
@@ -198,7 +186,7 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
         # Ensure at least one farm exists for this farmer
         farm = db.query(Farm).filter(Farm.farmer_id == prof.id).first()
         if not farm:
-            farm_name = req.farm_name.strip() if (req.farm_name and req.farm_name.strip()) else "Kishan Smart Farm"
+            farm_name = req.farm_name.strip() if (req.farm_name and req.farm_name.strip()) else f"{user.full_name}'s Farm"
             farm_loc = req.location.strip() if (req.location and req.location.strip()) else "Live GPS Field"
             farm_area = req.land_area if (req.land_area and req.land_area > 0) else prof.total_land_area
             farm = Farm(
@@ -223,18 +211,44 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
             f3 = Field(farm_id=farm.id, field_name="Plot 3 - Potato", area=1.0, crop="Potato", growth_stage="Vegetative", current_health="attention")
             db.add_all([f1, f2, f3])
             db.commit()
+        user_farm_name = farm.farm_name
 
     elif user.role == UserRole.AGRICULTURAL_EXPERT:
-        if not db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first():
-            db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
+        exp_prof = db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first()
+        if not exp_prof:
+            exp_prof = ExpertProfile(
+                user_id=user.id,
+                specialization=(req.farm_name.strip() if (req.farm_name and req.farm_name.strip()) else "Crop Leaf Disease Specialist"),
+                verification_status="VERIFIED"
+            )
+            db.add(exp_prof)
             db.commit()
+            db.refresh(exp_prof)
+        elif req.farm_name and req.farm_name.strip():
+            exp_prof.specialization = req.farm_name.strip()
+            db.commit()
+        user_specialization = exp_prof.specialization
+
     elif user.role == UserRole.SELLER:
-        if not db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first():
-            db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
+        sel_prof = db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first()
+        if not sel_prof:
+            sel_prof = SellerProfile(
+                user_id=user.id,
+                business_name=(req.farm_name.strip() if (req.farm_name and req.farm_name.strip()) else f"{user.full_name} Input Store"),
+                owner_name=user.full_name,
+                verification_status="VERIFIED"
+            )
+            db.add(sel_prof)
             db.commit()
+
     elif user.role == UserRole.BUYER:
-        if not db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first():
-            db.add(BuyerProfile(user_id=user.id))
+        buy_prof = db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first()
+        if not buy_prof:
+            buy_prof = BuyerProfile(
+                user_id=user.id,
+                organization_name=(req.farm_name.strip() if (req.farm_name and req.farm_name.strip()) else f"{user.full_name} Produce Buyer")
+            )
+            db.add(buy_prof)
             db.commit()
 
     # Generate JWT access token
@@ -249,11 +263,13 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
         "email": user.email,
         "role": user.role.value,
         "full_name": user.full_name,
-        "preferred_language": user.preferred_language
+        "preferred_language": user.preferred_language,
+        "specialization": user_specialization,
+        "farm_name": user_farm_name
     }
 
 # -------------------------------------------------------------
-# Legacy / Password and Direct JSON Login (Retained for compatibility)
+# Registration & Password Login
 # -------------------------------------------------------------
 @router.post("/register", response_model=Token)
 def register(user_in: UserRegister, db: Session = Depends(get_db)):
@@ -270,6 +286,8 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
     except (ValueError, AttributeError):
         role_enum = UserRole.FARMER
 
+    specialist_or_est = (user_in.leaf_disease_expert or user_in.farm_name or "").strip()
+
     existing = db.query(User).filter(User.email == clean_email).first()
     if existing:
         existing.hashed_password = get_password_hash(user_in.password.strip())
@@ -280,7 +298,8 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         db.refresh(existing)
         user = existing
     else:
-        clean_phone = user_in.phone.strip() if user_in.phone else None
+        raw_phone = user_in.phone or user_in.phone_number
+        clean_phone = re.sub(r'[^0-9]', '', raw_phone) if raw_phone else None
         if clean_phone and len(clean_phone) > 10 and clean_phone.startswith("91"):
             clean_phone = clean_phone[2:]
         if clean_phone:
@@ -303,6 +322,9 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         db.commit()
         db.refresh(user)
 
+    user_specialization = None
+    user_farm_name = None
+
     if role_enum == UserRole.FARMER:
         farmer_prof = db.query(FarmerProfile).filter(FarmerProfile.user_id == user.id).first()
         if not farmer_prof:
@@ -323,9 +345,10 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(farmer_prof)
 
-            # Create user's farm and field plots
-            farm_name = user_in.farm_name.strip() if user_in.farm_name else "Kishan Smart Farm"
-            farm_loc = user_in.location.strip() if user_in.location else "Khordha, Odisha"
+        farm = db.query(Farm).filter(Farm.farmer_id == farmer_prof.id).first()
+        farm_name = specialist_or_est if specialist_or_est else f"{user.full_name}'s Farm"
+        farm_loc = user_in.location.strip() if user_in.location else "Khordha, Odisha"
+        if not farm:
             farm = Farm(
                 farmer_id=farmer_prof.id,
                 farm_name=farm_name,
@@ -348,18 +371,62 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
             f3 = Field(farm_id=farm.id, field_name="Plot 3 - Potato", area=1.0, crop="Potato", growth_stage="Vegetative", current_health="attention")
             db.add_all([f1, f2, f3])
             db.commit()
+        elif specialist_or_est:
+            farm.farm_name = specialist_or_est
+            db.commit()
+        user_farm_name = farm.farm_name
 
     elif role_enum == UserRole.AGRICULTURAL_EXPERT:
-        if not db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first():
-            db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
+        exp_prof = db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first()
+        spec_val = specialist_or_est if specialist_or_est else "Crop Leaf Disease Specialist"
+        loc_val = user_in.location.strip() if (user_in.location and user_in.location.strip()) else "Odisha"
+        if not exp_prof:
+            exp_prof = ExpertProfile(
+                user_id=user.id,
+                qualification="Verified Leaf Disease Expert",
+                specialization=spec_val,
+                location=loc_val,
+                verification_status="VERIFIED"
+            )
+            db.add(exp_prof)
             db.commit()
+            db.refresh(exp_prof)
+        else:
+            if specialist_or_est:
+                exp_prof.specialization = specialist_or_est
+            if user_in.location and user_in.location.strip():
+                exp_prof.location = user_in.location.strip()
+            db.commit()
+            db.refresh(exp_prof)
+        user_specialization = exp_prof.specialization
+
     elif role_enum == UserRole.SELLER:
-        if not db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first():
-            db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
+        sel_prof = db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first()
+        if not sel_prof:
+            sel_prof = SellerProfile(
+                user_id=user.id,
+                business_name=specialist_or_est if specialist_or_est else f"{user.full_name} Input Store",
+                owner_name=user.full_name,
+                verification_status="VERIFIED"
+            )
+            db.add(sel_prof)
             db.commit()
+        elif specialist_or_est:
+            sel_prof.business_name = specialist_or_est
+            sel_prof.owner_name = user.full_name
+            db.commit()
+
     elif role_enum == UserRole.BUYER:
-        if not db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first():
-            db.add(BuyerProfile(user_id=user.id))
+        buy_prof = db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first()
+        if not buy_prof:
+            buy_prof = BuyerProfile(
+                user_id=user.id,
+                organization_name=specialist_or_est if specialist_or_est else f"{user.full_name} Produce Buyer"
+            )
+            db.add(buy_prof)
+            db.commit()
+        elif specialist_or_est:
+            buy_prof.organization_name = specialist_or_est
             db.commit()
 
     access_token = create_access_token(
@@ -372,7 +439,9 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
         "email": user.email,
         "role": user.role.value,
         "full_name": user.full_name,
-        "preferred_language": user.preferred_language
+        "preferred_language": user.preferred_language,
+        "specialization": user_specialization,
+        "farm_name": user_farm_name
     }
 
 @router.post("/token", response_model=Token)
@@ -429,6 +498,9 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
         except (ValueError, AttributeError):
             requested_role = None
 
+    specialist_or_est = (login_data.leaf_disease_expert or login_data.farm_name or "").strip()
+    entered_name = (login_data.full_name or "").strip()
+
     if not user:
         if not login_data.password or len(login_data.password.strip()) < 4:
             raise HTTPException(
@@ -437,7 +509,7 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             )
         # Auto-provision user if container database was reset on Render
         role_to_assign = requested_role or UserRole.FARMER
-        default_name = clean_email.split("@")[0].replace(".", " ").title()
+        default_name = entered_name if entered_name else clean_email.split("@")[0].replace(".", " ").title()
         user = User(
             email=clean_email,
             hashed_password=get_password_hash(login_data.password.strip()),
@@ -459,13 +531,22 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is disabled.")
 
-    # Apply the role explicitly selected by the user at login time
+    # Update user role or full name if explicitly provided at login time
+    updated_user = False
     if requested_role and user.role != requested_role:
         user.role = requested_role
+        updated_user = True
+    if entered_name:
+        user.full_name = entered_name
+        updated_user = True
+    if updated_user:
         db.commit()
         db.refresh(user)
 
-    # Ensure role-specific profile exists
+    user_specialization = None
+    user_farm_name = None
+
+    # Ensure role-specific profile exists and save Leaf Disease Expert specialization / establishment name
     if user.role == UserRole.FARMER:
         farmer_prof = db.query(FarmerProfile).filter(FarmerProfile.user_id == user.id).first()
         if not farmer_prof:
@@ -485,9 +566,11 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             db.add(farmer_prof)
             db.commit()
             db.refresh(farmer_prof)
+        farm = db.query(Farm).filter(Farm.farmer_id == farmer_prof.id).first()
+        if not farm:
             farm = Farm(
                 farmer_id=farmer_prof.id,
-                farm_name="Kishan Smart Farm",
+                farm_name=specialist_or_est if specialist_or_est else f"{user.full_name}'s Farm",
                 location="Khordha, Odisha",
                 latitude=20.2961,
                 longitude=85.8245,
@@ -499,17 +582,57 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             )
             db.add(farm)
             db.commit()
+            db.refresh(farm)
+        elif specialist_or_est:
+            farm.farm_name = specialist_or_est
+            db.commit()
+        user_farm_name = farm.farm_name
+
     elif user.role == UserRole.AGRICULTURAL_EXPERT:
-        if not db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first():
-            db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
+        exp_prof = db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first()
+        if not exp_prof:
+            exp_prof = ExpertProfile(
+                user_id=user.id,
+                qualification="Verified Leaf Disease Expert",
+                specialization=specialist_or_est if specialist_or_est else "Crop Leaf Disease Specialist",
+                verification_status="VERIFIED"
+            )
+            db.add(exp_prof)
             db.commit()
+            db.refresh(exp_prof)
+        elif specialist_or_est:
+            exp_prof.specialization = specialist_or_est
+            db.commit()
+            db.refresh(exp_prof)
+        user_specialization = exp_prof.specialization
+
     elif user.role == UserRole.SELLER:
-        if not db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first():
-            db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
+        sel_prof = db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first()
+        if not sel_prof:
+            sel_prof = SellerProfile(
+                user_id=user.id,
+                business_name=specialist_or_est if specialist_or_est else f"{user.full_name} Input Store",
+                owner_name=user.full_name,
+                verification_status="VERIFIED"
+            )
+            db.add(sel_prof)
             db.commit()
+        elif specialist_or_est:
+            sel_prof.business_name = specialist_or_est
+            sel_prof.owner_name = user.full_name
+            db.commit()
+
     elif user.role == UserRole.BUYER:
-        if not db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first():
-            db.add(BuyerProfile(user_id=user.id))
+        buy_prof = db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first()
+        if not buy_prof:
+            buy_prof = BuyerProfile(
+                user_id=user.id,
+                organization_name=specialist_or_est if specialist_or_est else f"{user.full_name} Produce Buyer"
+            )
+            db.add(buy_prof)
+            db.commit()
+        elif specialist_or_est:
+            buy_prof.organization_name = specialist_or_est
             db.commit()
 
     access_token = create_access_token(
@@ -522,7 +645,9 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
         "email": user.email,
         "role": user.role.value,
         "full_name": user.full_name,
-        "preferred_language": user.preferred_language
+        "preferred_language": user.preferred_language,
+        "specialization": user_specialization,
+        "farm_name": user_farm_name
     }
 
 @router.get("/me", response_model=UserResponse)

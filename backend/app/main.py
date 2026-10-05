@@ -10,7 +10,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from backend.app.config import settings
-from backend.app.models.database import engine, Base
+from backend.app.models.database import engine, Base, SessionLocal
+from backend.app.models.tables import (
+    User, FarmerProfile, ExpertProfile, SellerProfile, BuyerProfile,
+    Farm, Field, ExpertConsultation, DiseasePrediction, BuyerListing, BuyerOrder, Notification
+)
 from backend.app.api import (
     auth, farms, fields, crops, disease, predictions,
     copilot, weather, soil, business, expenses, income,
@@ -27,6 +31,86 @@ try:
         conn.commit()
 except Exception:
     pass
+
+def purge_demo_records_on_startup():
+    """Removes all seeded demo users, demo consultations, and demo listings from the database."""
+    db = SessionLocal()
+    try:
+        demo_emails = {
+            "admin@aifarm.org",
+            "farmer.ramesh@aifarm.org",
+            "farmer.ramesh@gmail.com",
+            "farmer.rames@gmail.com",
+            "dr.mohapatra@aifarm.org",
+            "dr.mohapatra@gmail.com",
+            "seller.kisan@aifarm.org",
+            "seller.kisan@gmail.com",
+            "buyer.trading@aifarm.org",
+            "buyer.trading@gmail.com",
+            "farmer_face_test@gmail.com",
+            "farmer_fp_test@gmail.com"
+        }
+        demo_names = {
+            "ramesh patel",
+            "ramesh chandra patel",
+            "ramesh pradhan",
+            "sita devi",
+            "kishan kumar",
+            "dr. debabrata mohapatra",
+            "dr. p. k. mohapatra (plant pathologist)",
+            "dr. p.k. mohapatra",
+            "sunil agrochemicals",
+            "sunil sahoo (kisan agro inputs)",
+            "utkal agro traders",
+            "utkal fresh produce traders",
+            "system administrator",
+            "agritech directorate admin"
+        }
+
+        all_users = db.query(User).all()
+        demo_user_ids = []
+        for u in all_users:
+            email_low = (u.email or "").lower()
+            name_low = (u.full_name or "").strip().lower()
+            if (
+                email_low in demo_emails
+                or email_low.startswith("farmer_face_")
+                or email_low.startswith("farmer_fp_")
+                or email_low.startswith("farmer_vec_")
+                or email_low.startswith("farmer_std_")
+                or name_low in demo_names
+                or "ramesh patel" in name_low
+            ):
+                demo_user_ids.append(u.id)
+
+        if demo_user_ids:
+            db.query(ExpertConsultation).filter(ExpertConsultation.farmer_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(DiseasePrediction).filter(DiseasePrediction.farmer_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(BuyerListing).filter(BuyerListing.farmer_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(Notification).filter(Notification.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(FarmerProfile).filter(FarmerProfile.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(ExpertProfile).filter(ExpertProfile.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(SellerProfile).filter(SellerProfile.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(BuyerProfile).filter(BuyerProfile.user_id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.query(User).filter(User.id.in_(demo_user_ids)).delete(synchronize_session=False)
+            db.commit()
+
+        # Also clean any orphaned consultations or listings
+        valid_user_ids = [u.id for u in db.query(User).all()]
+        if valid_user_ids:
+            db.query(ExpertConsultation).filter(~ExpertConsultation.farmer_id.in_(valid_user_ids)).delete(synchronize_session=False)
+            db.query(BuyerListing).filter(~BuyerListing.farmer_id.in_(valid_user_ids)).delete(synchronize_session=False)
+        else:
+            db.query(ExpertConsultation).delete(synchronize_session=False)
+            db.query(BuyerListing).delete(synchronize_session=False)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print("Startup demo cleanup note:", e)
+    finally:
+        db.close()
+
+purge_demo_records_on_startup()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,

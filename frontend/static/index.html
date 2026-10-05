@@ -251,22 +251,22 @@
                 </label>
                 <select id="regRole" class="w-full p-3 rounded-xl border-2 border-emerald-500 text-xs md:text-sm font-extrabold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-emerald-50/40 focus:bg-white cursor-pointer">
                   <option value="FARMER" selected>👨‍🌾 Farmer</option>
-                  <option value="AGRICULTURAL_EXPERT">🩺 Expert (Agricultural Pathologist)</option>
+                  <option value="AGRICULTURAL_EXPERT">🩺 Expert (Leaf Disease Expert)</option>
                   <option value="SELLER">🏪 Seller (Input Store)</option>
                   <option value="BUYER">🛒 Buyer (Crop Produce Buyer)</option>
                   <option value="ADMIN">⚙️ Admin (System Administrator)</option>
                 </select>
               </div>
 
-              <!-- Farm Name -->
+              <!-- Leaf Disease Expert -->
               <div>
-                <label class="block text-xs font-bold text-slate-700 mb-1">
-                  🚜 Farm / Establishment Name
+                <label id="regFarmNameLabel" class="block text-xs font-bold text-slate-700 mb-1">
+                  🌿 Leaf Disease Expert <span class="text-emerald-700 font-extrabold">(Specialist Crop / Disease)</span>
                 </label>
-                <input type="text" id="regFarmName" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="e.g. Green Valley Smart Farm" value="">
+                <input type="text" id="regFarmName" class="w-full p-3 rounded-xl border-2 border-emerald-400 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white" placeholder="e.g. Tomato & Rice Leaf Disease Specialist" value="">
               </div>
 
-              <!-- Farm Location / District -->
+              <!-- Location / District -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
                   📍 State & District / Village
@@ -294,7 +294,7 @@
             <!-- Registration Action Buttons -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button onclick="submitRegistrationWithPassword()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
-                <span>🚀</span> <span>Register & Open My Selected Role Portal</span>
+                <span>🚀</span> <span>Create Account & Enter Selected Portal</span>
               </button>
             </div>
             <p class="text-3xs text-slate-400 text-center">
@@ -303,7 +303,7 @@
           </div>
         </div>
 
-        <!-- TAB 2: REGISTERED USER SIGN IN (SELECT ROLE + GMAIL ID + PASSWORD) -->
+        <!-- TAB 2: REGISTERED USER SIGN IN (SELECT ROLE + GMAIL ID + PASSWORD + LEAF DISEASE EXPERT) -->
         <div id="tabContent-signin" class="hidden space-y-4">
           <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 md:p-6 space-y-5">
             <div>
@@ -311,7 +311,7 @@
                 <span>🔑</span> <span>Sign In to Your Role Portal</span>
               </h3>
               <p class="text-xs text-slate-600 mt-0.5">
-                First select who you are (Farmer, Expert, Seller, Buyer, or Admin), then enter your Gmail ID and password to open your dedicated portal.
+                First select who you are (Farmer, Expert, Seller, Buyer, or Admin), enter your Gmail ID, Password, and Leaf Disease Expert specialization to open your dedicated portal.
               </p>
             </div>
 
@@ -345,7 +345,7 @@
               <input type="hidden" id="signinRole" value="FARMER">
             </div>
 
-            <!-- Step 2: Gmail ID & Password -->
+            <!-- Step 2: Gmail ID, Password, Name & Leaf Disease Expert -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Registered Gmail ID -->
               <div>
@@ -372,12 +372,28 @@
                   </button>
                 </div>
               </div>
+
+              <!-- Full Name -->
+              <div>
+                <label class="block text-xs font-bold text-slate-700 mb-1">
+                  4️⃣ Your Full Name
+                </label>
+                <input type="text" id="signinFullName" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your name (e.g. Dr. Name / Farmer Name)" value="">
+              </div>
+
+              <!-- Leaf Disease Expert -->
+              <div>
+                <label id="signinLeafExpertLabel" class="block text-xs font-bold text-slate-700 mb-1">
+                  5️⃣ 🌿 Leaf Disease Expert <span class="text-emerald-700 font-extrabold">(Specialist Crop / Disease)</span>
+                </label>
+                <input type="text" id="signinLeafExpert" class="w-full p-3 rounded-xl border-2 border-emerald-400 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="e.g. Tomato & Rice Leaf Disease Specialist" value="">
+              </div>
             </div>
 
             <!-- Sign In Action Button -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button onclick="submitSignInWithPassword()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
-                <span>🔓</span> <span id="signinSubmitBtnLabel">Sign In as Farmer & Open Farmer Interface</span>
+                <span>🔓</span> <span id="signinSubmitBtnLabel">Create / Sign In & Open Farmer Interface</span>
               </button>
             </div>
           </div>
@@ -808,24 +824,71 @@
           </div>
         </div>
 
-        <!-- Submit Case to Agricultural Pathologist Review Queue -->
-        <div class="p-5 bg-purple-50/90 rounded-2xl border-2 border-purple-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
-          <div>
-            <div class="flex items-center gap-2">
-              <span class="w-8 h-8 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-sm">🩺</span>
-              <h4 class="font-extrabold text-purple-950 text-sm md:text-base">
-                Submit Case to Plant Pathologist Review Queue
-              </h4>
+        <!-- Ask Leaf Disease Experts & Send Problem Directly -->
+        <div class="p-5 bg-purple-50/95 rounded-2xl border-2 border-purple-200 space-y-4 shadow-sm">
+          <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="w-8 h-8 rounded-xl bg-purple-700 text-white flex items-center justify-center font-bold text-sm">🩺</span>
+                <h4 class="font-extrabold text-purple-950 text-sm md:text-base">
+                  Ask Our Leaf Disease Experts (विशेषज्ञ से सवाल पूछें)
+                </h4>
+              </div>
+              <p class="text-xs text-purple-900 font-semibold mt-1.5 leading-relaxed">
+                🌿 आपका जो पत्ती का रोग (Leaf Disease) है, अगर आप चाहें तो हमारे Experts से सवाल पूछ सकते हैं और अपनी समस्या सीधे भेज सकते हैं।<br>
+                <span class="text-purple-700 font-normal">Select a registered Leaf Disease Specialist below and send your leaf disease problem directly:</span>
+              </p>
             </div>
-            <p class="text-xs text-purple-800 mt-1.5 max-w-xl leading-relaxed">
-              Send this leaf disease scan directly to <strong>Dr. P.K. Mohapatra (OUAT)</strong> and agricultural pathology experts for verified clinical diagnosis, custom chemical dosage, and official IPM prescription.
-            </p>
           </div>
-          <button id="btnSubmitToPathologist" onclick="submitCaseToExpertPathologist()" class="px-5 py-3 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition flex items-center gap-2 shrink-0">
-            <span>🩺</span> <span>Send to Pathologist Review</span>
-          </button>
+
+          <!-- Dynamic List of Registered Leaf Disease Experts & Their Specialist Crops -->
+          <div>
+            <label class="block text-2xs font-extrabold uppercase tracking-wider text-purple-900 mb-2">
+              👨‍🔬 Available Leaf Disease Experts & Their Specialist Crop / Disease:
+            </label>
+            <div id="scannerExpertsListContainer" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <!-- Populated dynamically from /api/experts/list -->
+            </div>
+            <input type="hidden" id="selectedExpertIdForCase" value="">
+          </div>
+
+          <!-- Farmer Problem / Question Input & Direct Send Button -->
+          <div class="space-y-2.5 pt-2 border-t border-purple-200/80">
+            <label class="block text-xs font-extrabold text-purple-950">
+              ✍️ अपना सवाल या पत्ती के रोग की समस्या लिखें (Write Your Leaf Disease Problem / Question for the Expert):
+            </label>
+            <textarea id="farmerExpertProblemInput" rows="2" class="w-full p-3 rounded-xl border border-purple-300 bg-white text-xs md:text-sm font-medium text-slate-800 focus:ring-2 focus:ring-purple-500 focus:outline-hidden" placeholder="e.g. Mere fasal ke patton par daag aa rahe hain, kripya sahi dawai aur matra batayein..."></textarea>
+            <div class="flex justify-end">
+              <button id="btnSubmitToPathologist" onclick="submitCaseToExpertPathologist()" class="w-full sm:w-auto px-6 py-3 bg-purple-700 hover:bg-purple-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
+                <span>📨</span> <span>Send Problem Directly to Selected Expert</span>
+              </button>
+            </div>
+          </div>
         </div>
 
+      </div>
+
+      <!-- Farmer's Sent Questions & Expert Replies History -->
+      <div id="farmerSentConsultationsCard" class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-base md:text-lg font-extrabold text-purple-950 flex items-center gap-2">
+              <span>🩺</span> <span>Available Leaf Disease Specialists & My Expert Answers</span>
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">
+              View registered Leaf Disease Experts and track answers to the problems you sent.
+            </p>
+          </div>
+          <button onclick="loadRegisteredExpertsForScanner(); loadFarmerConsultationsHistory();" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 rounded-xl text-xs font-bold border border-purple-200 transition">
+            🔄 Refresh Experts & Replies
+          </button>
+        </div>
+        <div id="scannerStandaloneExpertsList" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <!-- Always-visible registered Leaf Disease Experts -->
+        </div>
+        <div id="farmerConsultationsHistory" class="space-y-3 pt-2 border-t border-slate-100">
+          <!-- Farmer's sent questions & expert prescriptions -->
+        </div>
       </div>
 
     </section>
@@ -1368,7 +1431,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 bg-purple-50 border border-purple-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
         <div class="flex items-center gap-2 text-purple-900 font-bold">
           <span class="w-2.5 h-2.5 rounded-full bg-purple-600 animate-pulse"></span>
-          <span>🩺 Verified Agricultural Expert Portal: <span id="expertPortalUserName" class="font-extrabold">Dr. P.K. Mohapatra (OUAT Pathologist)</span></span>
+          <span>🩺 Verified Leaf Disease Expert Portal: <span id="expertPortalUserName" class="font-extrabold">Leaf Disease Expert</span></span>
         </div>
         <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-purple-200 text-xs font-bold transition flex items-center gap-1">
           <span>🔒</span> <span>Sign Out</span>
@@ -1378,14 +1441,14 @@
       <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 class="text-xl md:text-2xl font-extrabold text-purple-900" data-i18n="expert_portal.title">Expert Advice & Plant Pathology Clinical Queue</h2>
-            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="expert_portal.subtitle">Review farmer leaf disease scans, low-confidence AI cases, and issue verified IPM prescriptions.</p>
+            <h2 class="text-xl md:text-2xl font-extrabold text-purple-900" data-i18n="expert_portal.title">Leaf Disease Expert Advice & Farmer Questions Queue</h2>
+            <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="expert_portal.subtitle">Review farmer leaf disease problems sent to you and reply with verified treatment prescriptions.</p>
           </div>
-          <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">🩺 Dr. P.K. Mohapatra • OUAT</span>
+          <span id="expertPortalSpecialistBadge" class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-purple-100 text-purple-800 border border-purple-200">🌿 Leaf Disease Specialist</span>
         </div>
 
         <div class="mt-6">
-          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="expert_portal.pending_queue">Cases Awaiting Pathologist Advice & Prescription</h3>
+          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="expert_portal.pending_queue">Farmer Leaf Disease Questions & Problems Sent to You</h3>
           <div id="expertQueueContainer" class="space-y-4">
             <!-- Dynamically populated expert cases -->
           </div>
@@ -1401,7 +1464,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 bg-blue-50 border border-blue-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
         <div class="flex items-center gap-2 text-blue-900 font-bold">
           <span class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
-          <span>🏪 Verified Input Store Seller Portal: <span id="sellerPortalUserName" class="font-extrabold">Sunil Agrochemicals & Seeds</span></span>
+          <span>🏪 Verified Input Store Seller Portal: <span id="sellerPortalUserName" class="font-extrabold">Verified Seller</span></span>
         </div>
         <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-blue-200 text-xs font-bold transition flex items-center gap-1">
           <span>🔒</span> <span>Sign Out</span>
@@ -1414,7 +1477,7 @@
             <h2 class="text-xl md:text-2xl font-extrabold text-blue-900" data-i18n="seller_portal.title">Input Store — Agrochemical & Seed Seller Portal</h2>
             <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="seller_portal.subtitle">Manage approved agricultural inputs, fertilizers, fungicides, pricing, and live inventory stock.</p>
           </div>
-          <span class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">🏪 Kisan Agro Input Store</span>
+          <span id="sellerPortalBadge" class="px-3.5 py-1.5 rounded-full text-xs font-extrabold bg-blue-100 text-blue-800 border border-blue-200">🏪 Verified Input Store</span>
         </div>
 
         <div class="mt-6">
@@ -1434,7 +1497,7 @@
       <div class="flex flex-wrap items-center justify-between gap-3 bg-amber-50 border border-amber-200 px-4 py-3 rounded-2xl text-xs shadow-2xs">
         <div class="flex items-center gap-2 text-amber-900 font-bold">
           <span class="w-2.5 h-2.5 rounded-full bg-amber-600 animate-pulse"></span>
-          <span>🛒 Verified Wholesale Buyer Portal: <span id="buyerPortalUserName" class="font-extrabold">Utkal Wholesale Agro Traders</span></span>
+          <span>🛒 Verified Wholesale Buyer Portal: <span id="buyerPortalUserName" class="font-extrabold">Verified Buyer</span></span>
         </div>
         <button onclick="logoutFarmerSession()" class="px-3 py-1.5 bg-white hover:bg-red-50 text-slate-700 hover:text-red-700 rounded-xl border border-amber-200 text-xs font-bold transition flex items-center gap-1">
           <span>🔒</span> <span>Sign Out</span>
@@ -1695,17 +1758,17 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block font-semibold text-slate-600 mb-1">Buyer / Trading Firm Name</label>
-            <input type="text" id="buyerOrderFirmName" value="Utkal Agro Trading & Wholesalers" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+            <input type="text" id="buyerOrderFirmName" value="" placeholder="Enter buyer firm name" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
           </div>
           <div>
             <label class="block font-semibold text-slate-600 mb-1">Buyer Contact Phone</label>
-            <input type="text" id="buyerOrderPhone" value="+91-9937012345" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+            <input type="text" id="buyerOrderPhone" value="" placeholder="Enter contact phone" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
           </div>
         </div>
 
         <div>
           <label class="block font-semibold text-slate-600 mb-1">Buyer Warehouse / Shop Location (Address)</label>
-          <input type="text" id="buyerOrderLocation" value="Aiginia APMC Yard, Bhubaneswar, Khordha, Odisha - 751019" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
+          <input type="text" id="buyerOrderLocation" value="Aiginia APMC Yard, Bhubaneswar, Khordha, Odisha" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
         </div>
 
         <div>
@@ -1792,7 +1855,7 @@
             <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
               🇮🇳 +91
             </span>
-            <input type="tel" id="authInputPhone" maxlength="10" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold font-mono tracking-wider focus:ring-2 focus:ring-emerald-500 focus:outline-hidden" placeholder="9861012345">
+            <input type="tel" id="authInputPhone" maxlength="10" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold font-mono tracking-wider focus:ring-2 focus:ring-emerald-500 focus:outline-hidden" placeholder="10-digit mobile number">
           </div>
         </div>
 
@@ -1804,7 +1867,7 @@
       <!-- Step 2: OTP Verification Box -->
       <div id="otpStep2" class="hidden space-y-3 pt-2 border-t border-slate-100">
         <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between">
-          <span>OTP sent to <strong id="authOtpPhoneDisplay" class="font-mono">+91-9861012345</strong></span>
+          <span>OTP sent to <strong id="authOtpPhoneDisplay" class="font-mono">--</strong></span>
           <button onclick="document.getElementById('otpStep1').classList.remove('hidden'); document.getElementById('otpStep2').classList.add('hidden');" class="text-3xs text-emerald-700 underline font-semibold">Change Number</button>
         </div>
 
@@ -1814,7 +1877,7 @@
         </div>
 
         <div class="flex items-center justify-between text-2xs text-slate-500">
-          <span data-i18n="auth.demo_hint">Demo Passcode: '123456' is approved for testing.</span>
+          <span>Enter the 6-digit verification code sent to your mobile.</span>
           <button onclick="requestPhoneOtp()" class="text-emerald-700 font-bold hover:underline" data-i18n="auth.resend_otp">Resend OTP</button>
         </div>
 
@@ -1833,7 +1896,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20261005_v4"></script>
+  <script src="/static/js/app.js?v=20261005_v5"></script>
 </body>
 </html>
 

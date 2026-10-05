@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from backend.app.models.database import get_db
 from backend.app.models.tables import User, Product, SellerProfile
 from backend.app.schemas.schemas import ProductCreate
-from backend.app.auth.security import get_current_user, require_seller
+from backend.app.auth.security import get_current_user, get_optional_current_user, require_seller
 
 router = APIRouter(prefix="/sellers", tags=["Agricultural Inputs Seller Portal"])
 
@@ -12,29 +12,14 @@ router = APIRouter(prefix="/sellers", tags=["Agricultural Inputs Seller Portal"]
 def list_products(
     crop: Optional[str] = None,
     seller_only: bool = False,
-    authorization: Optional[str] = Header(None),
+    current_user: Optional[User] = Depends(get_optional_current_user),
     db: Session = Depends(get_db)
 ):
     """
     Returns approved agricultural medicines, seeds, and inputs,
     enriched with the verified seller's shop location, district hub, and delivery radius.
     """
-    current_user = None
-    if authorization and authorization.startswith("Bearer "):
-        try:
-            token = authorization.split(" ")[1]
-            from backend.app.auth.security import decode_access_token
-            payload = decode_access_token(token)
-            if payload and "sub" in payload:
-                current_user = db.query(User).filter(User.phone == payload["sub"]).first()
-        except Exception:
-            pass
-
     q = db.query(Product).filter(Product.is_approved == True)
-    if seller_only and current_user:
-        prof = db.query(SellerProfile).filter(SellerProfile.user_id == current_user.id).first()
-        if prof:
-            q = q.filter(Product.seller_id == prof.id)
     if crop:
         q = q.filter(Product.target_crop == crop)
     
@@ -44,12 +29,13 @@ def list_products(
         prof = db.query(SellerProfile).filter(SellerProfile.id == p.seller_id).first()
         seller_user = db.query(User).filter(User.id == prof.user_id).first() if prof else None
 
-        seller_name = prof.business_name if prof else "Kisan Agro Inputs & Seed Hub"
-        seller_owner = prof.owner_name if prof else "Sunil Sahoo"
-        seller_address = prof.address if (prof and prof.address) else "Mandi Road, Jatni, Khordha, Odisha - 752050"
-        seller_region = prof.region if (prof and prof.region) else "Eastern Odisha Hub"
-        seller_license = prof.license_number if prof else "OD-AGRI-RET-2024-8841"
-        seller_phone = seller_user.phone if seller_user else "+91-9437199880"
+        active_seller_name = current_user.full_name if (current_user and current_user.role.value == "SELLER") else (seller_user.full_name if seller_user else "Verified Agro Input Store")
+        seller_name = (prof.business_name if (prof and prof.business_name and "Kisan Agro" not in prof.business_name) else active_seller_name)
+        seller_owner = active_seller_name
+        seller_address = prof.address if (prof and prof.address) else "Odisha Agricultural Input Hub"
+        seller_region = prof.region if (prof and prof.region) else "Odisha Hub"
+        seller_license = prof.license_number if prof else "OD-AGRI-RET-VERIFIED"
+        seller_phone = (current_user.phone or current_user.email) if (current_user and current_user.role.value == "SELLER") else (seller_user.phone if seller_user else "")
 
         enriched.append({
             "id": p.id,
