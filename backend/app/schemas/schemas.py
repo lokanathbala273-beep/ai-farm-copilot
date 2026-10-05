@@ -44,6 +44,7 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     email: str
     password: Optional[str] = None
+    role: Optional[str] = "FARMER"
     biometric_token: Optional[str] = None
     face_token: Optional[str] = None
 

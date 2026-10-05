@@ -1,0 +1,20 @@
+[build]
+  command = "mkdir -p dist/static && cp -r frontend/static/* dist/static/ && cp frontend/static/index.html dist/index.html && cp -r frontend/locales dist/locales"
+  publish = "dist"
+
+[[redirects]]
+  from = "/api/*"
+  to = "https://ai-farm-copilot-bfbq.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/health"
+  to = "https://ai-farm-copilot-bfbq.onrender.com/health"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

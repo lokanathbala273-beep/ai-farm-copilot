@@ -3,10 +3,15 @@
  * Farm Business Maker & Market Optimizer Frontend Controller
  */
 
+// Clear any previous cached session on fresh entry so website ALWAYS starts on the 1st Login/Sign Up page
+localStorage.removeItem('token');
+localStorage.removeItem('user');
+localStorage.removeItem('farmer_otp_verified');
+
 // Application State
 const state = {
-  token: localStorage.getItem('token') || '',
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  token: '',
+  user: null,
   currentLang: localStorage.getItem('lang') || 'en',
   translations: {},
   currentCrop: 'Tomato',
@@ -22,11 +27,12 @@ const state = {
   currentLon: 85.8245,
   currentLocationName: 'Shared Live Field Location',
   authModalRole: 'FARMER',
-  isFarmerVerified: localStorage.getItem('farmer_otp_verified') === 'true',
-  enrolledBiometricToken: localStorage.getItem('biometric_token') || null,
-  enrolledFaceToken: localStorage.getItem('face_token') || null,
-  activeLoginBiometricToken: localStorage.getItem('active_login_biometric') || null,
-  activeLoginFaceToken: localStorage.getItem('active_login_face') || null
+  signinSelectedRole: 'FARMER',
+  isFarmerVerified: false,
+  enrolledBiometricToken: null,
+  enrolledFaceToken: null,
+  activeLoginBiometricToken: null,
+  activeLoginFaceToken: null
 };
 
 // Helper: Check if user has an active authenticated session
@@ -51,27 +57,17 @@ const ROLE_ALLOWED_TABS = {
   'ADMIN': ['admin_portal']
 };
 
-// Initialize Application
+// Initialize Application (Always starts strictly on 1st Login / Sign Up screen)
 document.addEventListener('DOMContentLoaded', async () => {
   await loadTranslations(state.currentLang);
   initSpeechRecognition();
   setupEventListeners();
   init3DScene();
 
-  if (isUserAuthenticated()) {
-    updateUserUI();
-    applyFarmerGateState();
-    const role = state.user.role || 'FARMER';
-    const defaultTab = getRoleDefaultTab(role);
-    switchTab(defaultTab);
-    if (role === 'FARMER') {
-      loadDashboardData();
-    }
-  } else {
-    // Strictly lock entire website for unauthenticated / new user
-    applyFarmerGateState();
-    switchTab('dashboard');
-  }
+  // Always start unauthenticated on 1st Login / Registration screen
+  updateUserUI();
+  applyFarmerGateState();
+  switchTab('dashboard');
 });
 
 // ==============================================================================
@@ -866,12 +862,45 @@ async function submitRegistrationWithPassword() {
   }
 }
 
+function selectSignInRole(role) {
+  state.signinSelectedRole = role || 'FARMER';
+  const roleInput = document.getElementById('signinRole');
+  if (roleInput) roleInput.value = state.signinSelectedRole;
+
+  const roleLabels = {
+    'FARMER': 'Sign In as Farmer & Open Farmer Interface',
+    'AGRICULTURAL_EXPERT': 'Sign In as Expert & Open Expert Advice Interface',
+    'SELLER': 'Sign In as Seller & Open Input Store Interface',
+    'BUYER': 'Sign In as Buyer & Open Buyer Portal Interface',
+    'ADMIN': 'Sign In as Admin & Open Admin Portal Interface'
+  };
+
+  const btnLabel = document.getElementById('signinSubmitBtnLabel');
+  if (btnLabel) {
+    btnLabel.innerText = roleLabels[state.signinSelectedRole] || 'Sign In to Selected Role Portal';
+  }
+
+  const allRoles = ['FARMER', 'AGRICULTURAL_EXPERT', 'SELLER', 'BUYER', 'ADMIN'];
+  allRoles.forEach(r => {
+    const card = document.getElementById(`signinRoleCard-${r}`);
+    if (!card) return;
+    const isAdminSpan = r === 'ADMIN' ? ' col-span-2 sm:col-span-1' : '';
+    if (r === state.signinSelectedRole) {
+      card.className = `signin-role-card p-3 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition ring-2 ring-emerald-300${isAdminSpan}`;
+    } else {
+      card.className = `signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-bold text-xs flex flex-col items-center justify-center gap-1 transition${isAdminSpan}`;
+    }
+  });
+}
+
 async function submitSignInWithPassword() {
   const emailInput = document.getElementById('signinEmail');
   const passInput = document.getElementById('signinPassword');
+  const roleInput = document.getElementById('signinRole');
 
   const email = emailInput ? emailInput.value.trim().toLowerCase() : '';
   const password = passInput ? passInput.value : '';
+  const selectedRole = (roleInput ? roleInput.value : state.signinSelectedRole) || 'FARMER';
 
   if (!email || !email.includes('@')) {
     showToast('Please enter your registered Gmail ID', 'warning');
@@ -890,18 +919,20 @@ async function submitSignInWithPassword() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: email,
-        password: password
+        password: password,
+        role: selectedRole
       })
     });
 
     const data = await res.json();
     if (res.ok) {
+      const effectiveRole = selectedRole || data.role || 'FARMER';
       state.token = data.access_token;
       state.user = {
         id: data.user_id,
         email: data.email,
         phone_number: data.phone_number,
-        role: data.role,
+        role: effectiveRole,
         full_name: data.full_name,
         preferred_language: data.preferred_language || 'en'
       };
@@ -913,13 +944,13 @@ async function submitSignInWithPassword() {
       updateUserUI();
       applyFarmerGateState();
 
-      const targetTab = getRoleDefaultTab(data.role);
+      const targetTab = getRoleDefaultTab(effectiveRole);
       switchTab(targetTab);
-      if (data.role === 'FARMER') {
+      if (effectiveRole === 'FARMER') {
         loadDashboardData();
       }
 
-      showToast(`🔓 Sign In Successful! Welcome back ${data.full_name} (${data.role}).`, 'success');
+      showToast(`🔓 Sign In Successful! Welcome ${data.full_name} (${effectiveRole}).`, 'success');
     } else {
       const errorMsg = data.detail || 'Incorrect password or Gmail ID. Access denied.';
       showToast(`🚫 Unauthorized Access Blocked: ${errorMsg}`, 'error');
@@ -974,11 +1005,13 @@ function applyFarmerGateState() {
   const tabSigninEl = document.getElementById('tabContent-signin');
   const dashEl = document.getElementById('farmerPrivateDashboard');
   const navEl = document.getElementById('mainAppNav');
-  const quickRolesEl = document.getElementById('headerQuickRoles');
-
-  if (quickRolesEl) quickRolesEl.classList.remove('hidden');
+  const headerProfileBadge = document.getElementById('headerUserProfileBadge');
 
   if (isAuth) {
+    if (headerProfileBadge) {
+      headerProfileBadge.classList.remove('hidden');
+      headerProfileBadge.classList.add('flex');
+    }
     // Only show Farmer Private Dashboard & Farmer Session Banner if role is strictly FARMER
     if (dashEl) {
       if (role === 'FARMER') {
@@ -1013,7 +1046,7 @@ function applyFarmerGateState() {
     const farmNameEl = document.getElementById('dashFarmName');
     if (phoneBadge) phoneBadge.innerText = state.user.phone_number || state.user.email || '--';
     if (nameBadge) nameBadge.innerText = state.user.full_name || 'Farmer Account';
-    if (farmNameEl && !farmNameEl.innerText) farmNameEl.innerText = state.user.farm_name || 'My Farm';
+    if (farmNameEl && state.user.farm_name) farmNameEl.innerText = state.user.farm_name;
 
     // Update role-specific portal header user names
     const expName = document.getElementById('expertPortalUserName');
@@ -1029,6 +1062,10 @@ function applyFarmerGateState() {
     updateNavTabsLockVisual(true);
   } else {
     // 1st screen presentation for new / unverified user: strictly show Sign Up / Sign In portal
+    if (headerProfileBadge) {
+      headerProfileBadge.classList.add('hidden');
+      headerProfileBadge.classList.remove('flex');
+    }
     if (dashEl) dashEl.classList.add('hidden');
     if (bannerEl) bannerEl.classList.add('hidden');
     if (portalEl) portalEl.classList.remove('hidden');
@@ -1082,16 +1119,22 @@ function promptFarmerLoginOrSwitch() {
 function updateUserUI() {
   const nameEl = document.getElementById('headerUserName');
   const roleEl = document.getElementById('headerUserRole');
-  if (nameEl) nameEl.innerText = state.user ? state.user.full_name : 'Farmer Portal';
-  if (roleEl) roleEl.innerText = state.user ? state.user.role : 'SECURE ACCESS';
-
-  // Highlight active role pill
-  document.querySelectorAll('.role-pill').forEach(btn => {
-    btn.classList.remove('bg-emerald-700', 'text-white', 'ring-2', 'ring-emerald-400');
-    if (state.user && btn.getAttribute('data-role') === state.user.role) {
-      btn.classList.add('bg-emerald-700', 'text-white', 'ring-2', 'ring-emerald-400');
+  const headerProfileBadge = document.getElementById('headerUserProfileBadge');
+  if (state.user && isUserAuthenticated()) {
+    if (nameEl) nameEl.innerText = state.user.full_name;
+    if (roleEl) roleEl.innerText = state.user.role;
+    if (headerProfileBadge) {
+      headerProfileBadge.classList.remove('hidden');
+      headerProfileBadge.classList.add('flex');
     }
-  });
+  } else {
+    if (nameEl) nameEl.innerText = '--';
+    if (roleEl) roleEl.innerText = '--';
+    if (headerProfileBadge) {
+      headerProfileBadge.classList.add('hidden');
+      headerProfileBadge.classList.remove('flex');
+    }
+  }
 
   // Adjust visible navigation items strictly according to role
   adjustNavigationForRole();

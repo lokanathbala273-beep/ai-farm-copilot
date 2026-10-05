@@ -62,27 +62,8 @@
         </div>
       </div>
 
-      <!-- Quick 1-Click Demo Role Switcher (Farmer, Expert, Seller, Buyer, Admin) -->
-      <div id="headerQuickRoles" class="flex items-center gap-1.5 bg-slate-800/80 p-1.5 rounded-xl border border-slate-700 text-xs overflow-x-auto no-scrollbar">
-        <button onclick="quickDemoPhoneLogin('FARMER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="FARMER">
-          👨‍🌾 Farmer
-        </button>
-        <button onclick="quickDemoPhoneLogin('AGRICULTURAL_EXPERT')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="AGRICULTURAL_EXPERT">
-          🩺 Expert
-        </button>
-        <button onclick="quickDemoPhoneLogin('SELLER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="SELLER">
-          🏪 Seller
-        </button>
-        <button onclick="quickDemoPhoneLogin('BUYER')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="BUYER">
-          🛒 Buyer
-        </button>
-        <button onclick="quickDemoPhoneLogin('ADMIN')" class="role-pill px-2.5 py-1 rounded-lg font-medium hover:bg-slate-700 text-slate-300 transition" data-role="ADMIN">
-          ⚙️ Admin
-        </button>
-      </div>
-
       <!-- Auth Actions: Sign Up / Register & Registered User Sign In -->
-      <div class="flex items-center gap-2">
+      <div id="headerAuthButtons" class="flex items-center gap-2">
         <button onclick="openRegistrationInterface('signup')" class="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-black shadow-md hover:shadow-emerald-500/20 transition flex items-center gap-1.5">
           <span>📝</span> <span>New User Sign Up</span>
         </button>
@@ -100,15 +81,18 @@
           <option value="hi">हिंदी (Hindi)</option>
         </select>
 
-        <!-- Current User Profile Pill -->
-        <div class="hidden lg:flex items-center gap-2 pl-2 border-l border-slate-800 text-xs">
+        <!-- Current User Profile Pill (Visible ONLY after Sign In) -->
+        <div id="headerUserProfileBadge" class="hidden items-center gap-2.5 pl-2 border-l border-slate-800 text-xs">
           <div class="w-7 h-7 rounded-full bg-emerald-700 text-white flex items-center justify-center font-bold">
             👤
           </div>
           <div>
-            <div id="headerUserName" class="font-bold text-slate-200">Farmer Portal</div>
-            <div id="headerUserRole" class="text-3xs text-emerald-400 font-mono">SECURE ACCESS</div>
+            <div id="headerUserName" class="font-bold text-slate-200">--</div>
+            <div id="headerUserRole" class="text-3xs text-emerald-400 font-mono">--</div>
           </div>
+          <button onclick="logoutFarmerSession()" class="ml-1 px-2.5 py-1 bg-red-600/90 hover:bg-red-600 text-white rounded-lg text-2xs font-bold transition">
+            🔒 Sign Out
+          </button>
         </div>
       </div>
 
@@ -260,17 +244,17 @@
                 </div>
               </div>
 
-              <!-- Account Role -->
+              <!-- Account Role (Who Are You?) -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
-                  🏷️ Portal Role
+                  🏷️ Select Who You Are (Your Role) <span class="text-red-500">*</span>
                 </label>
-                <select id="regRole" class="w-full p-3 rounded-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-slate-50 focus:bg-white cursor-pointer">
-                  <option value="FARMER" selected>👨‍🌾 Farmer (Priority 1)</option>
-                  <option value="AGRICULTURAL_EXPERT">🩺 Agricultural Expert</option>
-                  <option value="SELLER">🏪 Input & Seed Seller</option>
-                  <option value="BUYER">🛒 Crop Produce Buyer</option>
-                  <option value="ADMIN">⚙️ System Administrator</option>
+                <select id="regRole" class="w-full p-3 rounded-xl border-2 border-emerald-500 text-xs md:text-sm font-extrabold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-emerald-50/40 focus:bg-white cursor-pointer">
+                  <option value="FARMER" selected>👨‍🌾 Farmer</option>
+                  <option value="AGRICULTURAL_EXPERT">🩺 Expert (Agricultural Pathologist)</option>
+                  <option value="SELLER">🏪 Seller (Input Store)</option>
+                  <option value="BUYER">🛒 Buyer (Crop Produce Buyer)</option>
+                  <option value="ADMIN">⚙️ Admin (System Administrator)</option>
                 </select>
               </div>
 
@@ -310,45 +294,76 @@
             <!-- Registration Action Buttons -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button onclick="submitRegistrationWithPassword()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
-                <span>🚀</span> <span>Register & Unlock My Farm Portal</span>
+                <span>🚀</span> <span>Register & Open My Selected Role Portal</span>
               </button>
             </div>
             <p class="text-3xs text-slate-400 text-center">
-              🔒 End-to-end encrypted passwords. Your account and farm data are isolated and secure.
+              🔒 End-to-end encrypted passwords. Only the interface for your selected role will be shown after login.
             </p>
           </div>
         </div>
 
-        <!-- TAB 2: REGISTERED USER SIGN IN (GMAIL ID + PASSWORD) -->
+        <!-- TAB 2: REGISTERED USER SIGN IN (SELECT ROLE + GMAIL ID + PASSWORD) -->
         <div id="tabContent-signin" class="hidden space-y-4">
-          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 md:p-6 space-y-4">
+          <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 md:p-6 space-y-5">
             <div>
               <h3 class="text-base font-extrabold text-slate-900 flex items-center gap-2">
-                <span>🔑</span> <span>Sign In to Your Private Portal</span>
+                <span>🔑</span> <span>Sign In to Your Role Portal</span>
               </h3>
               <p class="text-xs text-slate-600 mt-0.5">
-                Enter your registered Gmail ID and password to access your farm portal.
+                First select who you are (Farmer, Expert, Seller, Buyer, or Admin), then enter your Gmail ID and password to open your dedicated portal.
               </p>
             </div>
 
+            <!-- Step 1: Select Who You Are (Role Selector) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-extrabold text-slate-800">
+                1️⃣ Choose Who You Are (Select Your Role) <span class="text-red-500">*</span>
+              </label>
+              <div class="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <button type="button" id="signinRoleCard-FARMER" onclick="selectSignInRole('FARMER')" class="signin-role-card p-3 rounded-xl border-2 border-emerald-600 bg-emerald-600 text-white font-extrabold text-xs flex flex-col items-center justify-center gap-1 shadow-md transition">
+                  <span class="text-lg">👨‍🌾</span>
+                  <span>Farmer</span>
+                </button>
+                <button type="button" id="signinRoleCard-AGRICULTURAL_EXPERT" onclick="selectSignInRole('AGRICULTURAL_EXPERT')" class="signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-purple-50 font-bold text-xs flex flex-col items-center justify-center gap-1 transition">
+                  <span class="text-lg">🩺</span>
+                  <span>Expert</span>
+                </button>
+                <button type="button" id="signinRoleCard-SELLER" onclick="selectSignInRole('SELLER')" class="signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-blue-50 font-bold text-xs flex flex-col items-center justify-center gap-1 transition">
+                  <span class="text-lg">🏪</span>
+                  <span>Seller</span>
+                </button>
+                <button type="button" id="signinRoleCard-BUYER" onclick="selectSignInRole('BUYER')" class="signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-amber-50 font-bold text-xs flex flex-col items-center justify-center gap-1 transition">
+                  <span class="text-lg">🛒</span>
+                  <span>Buyer</span>
+                </button>
+                <button type="button" id="signinRoleCard-ADMIN" onclick="selectSignInRole('ADMIN')" class="signin-role-card p-3 rounded-xl border border-slate-300 bg-white text-slate-700 hover:bg-slate-100 font-bold text-xs flex flex-col items-center justify-center gap-1 transition col-span-2 sm:col-span-1">
+                  <span class="text-lg">⚙️</span>
+                  <span>Admin</span>
+                </button>
+              </div>
+              <input type="hidden" id="signinRole" value="FARMER">
+            </div>
+
+            <!-- Step 2: Gmail ID & Password -->
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <!-- Registered Gmail ID -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
-                  📧 Registered Gmail ID <span class="text-red-500">*</span>
+                  2️⃣ Registered Gmail ID <span class="text-red-500">*</span>
                 </label>
                 <div class="flex items-center">
                   <span class="inline-flex items-center px-3 py-3 rounded-l-xl border border-r-0 border-slate-300 bg-slate-100 text-slate-600 text-xs font-bold font-mono">
                     ✉️
                   </span>
-                  <input type="email" id="signinEmail" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your registered Gmail ID" value="">
+                  <input type="email" id="signinEmail" class="w-full p-3 rounded-r-xl border border-slate-300 text-xs md:text-sm font-bold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your Gmail ID" value="">
                 </div>
               </div>
 
               <!-- Password -->
               <div>
                 <label class="block text-xs font-bold text-slate-700 mb-1">
-                  🔒 Your Password <span class="text-red-500">*</span>
+                  3️⃣ Your Password <span class="text-red-500">*</span>
                 </label>
                 <div class="relative">
                   <input type="password" id="signinPassword" class="w-full p-3 pr-10 rounded-xl border border-slate-300 text-xs md:text-sm font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-hidden bg-white" placeholder="Enter your password" value="">
@@ -362,7 +377,7 @@
             <!-- Sign In Action Button -->
             <div class="flex flex-wrap items-center gap-3 pt-2">
               <button onclick="submitSignInWithPassword()" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2">
-                <span>🔓</span> <span>Sign In to Private Portal</span>
+                <span>🔓</span> <span id="signinSubmitBtnLabel">Sign In as Farmer & Open Farmer Interface</span>
               </button>
             </div>
           </div>
@@ -1808,28 +1823,6 @@
         </button>
       </div>
 
-      <!-- Quick 1-Click Evaluation Accounts Footer -->
-      <div class="pt-3 border-t border-slate-100">
-        <span class="text-3xs uppercase font-bold text-slate-400 tracking-wider block mb-2">Or test 1-click verified phone OTP login:</span>
-        <div class="flex flex-wrap gap-1.5 text-xs">
-          <button onclick="quickDemoPhoneLogin('FARMER')" class="px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-800 font-bold hover:bg-emerald-200 transition">
-            👨‍🌾 +91-9861012345 (Farmer Account)
-          </button>
-          <button onclick="quickDemoPhoneLogin('AGRICULTURAL_EXPERT')" class="px-2.5 py-1 rounded-lg bg-purple-100 text-purple-800 font-bold hover:bg-purple-200 transition">
-            🩺 +91-9437012345 (Expert Dr. Mohapatra)
-          </button>
-          <button onclick="quickDemoPhoneLogin('SELLER')" class="px-2.5 py-1 rounded-lg bg-blue-100 text-blue-800 font-bold hover:bg-blue-200 transition">
-            🏪 +91-9124012345 (Seller Sunil)
-          </button>
-          <button onclick="quickDemoPhoneLogin('BUYER')" class="px-2.5 py-1 rounded-lg font-bold bg-amber-100 text-amber-800 hover:bg-amber-200 transition">
-            🛒 +91-9937012345 (Buyer Utkal)
-          </button>
-          <button onclick="quickDemoPhoneLogin('ADMIN')" class="px-2.5 py-1 rounded-lg font-bold bg-slate-200 text-slate-800 hover:bg-slate-300 transition">
-            ⚙️ +91-9876543210 (Admin)
-          </button>
-        </div>
-      </div>
-
     </div>
   </div>
 
@@ -1840,7 +1833,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20261004_v3"></script>
+  <script src="/static/js/app.js?v=20261005_v4"></script>
 </body>
 </html>
 

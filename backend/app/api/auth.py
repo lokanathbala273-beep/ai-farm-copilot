@@ -258,13 +258,6 @@ def verify_phone_otp(req: OtpVerifyRequest, db: Session = Depends(get_db)):
 @router.post("/register", response_model=Token)
 def register(user_in: UserRegister, db: Session = Depends(get_db)):
     clean_email = user_in.email.strip().lower()
-    existing = db.query(User).filter(User.email == clean_email).first()
-    if existing:
-        raise HTTPException(
-            status_code=400,
-            detail="An account with this Gmail ID already exists. Please sign in instead."
-        )
-
     if not user_in.password or len(user_in.password.strip()) < 4:
         raise HTTPException(
             status_code=400,
@@ -277,82 +270,97 @@ def register(user_in: UserRegister, db: Session = Depends(get_db)):
     except (ValueError, AttributeError):
         role_enum = UserRole.FARMER
 
-    clean_phone = user_in.phone.strip() if user_in.phone else None
-    if clean_phone and len(clean_phone) > 10 and clean_phone.startswith("91"):
-        clean_phone = clean_phone[2:]
-    if clean_phone:
-        existing_phone = db.query(User).filter(User.phone == clean_phone).first()
-        if existing_phone:
-            clean_phone = None
+    existing = db.query(User).filter(User.email == clean_email).first()
+    if existing:
+        existing.hashed_password = get_password_hash(user_in.password.strip())
+        if user_in.full_name and user_in.full_name.strip():
+            existing.full_name = user_in.full_name.strip()
+        existing.role = role_enum
+        db.commit()
+        db.refresh(existing)
+        user = existing
+    else:
+        clean_phone = user_in.phone.strip() if user_in.phone else None
+        if clean_phone and len(clean_phone) > 10 and clean_phone.startswith("91"):
+            clean_phone = clean_phone[2:]
+        if clean_phone:
+            existing_phone = db.query(User).filter(User.phone == clean_phone).first()
+            if existing_phone:
+                clean_phone = None
 
-    user = User(
-        email=clean_email,
-        phone=clean_phone,
-        hashed_password=get_password_hash(user_in.password.strip()),
-        full_name=user_in.full_name.strip() if user_in.full_name else "Registered User",
-        role=role_enum,
-        preferred_language=user_in.preferred_language or "en",
-        biometric_token=user_in.biometric_token,
-        face_token=user_in.face_token,
-        is_active=True
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
+        user = User(
+            email=clean_email,
+            phone=clean_phone,
+            hashed_password=get_password_hash(user_in.password.strip()),
+            full_name=user_in.full_name.strip() if user_in.full_name else "Registered User",
+            role=role_enum,
+            preferred_language=user_in.preferred_language or "en",
+            biometric_token=user_in.biometric_token,
+            face_token=user_in.face_token,
+            is_active=True
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
 
     if role_enum == UserRole.FARMER:
-        farmer_prof = FarmerProfile(
-            user_id=user.id,
-            state=user_in.state or "Odisha",
-            district=user_in.district or "Khordha",
-            block=user_in.block or "Bhubaneswar",
-            village=user_in.village or "Patia",
-            total_land_area=user_in.total_land_area or 5.0,
-            irrigation_type=user_in.irrigation_type or "Canal & Borewell",
-            soil_type=user_in.soil_type or "Alluvial Loam",
-            farming_experience_years=user_in.farming_experience_years or 10,
-            farming_method=user_in.farming_method or "Integrated Farming",
-            current_crops=["Rice", "Tomato", "Potato"]
-        )
-        db.add(farmer_prof)
-        db.commit()
-        db.refresh(farmer_prof)
+        farmer_prof = db.query(FarmerProfile).filter(FarmerProfile.user_id == user.id).first()
+        if not farmer_prof:
+            farmer_prof = FarmerProfile(
+                user_id=user.id,
+                state=user_in.state or "Odisha",
+                district=user_in.district or "Khordha",
+                block=user_in.block or "Bhubaneswar",
+                village=user_in.village or "Patia",
+                total_land_area=user_in.total_land_area or 5.0,
+                irrigation_type=user_in.irrigation_type or "Canal & Borewell",
+                soil_type=user_in.soil_type or "Alluvial Loam",
+                farming_experience_years=user_in.farming_experience_years or 10,
+                farming_method=user_in.farming_method or "Integrated Farming",
+                current_crops=["Rice", "Tomato", "Potato"]
+            )
+            db.add(farmer_prof)
+            db.commit()
+            db.refresh(farmer_prof)
 
-        # Create user's farm and field plots
-        farm_name = user_in.farm_name.strip() if user_in.farm_name else "Kishan Smart Farm"
-        farm_loc = user_in.location.strip() if user_in.location else "Khordha, Odisha"
-        farm = Farm(
-            farmer_id=farmer_prof.id,
-            farm_name=farm_name,
-            location=farm_loc,
-            latitude=20.2961,
-            longitude=85.8245,
-            area=farmer_prof.total_land_area,
-            soil_type="Alluvial Loam",
-            irrigation_type="Drip & Tube-well",
-            ownership_type="Owned",
-            farming_method="Integrated Pest Management"
-        )
-        db.add(farm)
-        db.commit()
-        db.refresh(farm)
+            # Create user's farm and field plots
+            farm_name = user_in.farm_name.strip() if user_in.farm_name else "Kishan Smart Farm"
+            farm_loc = user_in.location.strip() if user_in.location else "Khordha, Odisha"
+            farm = Farm(
+                farmer_id=farmer_prof.id,
+                farm_name=farm_name,
+                location=farm_loc,
+                latitude=20.2961,
+                longitude=85.8245,
+                area=farmer_prof.total_land_area,
+                soil_type="Alluvial Loam",
+                irrigation_type="Drip & Tube-well",
+                ownership_type="Owned",
+                farming_method="Integrated Pest Management"
+            )
+            db.add(farm)
+            db.commit()
+            db.refresh(farm)
 
-        # Create default plots
-        f1 = Field(farm_id=farm.id, field_name="Plot 1 - Tomato", area=2.0, crop="Tomato", growth_stage="Flowering", current_health="healthy")
-        f2 = Field(farm_id=farm.id, field_name="Plot 2 - Rice", area=2.0, crop="Rice", growth_stage="Tillering", current_health="healthy")
-        f3 = Field(farm_id=farm.id, field_name="Plot 3 - Potato", area=1.0, crop="Potato", growth_stage="Vegetative", current_health="attention")
-        db.add_all([f1, f2, f3])
-        db.commit()
+            # Create default plots
+            f1 = Field(farm_id=farm.id, field_name="Plot 1 - Tomato", area=2.0, crop="Tomato", growth_stage="Flowering", current_health="healthy")
+            f2 = Field(farm_id=farm.id, field_name="Plot 2 - Rice", area=2.0, crop="Rice", growth_stage="Tillering", current_health="healthy")
+            f3 = Field(farm_id=farm.id, field_name="Plot 3 - Potato", area=1.0, crop="Potato", growth_stage="Vegetative", current_health="attention")
+            db.add_all([f1, f2, f3])
+            db.commit()
 
     elif role_enum == UserRole.AGRICULTURAL_EXPERT:
-        db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
-        db.commit()
+        if not db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first():
+            db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
+            db.commit()
     elif role_enum == UserRole.SELLER:
-        db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
-        db.commit()
+        if not db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first():
+            db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
+            db.commit()
     elif role_enum == UserRole.BUYER:
-        db.add(BuyerProfile(user_id=user.id))
-        db.commit()
+        if not db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first():
+            db.add(BuyerProfile(user_id=user.id))
+            db.commit()
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role.value, "email": user.email}
@@ -413,20 +421,96 @@ def login_json(login_data: UserLogin, db: Session = Depends(get_db)):
             alt_email = clean_email.replace("@aifarm.org", "@gmail.com")
             user = db.query(User).filter(User.email == alt_email).first()
 
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No registered account found with this Gmail ID. Please sign up first."
-        )
+    # Determine role chosen by user at login time
+    requested_role = None
+    if login_data.role:
+        try:
+            requested_role = UserRole(login_data.role.strip().upper())
+        except (ValueError, AttributeError):
+            requested_role = None
 
-    if not login_data.password or not verify_password(login_data.password, user.hashed_password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password or Gmail ID. Access denied."
+    if not user:
+        if not login_data.password or len(login_data.password.strip()) < 4:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="No registered account found with this Gmail ID. Please enter a valid password or sign up first."
+            )
+        # Auto-provision user if container database was reset on Render
+        role_to_assign = requested_role or UserRole.FARMER
+        default_name = clean_email.split("@")[0].replace(".", " ").title()
+        user = User(
+            email=clean_email,
+            hashed_password=get_password_hash(login_data.password.strip()),
+            full_name=default_name,
+            role=role_to_assign,
+            preferred_language="en",
+            is_active=True
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        if not login_data.password or not verify_password(login_data.password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect password or Gmail ID. Access denied."
+            )
 
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account is disabled.")
+
+    # Apply the role explicitly selected by the user at login time
+    if requested_role and user.role != requested_role:
+        user.role = requested_role
+        db.commit()
+        db.refresh(user)
+
+    # Ensure role-specific profile exists
+    if user.role == UserRole.FARMER:
+        farmer_prof = db.query(FarmerProfile).filter(FarmerProfile.user_id == user.id).first()
+        if not farmer_prof:
+            farmer_prof = FarmerProfile(
+                user_id=user.id,
+                state="Odisha",
+                district="Khordha",
+                block="Bhubaneswar",
+                village="Patia",
+                total_land_area=5.0,
+                irrigation_type="Canal & Borewell",
+                soil_type="Alluvial Loam",
+                farming_experience_years=10,
+                farming_method="Integrated Farming",
+                current_crops=["Rice", "Tomato", "Potato"]
+            )
+            db.add(farmer_prof)
+            db.commit()
+            db.refresh(farmer_prof)
+            farm = Farm(
+                farmer_id=farmer_prof.id,
+                farm_name="Kishan Smart Farm",
+                location="Khordha, Odisha",
+                latitude=20.2961,
+                longitude=85.8245,
+                area=5.0,
+                soil_type="Alluvial Loam",
+                irrigation_type="Drip & Tube-well",
+                ownership_type="Owned",
+                farming_method="Integrated Pest Management"
+            )
+            db.add(farm)
+            db.commit()
+    elif user.role == UserRole.AGRICULTURAL_EXPERT:
+        if not db.query(ExpertProfile).filter(ExpertProfile.user_id == user.id).first():
+            db.add(ExpertProfile(user_id=user.id, verification_status="VERIFIED"))
+            db.commit()
+    elif user.role == UserRole.SELLER:
+        if not db.query(SellerProfile).filter(SellerProfile.user_id == user.id).first():
+            db.add(SellerProfile(user_id=user.id, verification_status="VERIFIED"))
+            db.commit()
+    elif user.role == UserRole.BUYER:
+        if not db.query(BuyerProfile).filter(BuyerProfile.user_id == user.id).first():
+            db.add(BuyerProfile(user_id=user.id))
+            db.commit()
 
     access_token = create_access_token(
         data={"sub": str(user.id), "role": user.role.value, "email": user.email}
