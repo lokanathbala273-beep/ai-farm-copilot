@@ -312,6 +312,10 @@ class BuyerListingCreate(BaseModel):
     description: Optional[str] = None
     farmer_name: Optional[str] = None
     farmer_phone: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    account_holder_name: Optional[str] = None
 
 class BuyerOrderCreate(BaseModel):
     listing_id: int

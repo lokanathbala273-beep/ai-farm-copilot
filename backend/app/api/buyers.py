@@ -28,7 +28,7 @@ def get_marketplace_listings(crop: Optional[str] = None, db: Session = Depends(g
         farmer_prof = db.query(FarmerProfile).filter(FarmerProfile.user_id == item.farmer_id).first()
 
         farmer_name = farmer_user.full_name
-        farmer_phone = farmer_user.phone or farmer_user.email
+        farmer_phone = item.farmer_phone or farmer_user.phone or farmer_user.email
         
         # Build precise location
         if item.farm_location:
@@ -43,6 +43,10 @@ def get_marketplace_listings(crop: Optional[str] = None, db: Session = Depends(g
             "farmer_id": item.farmer_id,
             "farmer_name": farmer_name,
             "farmer_phone": farmer_phone,
+            "bank_name": item.bank_name or "",
+            "account_number": item.account_number or "",
+            "ifsc_code": item.ifsc_code or "",
+            "account_holder_name": item.account_holder_name or farmer_name,
             "crop": item.crop,
             "variety": item.variety or "Hybrid Fresh",
             "quantity_quintals": item.quantity_quintals,
@@ -74,6 +78,11 @@ def create_produce_listing(
         harvest_date=item_in.harvest_date or datetime.utcnow().strftime("%Y-%m-%d"),
         expected_price_per_quintal=item_in.expected_price_per_quintal,
         farm_location=item_in.farm_location or "Khordha, Odisha",
+        farmer_phone=item_in.farmer_phone or current_user.phone,
+        bank_name=item_in.bank_name,
+        account_number=item_in.account_number,
+        ifsc_code=item_in.ifsc_code,
+        account_holder_name=item_in.account_holder_name or current_user.full_name,
         description=item_in.description or f"Direct farm harvest of {item_in.crop} from {current_user.full_name}'s farm profile.",
         status="ACTIVE"
     )
@@ -115,6 +124,11 @@ def create_produce_listing_from_profile(
         harvest_date=item_in.harvest_date or datetime.utcnow().strftime("%Y-%m-%d"),
         expected_price_per_quintal=item_in.expected_price_per_quintal,
         farm_location=loc,
+        farmer_phone=item_in.farmer_phone or (farmer.phone if farmer else ""),
+        bank_name=item_in.bank_name,
+        account_number=item_in.account_number,
+        ifsc_code=item_in.ifsc_code,
+        account_holder_name=item_in.account_holder_name or farmer_name,
         description=item_in.description or f"Direct harvest from {farmer_name}'s verified farm profile.",
         status="ACTIVE"
     )
@@ -133,6 +147,11 @@ def create_produce_listing_from_profile(
             "expected_price_per_quintal": listing.expected_price_per_quintal,
             "farm_location": listing.farm_location,
             "farmer_name": farmer_name,
+            "farmer_phone": listing.farmer_phone,
+            "bank_name": listing.bank_name,
+            "account_number": listing.account_number,
+            "ifsc_code": listing.ifsc_code,
+            "account_holder_name": listing.account_holder_name,
             "status": listing.status
         }
     }

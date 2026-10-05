@@ -1399,17 +1399,107 @@
         <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <div class="flex items-center gap-2 mb-1">
-              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">👨‍🌾 Farmer Direct Selling</span>
+              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider">👨‍🌾 Farmer Direct Selling & Bank Payment Setup</span>
             </div>
             <h2 class="text-xl md:text-2xl font-extrabold text-slate-800">Sell My Farm Produce</h2>
-            <p class="text-xs md:text-sm text-slate-500 mt-1">List your farm harvest lots directly from your profile for verified wholesale buyers and traders.</p>
+            <p class="text-xs md:text-sm text-slate-500 mt-1">Enter your produce details along with your Phone Number, Bank Name, Account Number, IFSC Code, and Account Holder Name to sell directly to buyers.</p>
           </div>
           <button onclick="openProduceListingModalFromProfile()" class="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-extrabold rounded-xl shadow-md transition flex items-center gap-2">
-            <span>🌾</span> <span>+ List Produce Directly from Profile</span>
+            <span>🌾</span> <span>+ Quick Popup Form</span>
           </button>
         </div>
 
-        <div id="marketplaceGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mt-6">
+        <!-- INLINE FARMER SELL PRODUCE + BANK ACCOUNT FORM -->
+        <div class="mt-6 p-5 md:p-6 bg-emerald-50/60 rounded-2xl border-2 border-emerald-500/40 space-y-4">
+          <div class="flex items-center justify-between border-b border-emerald-200/80 pb-3">
+            <h3 class="text-sm md:text-base font-extrabold text-emerald-950 flex items-center gap-2">
+              <span>🌾</span> <span>Sell Farm Produce & Farmer Bank Details Form</span>
+            </h3>
+            <span class="text-2xs font-bold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">Direct Bank Payment Enabled</span>
+          </div>
+
+          <!-- Row 1: Crop, Grade, Quantity, Price, Farm Location -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">🌾 Select Crop <span class="text-red-500">*</span></label>
+              <select id="inlineListingCrop" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+                <option value="Tomato" selected>Tomato (Odisha Hybrid)</option>
+                <option value="Rice">Rice / Paddy (Swarna)</option>
+                <option value="Potato">Potato (Kufri Jyoti)</option>
+                <option value="Onion">Onion (Odisha Red)</option>
+                <option value="Chilli">Chilli (Desi Fresh)</option>
+                <option value="Wheat">Wheat (Kalyansona)</option>
+                <option value="Brinjal">Brinjal (Kantabada)</option>
+                <option value="Maize">Maize (Sweet Corn)</option>
+                <option value="Banana">Banana (Champa)</option>
+                <option value="Mango">Mango (Amrapali)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">⭐ Produce Grade <span class="text-red-500">*</span></label>
+              <select id="inlineListingGrade" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+                <option value="Grade A" selected>Grade A (Premium Sorted)</option>
+                <option value="Grade B">Grade B (Standard Market)</option>
+                <option value="Grade C">Grade C (Fair Average)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">⚖️ Quantity (Quintals) <span class="text-red-500">*</span></label>
+              <input type="number" id="inlineListingQty" value="25" min="1" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">💰 Price (₹ / Quintal) <span class="text-red-500">*</span></label>
+              <input type="number" id="inlineListingPrice" value="2450" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">📍 Farm Location <span class="text-red-500">*</span></label>
+              <input type="text" id="inlineListingLocation" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-white" placeholder="Village, District, Odisha">
+            </div>
+          </div>
+
+          <!-- Row 2: Farmer Phone Number & Bank Payment Inputs -->
+          <div class="p-4 bg-white rounded-2xl border border-emerald-200 space-y-3">
+            <div class="text-xs font-extrabold text-emerald-900 flex items-center gap-1.5">
+              <span>🏦</span> <span>Farmer Contact & Bank Account Details (For Buyer Payment)</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 text-xs">
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">📱 Phone Number <span class="text-red-500">*</span></label>
+                <input type="tel" id="inlineListingPhone" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50 focus:bg-white" placeholder="e.g. 9861012345">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">🏦 Bank Name <span class="text-red-500">*</span></label>
+                <input type="text" id="inlineListingBankName" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50 focus:bg-white" placeholder="e.g. State Bank of India">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">👤 Account Holder Name <span class="text-red-500">*</span></label>
+                <input type="text" id="inlineListingHolderName" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-slate-50 focus:bg-white" placeholder="Enter Account Holder Name">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">🔢 Account Number <span class="text-red-500">*</span></label>
+                <input type="text" id="inlineListingAccountNumber" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold font-mono bg-slate-50 focus:bg-white" placeholder="Enter Bank Account No.">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-700 mb-1">🏛️ IFSC Code <span class="text-red-500">*</span></label>
+                <input type="text" id="inlineListingIfscCode" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold font-mono uppercase bg-slate-50 focus:bg-white" placeholder="e.g. SBIN0001234">
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Description & Submit Button -->
+          <div class="flex flex-col sm:flex-row items-stretch sm:items-end gap-3 text-xs">
+            <div class="flex-1">
+              <label class="block font-bold text-slate-700 mb-1">📝 Harvest Quality Notes (Optional)</label>
+              <input type="text" id="inlineListingDesc" class="w-full p-2.5 rounded-xl border border-slate-300 bg-white" placeholder="Freshly harvested, clean sorted, ready for buyer pickup.">
+            </div>
+            <button onclick="submitInlineProduceListing()" class="px-6 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition flex items-center justify-center gap-2 shrink-0">
+              <span>🚀</span> <span>Sell Produce & Publish to Buyer Portal</span>
+            </button>
+          </div>
+        </div>
+
+        <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mt-6">My Published Farm Produce Listings</h3>
+        <div id="marketplaceGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5 mt-3">
           <!-- Dynamically populated farmer produce listings -->
         </div>
       </div>
@@ -1615,29 +1705,33 @@
   </div>
 
   <!-- GENERATE PRODUCE LISTING FROM FARMER PROFILE MODAL -->
-  <div id="modalProduceFromProfile" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full space-y-4 shadow-2xl border border-slate-200">
+  <div id="modalProduceFromProfile" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl p-6 sm:p-8 max-w-xl w-full space-y-4 shadow-2xl border border-slate-200 my-8">
       <div class="flex items-start justify-between">
         <div>
           <div class="flex items-center gap-2">
             <span class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center text-base font-bold">🌾</span>
-            <h3 class="font-extrabold text-slate-900 text-lg">List Produce Directly from Profile</h3>
+            <h3 class="font-extrabold text-slate-900 text-lg">Sell Produce & Add Bank Payment Details</h3>
           </div>
           <p class="text-xs text-slate-500 mt-1">
-            Auto-populated from your verified farm profile. Add your harvest directly to wholesale buyers.
+            Enter your Phone Number, Bank Name, Account Number, IFSC Code, and Account Holder Name to list your produce.
           </p>
         </div>
         <button onclick="closeProduceListingModalFromProfile()" class="text-slate-400 hover:text-slate-800 text-xl font-bold p-1">✕</button>
       </div>
 
       <div class="space-y-3 text-xs">
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div>
             <label class="block font-bold text-slate-700 mb-1">Farmer Name</label>
-            <input type="text" id="profListingFarmerName" readonly class="w-full p-2.5 rounded-xl border border-slate-200 bg-slate-100 font-bold text-slate-700">
+            <input type="text" id="profListingFarmerName" class="w-full p-2.5 rounded-xl border border-slate-300 bg-slate-50 font-bold text-slate-800">
           </div>
           <div>
-            <label class="block font-bold text-slate-700 mb-1">Farm Location</label>
+            <label class="block font-bold text-slate-700 mb-1">📱 Phone Number <span class="text-red-500">*</span></label>
+            <input type="tel" id="profListingPhone" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white" placeholder="10-digit mobile number">
+          </div>
+          <div>
+            <label class="block font-bold text-slate-700 mb-1">📍 Farm Location</label>
             <input type="text" id="profListingLocation" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-white" placeholder="Village, District, Odisha">
           </div>
         </div>
@@ -1679,6 +1773,31 @@
           </div>
         </div>
 
+        <!-- Farmer Bank Account Details Box -->
+        <div class="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 space-y-2.5">
+          <div class="font-extrabold text-emerald-950 flex items-center gap-1.5">
+            <span>🏦</span> <span>Farmer Bank Details (For Buyer Payment)</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">🏦 Bank Name <span class="text-red-500">*</span></label>
+              <input type="text" id="profListingBankName" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white" placeholder="e.g. State Bank of India">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">👤 Account Holder Name <span class="text-red-500">*</span></label>
+              <input type="text" id="profListingHolderName" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold bg-white" placeholder="Account Holder Name">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">🔢 Account Number <span class="text-red-500">*</span></label>
+              <input type="text" id="profListingAccountNumber" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold font-mono bg-white" placeholder="Bank Account Number">
+            </div>
+            <div>
+              <label class="block font-bold text-slate-700 mb-1">🏛️ IFSC Code <span class="text-red-500">*</span></label>
+              <input type="text" id="profListingIfscCode" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold font-mono uppercase bg-white" placeholder="e.g. SBIN0001234">
+            </div>
+          </div>
+        </div>
+
         <div>
           <label class="block font-bold text-slate-700 mb-1">Harvest Description & Quality Notes</label>
           <textarea id="profListingDesc" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs" rows="2" placeholder="Freshly harvested, clean sorted, IPM managed. Ready for immediate mandi/buyer pickup."></textarea>
@@ -1697,12 +1816,12 @@
   </div>
 
   <!-- BUYER ORDER MODAL -->
-  <div id="buyerOrderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-    <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl">
+  <div id="buyerOrderModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+    <div class="bg-white rounded-3xl p-6 max-w-lg w-full space-y-4 shadow-2xl my-8">
       <div class="flex items-center justify-between">
         <div>
-          <h3 class="font-bold text-slate-800 text-base">Place Produce Order Inquiry</h3>
-          <p class="text-2xs text-slate-500">Provide buyer identity and delivery location to farmer</p>
+          <h3 class="font-bold text-slate-800 text-base">Place Produce Order & Pay Farmer</h3>
+          <p class="text-2xs text-slate-500">Order produce and pay directly using Farmer's Account Holder Name & Account Number</p>
         </div>
         <button onclick="document.getElementById('buyerOrderModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-800 text-lg">✕</button>
       </div>
@@ -1711,6 +1830,26 @@
       <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
         <div>Crop: <strong id="buyerOrderCropName" class="text-emerald-800 font-bold">Tomato</strong></div>
         <span class="text-3xs px-2 py-0.5 rounded-full bg-emerald-200 text-emerald-800 font-bold">Direct Farmer Harvest</span>
+      </div>
+
+      <!-- FARMER PAYMENT DETAILS FOR BUYER (STRICTLY ONLY ACCOUNT HOLDER NAME & ACCOUNT NUMBER) -->
+      <div class="p-4 bg-amber-50 rounded-2xl border-2 border-amber-400/80 space-y-2 text-xs shadow-xs">
+        <div class="flex items-center justify-between">
+          <span class="font-extrabold text-amber-950 flex items-center gap-1.5">
+            <span>💳</span> <span>Pay to Farmer (Farmer Payment Account)</span>
+          </span>
+          <span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-3xs uppercase">Verified Account</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+          <div class="p-2.5 bg-white rounded-xl border border-amber-200">
+            <span class="text-slate-500 block text-3xs uppercase font-bold">👤 Account Holder Name</span>
+            <strong id="buyerOrderHolderName" class="text-slate-900 font-black text-sm block mt-0.5">--</strong>
+          </div>
+          <div class="p-2.5 bg-white rounded-xl border border-amber-200">
+            <span class="text-slate-500 block text-3xs uppercase font-bold">🔢 Account Number</span>
+            <strong id="buyerOrderAccountNumber" class="text-emerald-900 font-black font-mono text-sm block mt-0.5">--</strong>
+          </div>
+        </div>
       </div>
 
       <div class="space-y-3 text-xs">
@@ -1753,7 +1892,7 @@
       </div>
 
       <button onclick="submitBuyerOrder()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs transition">
-        Submit Order to Farmer with Verified Location
+        Confirm Order & Pay to Farmer Account
       </button>
     </div>
   </div>
@@ -1852,7 +1991,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20261005_v6"></script>
+  <script src="/static/js/app.js?v=20261005_v7"></script>
 </body>
 </html>
 

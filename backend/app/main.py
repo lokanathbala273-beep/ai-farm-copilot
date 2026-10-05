@@ -32,6 +32,20 @@ try:
 except Exception:
     pass
 
+for col_sql in [
+    "ALTER TABLE buyer_listings ADD COLUMN farmer_phone VARCHAR(50)",
+    "ALTER TABLE buyer_listings ADD COLUMN bank_name VARCHAR(150)",
+    "ALTER TABLE buyer_listings ADD COLUMN account_number VARCHAR(100)",
+    "ALTER TABLE buyer_listings ADD COLUMN ifsc_code VARCHAR(50)",
+    "ALTER TABLE buyer_listings ADD COLUMN account_holder_name VARCHAR(150)",
+]:
+    try:
+        with engine.connect() as conn:
+            conn.execute(text(col_sql))
+            conn.commit()
+    except Exception:
+        pass
+
 def purge_demo_records_on_startup():
     """Removes all seeded demo users, demo consultations, and demo listings from the database."""
     db = SessionLocal()

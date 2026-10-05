@@ -404,6 +404,11 @@ class BuyerListing(Base):
     harvest_date = Column(String(50), nullable=False)
     expected_price_per_quintal = Column(Float, nullable=False)
     farm_location = Column(String(255), default="Bhubaneswar Rural")
+    farmer_phone = Column(String(50), nullable=True)
+    bank_name = Column(String(150), nullable=True)
+    account_number = Column(String(100), nullable=True)
+    ifsc_code = Column(String(50), nullable=True)
+    account_holder_name = Column(String(150), nullable=True)
     photos = Column(JSON, default=list)
     description = Column(Text, nullable=True)
     status = Column(String(50), default="ACTIVE")  # ACTIVE, NEGOTIATING, SOLD

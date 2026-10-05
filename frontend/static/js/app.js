@@ -2547,14 +2547,21 @@ function openProduceListingModalFromProfile() {
   const modal = document.getElementById('modalProduceFromProfile');
   if (!modal) return;
 
-  const farmerName = state.user?.full_name || localStorage.getItem('farmer_name') || 'Lokanath Bala (Farmer)';
+  const farmerName = state.user?.full_name || 'Farmer';
   const farmLoc = state.user?.location || 'Khordha / Bhubaneswar Rural, Odisha';
+  const farmerPhone = state.user?.phone_number || '';
 
   const nameInput = document.getElementById('profListingFarmerName');
   if (nameInput) nameInput.value = farmerName;
 
+  const phoneInput = document.getElementById('profListingPhone');
+  if (phoneInput && !phoneInput.value) phoneInput.value = farmerPhone;
+
+  const holderInput = document.getElementById('profListingHolderName');
+  if (holderInput && !holderInput.value) holderInput.value = farmerName;
+
   const locInput = document.getElementById('profListingLocation');
-  if (locInput) locInput.value = farmLoc;
+  if (locInput && !locInput.value) locInput.value = farmLoc;
 
   modal.classList.remove('hidden');
 }
@@ -2564,14 +2571,45 @@ function closeProduceListingModalFromProfile() {
   if (modal) modal.classList.add('hidden');
 }
 
-async function createProduceListingFromProfile() {
-  const crop = document.getElementById('profListingCrop')?.value || 'Tomato';
-  const grade = document.getElementById('profListingGrade')?.value || 'Grade A';
-  const qty = parseFloat(document.getElementById('profListingQty')?.value) || 25.0;
-  const price = parseFloat(document.getElementById('profListingPrice')?.value) || 2450.0;
-  const location = document.getElementById('profListingLocation')?.value || 'Khordha, Odisha';
-  const desc = document.getElementById('profListingDesc')?.value || '';
-  const farmerName = document.getElementById('profListingFarmerName')?.value || state.user?.full_name || 'Farmer';
+async function submitInlineProduceListing() {
+  const crop = document.getElementById('inlineListingCrop')?.value || 'Tomato';
+  const grade = document.getElementById('inlineListingGrade')?.value || 'Grade A';
+  const qty = parseFloat(document.getElementById('inlineListingQty')?.value) || 25.0;
+  const price = parseFloat(document.getElementById('inlineListingPrice')?.value) || 2450.0;
+  const location = document.getElementById('inlineListingLocation')?.value?.trim() || 'Khordha, Odisha';
+  const farmerPhone = document.getElementById('inlineListingPhone')?.value?.trim() || '';
+  const bankName = document.getElementById('inlineListingBankName')?.value?.trim() || '';
+  const holderName = document.getElementById('inlineListingHolderName')?.value?.trim() || '';
+  const accountNumber = document.getElementById('inlineListingAccountNumber')?.value?.trim() || '';
+  const ifscCode = document.getElementById('inlineListingIfscCode')?.value?.trim().toUpperCase() || '';
+  const desc = document.getElementById('inlineListingDesc')?.value?.trim() || '';
+  const farmerName = state.user?.full_name || holderName || 'Farmer';
+
+  if (!farmerPhone) {
+    showToast('कृपया अपना Phone Number दर्ज करें (Please enter your Phone Number)', 'warning');
+    document.getElementById('inlineListingPhone')?.focus();
+    return;
+  }
+  if (!bankName) {
+    showToast('कृपया अपना Bank Name दर्ज करें (Please enter Bank Name)', 'warning');
+    document.getElementById('inlineListingBankName')?.focus();
+    return;
+  }
+  if (!holderName) {
+    showToast('कृपया Account Holder Name दर्ज करें (Please enter Account Holder Name)', 'warning');
+    document.getElementById('inlineListingHolderName')?.focus();
+    return;
+  }
+  if (!accountNumber) {
+    showToast('कृपया Bank Account Number दर्ज करें (Please enter Account Number)', 'warning');
+    document.getElementById('inlineListingAccountNumber')?.focus();
+    return;
+  }
+  if (!ifscCode) {
+    showToast('कृपया Bank IFSC Code दर्ज करें (Please enter IFSC Code)', 'warning');
+    document.getElementById('inlineListingIfscCode')?.focus();
+    return;
+  }
 
   try {
     const res = await apiFetch('/buyers/listings/from-profile', {
@@ -2585,12 +2623,91 @@ async function createProduceListingFromProfile() {
         farm_location: location,
         description: desc,
         farmer_name: farmerName,
+        farmer_phone: farmerPhone,
+        bank_name: bankName,
+        account_number: accountNumber,
+        ifsc_code: ifscCode,
+        account_holder_name: holderName,
         variety: 'Farm Fresh Certified'
       })
     });
 
     if (res.ok) {
-      showToast(`🌾 Fresh produce listing for ${crop} added to marketplace directly from your profile!`, 'success');
+      showToast(`🌾 ${crop} produce listed with your Bank Account details for direct Buyer payment!`, 'success');
+      initMarketplaceView();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to list produce', 'error');
+    }
+  } catch (e) {
+    console.error(e);
+    showToast('Network error while listing produce', 'error');
+  }
+}
+
+async function createProduceListingFromProfile() {
+  const crop = document.getElementById('profListingCrop')?.value || 'Tomato';
+  const grade = document.getElementById('profListingGrade')?.value || 'Grade A';
+  const qty = parseFloat(document.getElementById('profListingQty')?.value) || 25.0;
+  const price = parseFloat(document.getElementById('profListingPrice')?.value) || 2450.0;
+  const location = document.getElementById('profListingLocation')?.value?.trim() || 'Khordha, Odisha';
+  const desc = document.getElementById('profListingDesc')?.value?.trim() || '';
+  const farmerName = document.getElementById('profListingFarmerName')?.value?.trim() || state.user?.full_name || 'Farmer';
+  const farmerPhone = document.getElementById('profListingPhone')?.value?.trim() || '';
+  const bankName = document.getElementById('profListingBankName')?.value?.trim() || '';
+  const holderName = document.getElementById('profListingHolderName')?.value?.trim() || '';
+  const accountNumber = document.getElementById('profListingAccountNumber')?.value?.trim() || '';
+  const ifscCode = document.getElementById('profListingIfscCode')?.value?.trim().toUpperCase() || '';
+
+  if (!farmerPhone) {
+    showToast('Please enter your Phone Number', 'warning');
+    document.getElementById('profListingPhone')?.focus();
+    return;
+  }
+  if (!bankName) {
+    showToast('Please enter your Bank Name', 'warning');
+    document.getElementById('profListingBankName')?.focus();
+    return;
+  }
+  if (!holderName) {
+    showToast('Please enter Account Holder Name', 'warning');
+    document.getElementById('profListingHolderName')?.focus();
+    return;
+  }
+  if (!accountNumber) {
+    showToast('Please enter Bank Account Number', 'warning');
+    document.getElementById('profListingAccountNumber')?.focus();
+    return;
+  }
+  if (!ifscCode) {
+    showToast('Please enter Bank IFSC Code', 'warning');
+    document.getElementById('profListingIfscCode')?.focus();
+    return;
+  }
+
+  try {
+    const res = await apiFetch('/buyers/listings/from-profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        crop,
+        grade,
+        quantity_quintals: qty,
+        expected_price_per_quintal: price,
+        farm_location: location,
+        description: desc,
+        farmer_name: farmerName,
+        farmer_phone: farmerPhone,
+        bank_name: bankName,
+        account_number: accountNumber,
+        ifsc_code: ifscCode,
+        account_holder_name: holderName,
+        variety: 'Farm Fresh Certified'
+      })
+    });
+
+    if (res.ok) {
+      showToast(`🌾 Fresh produce listing for ${crop} added to marketplace with your bank payment details!`, 'success');
       closeProduceListingModalFromProfile();
       initMarketplaceView();
     } else {
@@ -2604,6 +2721,20 @@ async function createProduceListingFromProfile() {
 }
 
 async function initMarketplaceView() {
+  // Pre-populate inline form defaults from logged-in farmer
+  const inlineHolder = document.getElementById('inlineListingHolderName');
+  if (inlineHolder && !inlineHolder.value && state.user?.full_name) {
+    inlineHolder.value = state.user.full_name;
+  }
+  const inlinePhone = document.getElementById('inlineListingPhone');
+  if (inlinePhone && !inlinePhone.value && state.user?.phone_number) {
+    inlinePhone.value = state.user.phone_number;
+  }
+  const inlineLoc = document.getElementById('inlineListingLocation');
+  if (inlineLoc && !inlineLoc.value) {
+    inlineLoc.value = state.user?.location || 'Khordha, Odisha';
+  }
+
   const res = await apiFetch('/buyers/listings');
   const container = document.getElementById('marketplaceGrid');
   if (!res.ok || !container) return;
@@ -2611,7 +2742,7 @@ async function initMarketplaceView() {
   const listings = await res.json();
   container.innerHTML = '';
   if (listings.length === 0) {
-    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No produce listings yet. Click "+ List Produce Directly from Profile" above to create one!</p>';
+    container.innerHTML = '<p class="text-slate-500 col-span-3 text-center py-8">No produce listings yet. Fill in your produce and Bank Account details above to sell produce!</p>';
     return;
   }
 
@@ -2627,11 +2758,11 @@ async function initMarketplaceView() {
           <span class="px-2.5 py-0.5 rounded-full text-3xs font-bold bg-slate-100 text-slate-700">${item.grade}</span>
         </div>
         <h4 class="font-black text-slate-900 text-lg mt-2">${item.crop} <span class="text-xs text-slate-500 font-normal">(${item.variety})</span></h4>
-        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} (${item.farmer_phone || '+91-9437012345'})</p>
+        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} • 📱 ${item.farmer_phone || '--'}</p>
         <p class="text-xs text-slate-500 mt-0.5">📍 Farm: ${item.farm_location}</p>
-        <p class="text-xs text-slate-600 mt-2.5 line-clamp-2">${item.description || 'Direct farm harvest from verified profile.'}</p>
+        <p class="text-xs text-slate-600 mt-2 line-clamp-2">${item.description || 'Direct farm harvest from verified profile.'}</p>
         
-        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+        <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
           <div class="p-2 bg-slate-50 rounded-xl">
             <span class="text-slate-400 block text-3xs uppercase font-bold">Available Quantity</span>
             <span class="font-extrabold text-slate-800 text-sm">${item.quantity_quintals} Qtl</span>
@@ -2640,6 +2771,13 @@ async function initMarketplaceView() {
             <span class="text-emerald-700 block text-3xs uppercase font-bold">Expected Price</span>
             <span class="font-extrabold text-emerald-900 text-sm">₹${item.expected_price_per_quintal}/Qtl</span>
           </div>
+        </div>
+
+        <div class="mt-3 p-3 bg-emerald-50/70 rounded-xl border border-emerald-200 text-2xs space-y-1">
+          <div class="font-extrabold text-emerald-950">🏦 Your Saved Bank Account Details:</div>
+          <div><strong>Bank Name:</strong> ${item.bank_name || '--'} | <strong>IFSC:</strong> <span class="font-mono">${item.ifsc_code || '--'}</span></div>
+          <div><strong>Account Holder:</strong> ${item.account_holder_name || item.farmer_name || '--'}</div>
+          <div><strong>Account No.:</strong> <span class="font-mono font-bold text-emerald-900">${item.account_number || '--'}</span></div>
         </div>
       </div>
 
@@ -2698,6 +2836,11 @@ function renderBuyerPortalListings(listings) {
 
   listings.forEach(item => {
     const card = document.createElement('div');
+    const holderName = item.account_holder_name || item.farmer_name || 'Verified Farmer';
+    const accountNum = item.account_number || 'Provided in Order';
+    const safeHolder = holderName.replace(/'/g, "\\'");
+    const safeAcct = accountNum.replace(/'/g, "\\'");
+
     card.className = 'p-5 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between hover:border-amber-400 transition';
     card.innerHTML = `
       <div>
@@ -2708,11 +2851,11 @@ function renderBuyerPortalListings(listings) {
           <span class="px-2.5 py-0.5 rounded-full text-3xs font-bold bg-slate-100 text-slate-700">${item.grade}</span>
         </div>
         <h4 class="font-black text-slate-900 text-lg mt-2">${item.crop} <span class="text-xs text-slate-500 font-normal">(${item.variety})</span></h4>
-        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} (${item.farmer_phone || '+91-9437012345'})</p>
+        <p class="text-xs text-emerald-800 font-bold mt-0.5">🧑‍🌾 Farmer: ${item.farmer_name || 'Verified Farmer'} ${item.farmer_phone ? `(${item.farmer_phone})` : ''}</p>
         <p class="text-xs text-slate-500 mt-0.5">📍 Farm Location: ${item.farm_location}</p>
-        <p class="text-xs text-slate-600 mt-2.5 line-clamp-2">${item.description || 'Direct farm harvest ready for immediate wholesale dispatch.'}</p>
+        <p class="text-xs text-slate-600 mt-2 line-clamp-2">${item.description || 'Direct farm harvest ready for immediate wholesale dispatch.'}</p>
         
-        <div class="grid grid-cols-2 gap-2 mt-4 text-xs">
+        <div class="grid grid-cols-2 gap-2 mt-3 text-xs">
           <div class="p-2 bg-slate-50 rounded-xl">
             <span class="text-slate-400 block text-3xs uppercase font-bold">Available Quantity</span>
             <span class="font-extrabold text-slate-800 text-sm">${item.quantity_quintals} Qtl</span>
@@ -2722,11 +2865,20 @@ function renderBuyerPortalListings(listings) {
             <span class="font-extrabold text-amber-950 text-sm">₹${item.expected_price_per_quintal}/Qtl</span>
           </div>
         </div>
+
+        <!-- Strictly ONLY Account Holder Name & Account Number shown to Buyer for payment -->
+        <div class="mt-3 p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-xs space-y-1">
+          <div class="text-2xs font-extrabold uppercase tracking-wider text-emerald-900 flex items-center gap-1">
+            <span>💳</span> <span>Pay Farmer Account Details</span>
+          </div>
+          <div class="text-slate-800">👤 <strong>Account Holder Name:</strong> <span class="font-extrabold text-slate-900">${holderName}</span></div>
+          <div class="text-slate-800">🔢 <strong>Account Number:</strong> <span class="font-mono font-extrabold text-emerald-900">${accountNum}</span></div>
+        </div>
       </div>
 
       <div class="mt-4 pt-3 border-t border-slate-100">
-        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal})" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
-          <span>🛒</span> <span>Place Purchase Offer</span>
+        <button onclick="openBuyerOrderModal(${item.id}, '${item.crop}', ${item.expected_price_per_quintal}, '${safeHolder}', '${safeAcct}')" class="w-full py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-extrabold rounded-xl text-xs shadow-xs transition flex items-center justify-center gap-1.5">
+          <span>🛒</span> <span>Order Produce & Pay Farmer</span>
         </button>
       </div>
     `;
@@ -2734,12 +2886,26 @@ function renderBuyerPortalListings(listings) {
   });
 }
 
-function openBuyerOrderModal(listingId, crop, price) {
+function openBuyerOrderModal(listingId, crop, price, holderName = '', accountNumber = '') {
   const modal = document.getElementById('buyerOrderModal');
   if (!modal) return;
   document.getElementById('buyerOrderListingId').value = listingId;
   document.getElementById('buyerOrderCropName').innerText = crop;
   document.getElementById('buyerOrderPrice').value = price;
+
+  // Populate Farmer's Account Holder Name & Account Number for Buyer Payment
+  if (!holderName || !accountNumber) {
+    const found = (window.allBuyerListings || []).find(l => l.id === listingId);
+    if (found) {
+      holderName = holderName || found.account_holder_name || found.farmer_name || 'Verified Farmer';
+      accountNumber = accountNumber || found.account_number || '--';
+    }
+  }
+  const holderEl = document.getElementById('buyerOrderHolderName');
+  const acctEl = document.getElementById('buyerOrderAccountNumber');
+  if (holderEl) holderEl.innerText = holderName || 'Verified Farmer';
+  if (acctEl) acctEl.innerText = accountNumber || '--';
+
   const firmInput = document.getElementById('buyerOrderFirmName');
   const phoneInput = document.getElementById('buyerOrderPhone');
   if (firmInput && !firmInput.value) {
