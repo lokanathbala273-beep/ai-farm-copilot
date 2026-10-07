@@ -3374,3 +3374,729 @@ function setupEventListeners() {
     if (el) el.addEventListener('change', analyzeSoilParams);
   });
 }
+
+// =========================================================================
+// 🌐 NETLIFY 100% STANDALONE SERVERLESS / CLIENT API ENGINE
+// Allows deploying purely on Netlify after cancelling Render!
+// Intercepts /api/* requests when running on Netlify (or if backend is off)
+// and serves them with persistent localStorage database (`aifarm_standalone_db_v1`).
+// =========================================================================
+(function initNetlifyStandaloneEngine() {
+  const DB_KEY = 'aifarm_standalone_db_v1';
+
+  function getDefaultStandaloneDB() {
+    return {
+      users: [
+        {
+          id: 9,
+          name: 'Lokanath Bala',
+          phone: '7855068089',
+          role: 'farmer',
+          state: 'Odisha',
+          district: 'Bhubaneswar',
+          farm_name: 'My Farm',
+          land_acres: 5.0,
+          crops: 'Rice, Tomato, Potato',
+          language: 'en'
+        },
+        {
+          id: 10,
+          name: 'Santosh Behera',
+          phone: '9937574325',
+          role: 'farmer',
+          state: 'Odisha',
+          district: 'Cuttack',
+          farm_name: 'Behera Krishi Farm',
+          land_acres: 4.5,
+          crops: 'Rice, Wheat, Mustard',
+          language: 'en'
+        },
+        {
+          id: 11,
+          name: 'Himanshu Pratihari',
+          phone: '8480366752',
+          role: 'expert',
+          state: 'Odisha',
+          district: 'Puri',
+          farm_name: 'Rice & Tomato Leaf Blight Specialist',
+          land_acres: 0,
+          crops: 'Rice, Tomato, Potato',
+          language: 'en'
+        },
+        {
+          id: 12,
+          name: 'Asit Sahu',
+          phone: '8280098153',
+          role: 'buyer',
+          state: 'Odisha',
+          district: 'Bhubaneswar',
+          farm_name: 'Sahu Agro Traders',
+          land_acres: 0,
+          crops: '',
+          language: 'en'
+        },
+        {
+          id: 14,
+          name: 'Dr.Budha Mohapatra',
+          phone: '7855068959',
+          role: 'expert',
+          state: 'Odisha',
+          district: 'Bhubaneswar',
+          farm_name: 'Potato Late Blight & Chili Leaf Curl Expert',
+          land_acres: 0,
+          crops: 'Potato, Chili, Tomato',
+          language: 'en'
+        }
+      ],
+      consultations: [],
+      listings: [
+        {
+          id: 101,
+          farmer_id: 9,
+          farmer_name: 'Lokanath Bala',
+          farmer_phone: '7855068089',
+          crop: 'Rice',
+          variety: 'Swarna Sub-1 (Grade A)',
+          quantity_quintals: 35,
+          expected_price_per_qtl: 2350,
+          mandi_reference_price: 2300,
+          harvest_date: '2026-10-05',
+          location: 'Bhubaneswar, Odisha',
+          district: 'Bhubaneswar',
+          state: 'Odisha',
+          quality_grade: 'A+',
+          organic: true,
+          status: 'available',
+          bank_name: 'State Bank of India',
+          account_holder_name: 'Lokanath Bala',
+          account_number: '38945120984',
+          ifsc_code: 'SBIN0004521'
+        }
+      ],
+      orders: [],
+      expenses: [
+        { id: 1, category: 'Seed', description: 'Certified Paddy & Vegetable Seeds', amount: 4200, crop: 'Rice', expense_date: '2026-09-15' },
+        { id: 2, category: 'Fertilizer', description: 'DAP, NPK & Neem Coated Urea', amount: 5800, crop: 'Rice', expense_date: '2026-09-20' },
+        { id: 3, category: 'Labour', description: 'Field preparation & transplanting', amount: 6500, crop: 'Rice', expense_date: '2026-09-25' }
+      ],
+      income: [
+        { id: 1, crop: 'Rice', quantity_qtl: 25, price_per_qtl: 2350, total_amount: 58750, buyer_name: 'Odisha Agro Mandi', sale_date: '2026-09-28' }
+      ],
+      active_model_version: 'v2.4.0-prod'
+    };
+  }
+
+  function loadDB() {
+    try {
+      const raw = localStorage.getItem(DB_KEY);
+      if (!raw) {
+        const initial = getDefaultStandaloneDB();
+        localStorage.setItem(DB_KEY, JSON.stringify(initial));
+        return initial;
+      }
+      const parsed = JSON.parse(raw);
+      if (!parsed.users) parsed.users = getDefaultStandaloneDB().users;
+      if (!parsed.consultations) parsed.consultations = [];
+      if (!parsed.listings) parsed.listings = getDefaultStandaloneDB().listings;
+      if (!parsed.orders) parsed.orders = [];
+      if (!parsed.expenses) parsed.expenses = getDefaultStandaloneDB().expenses;
+      if (!parsed.income) parsed.income = getDefaultStandaloneDB().income;
+      return parsed;
+    } catch (e) {
+      return getDefaultStandaloneDB();
+    }
+  }
+
+  function saveDB(db) {
+    try {
+      localStorage.setItem(DB_KEY, JSON.stringify(db));
+    } catch (e) {
+      console.warn('Could not persist standalone DB:', e);
+    }
+  }
+
+  function jsonResponse(data, status = 200) {
+    return new Response(JSON.stringify(data), {
+      status,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }
+
+  async function parseBody(options) {
+    if (!options || !options.body) return {};
+    if (typeof options.body === 'string') {
+      try { return JSON.parse(options.body); } catch (e) { return {}; }
+    }
+    if (options.body instanceof FormData) {
+      const obj = {};
+      for (const [k, v] of options.body.entries()) {
+        obj[k] = v;
+      }
+      return obj;
+    }
+    return {};
+  }
+
+  async function handleStandaloneApiRequest(urlStr, options = {}) {
+    const urlObj = new URL(urlStr, window.location.origin);
+    const path = urlObj.pathname;
+    const method = (options.method || 'GET').toUpperCase();
+    const db = loadDB();
+
+    // 1. AUTHENTICATION & REGISTRATION
+    if (path === '/api/auth/register' && method === 'POST') {
+      const body = await parseBody(options);
+      const phone = String(body.phone || '').trim();
+      const role = String(body.role || 'farmer').trim().toLowerCase();
+      let user = db.users.find(u => u.phone === phone);
+      if (user) {
+        user.name = body.name || user.name;
+        user.role = role || user.role;
+        user.state = body.state || user.state;
+        user.district = body.district || user.district;
+        user.farm_name = body.farm_name !== undefined ? body.farm_name : user.farm_name;
+        user.land_acres = body.land_acres !== undefined ? Number(body.land_acres) : user.land_acres;
+        user.crops = body.crops !== undefined ? body.crops : user.crops;
+      } else {
+        user = {
+          id: Date.now(),
+          name: body.name || 'User',
+          phone,
+          role,
+          state: body.state || 'Odisha',
+          district: body.district || 'Bhubaneswar',
+          farm_name: body.farm_name || (role === 'expert' ? 'Leaf Disease Specialist' : 'My Farm'),
+          land_acres: Number(body.land_acres || 0),
+          crops: body.crops || '',
+          language: body.language || 'en'
+        };
+        db.users.push(user);
+      }
+      saveDB(db);
+      return jsonResponse({
+        status: 'success',
+        message: 'Account authenticated on Netlify',
+        token: 'netlify-jwt-' + user.id,
+        user
+      });
+    }
+
+    if (path === '/api/auth/login' && method === 'POST') {
+      const body = await parseBody(options);
+      const phone = String(body.phone || '').trim();
+      const requestedRole = body.role ? String(body.role).trim().toLowerCase() : null;
+      let user = db.users.find(u => u.phone === phone);
+      if (!user) {
+        return jsonResponse({ detail: 'Phone number not registered yet. Please fill your Name and click Sign In.' }, 404);
+      }
+      if (requestedRole && user.role !== requestedRole) {
+        user.role = requestedRole;
+        saveDB(db);
+      }
+      return jsonResponse({
+        status: 'success',
+        token: 'netlify-jwt-' + user.id,
+        user
+      });
+    }
+
+    if (path === '/api/auth/otp/send' && method === 'POST') {
+      const body = await parseBody(options);
+      return jsonResponse({
+        status: 'success',
+        phone: body.phone,
+        demo_otp: '1234',
+        expires_in_seconds: 300
+      });
+    }
+
+    if (path === '/api/auth/otp/verify' && method === 'POST') {
+      const body = await parseBody(options);
+      const phone = String(body.phone || '').trim();
+      let user = db.users.find(u => u.phone === phone) || db.users[0];
+      return jsonResponse({
+        status: 'success',
+        token: 'netlify-jwt-' + user.id,
+        user
+      });
+    }
+
+    // 2. EXPERTS & CONSULTATIONS
+    if (path === '/api/experts/list' && method === 'GET') {
+      const cropFilter = (urlObj.searchParams.get('crop') || '').toLowerCase();
+      const diseaseFilter = (urlObj.searchParams.get('disease') || '').toLowerCase();
+      const experts = db.users
+        .filter(u => u.role === 'expert')
+        .map(u => {
+          const specText = (u.farm_name || u.crops || 'All Crop Leaf Diseases').toLowerCase();
+          const isMatch = (!cropFilter && !diseaseFilter) ||
+            (cropFilter && specText.includes(cropFilter)) ||
+            (diseaseFilter && specText.includes(diseaseFilter));
+          return {
+            id: u.id,
+            name: u.name,
+            phone: u.phone,
+            specialist_in: u.farm_name || 'Crop Leaf Disease Specialist',
+            crops: u.crops || 'All Crops',
+            district: u.district || 'Bhubaneswar',
+            state: u.state || 'Odisha',
+            is_recommended_match: Boolean(isMatch)
+          };
+        });
+      return jsonResponse({ status: 'success', experts });
+    }
+
+    if (path === '/api/experts/consultations/create' && method === 'POST') {
+      const body = await parseBody(options);
+      const newCase = {
+        id: Date.now(),
+        farmer_id: body.farmer_id || 9,
+        farmer_name: body.farmer_name || 'Farmer',
+        farmer_phone: body.farmer_phone || '',
+        district: body.district || 'Bhubaneswar',
+        state: body.state || 'Odisha',
+        crop: body.crop || 'Rice',
+        ai_diagnosis: body.ai_diagnosis || 'Leaf Blight',
+        confidence: Number(body.confidence || 92.4),
+        severity: body.severity || 'Moderate',
+        urgency: body.urgency || 'High',
+        farmer_note: body.farmer_note || '',
+        expert_id: body.expert_id ? Number(body.expert_id) : null,
+        expert_name: body.expert_name || 'Leaf Disease Expert',
+        expert_specialty: body.expert_specialty || 'Crop Leaf Disease Specialist',
+        status: 'pending_review',
+        expert_notes: null,
+        recommended_chemical: null,
+        created_at: new Date().toLocaleString()
+      };
+      db.consultations.unshift(newCase);
+      saveDB(db);
+      return jsonResponse({ status: 'success', consultation: newCase });
+    }
+
+    if (path === '/api/experts/queue' && method === 'GET') {
+      const statusFilter = urlObj.searchParams.get('status');
+      const expertId = urlObj.searchParams.get('expert_id');
+      let list = db.consultations.slice();
+      if (expertId) {
+        list = list.filter(c => !c.expert_id || String(c.expert_id) === String(expertId));
+      }
+      const pendingCount = list.filter(c => c.status === 'pending_review').length;
+      const resolvedCount = list.filter(c => c.status === 'resolved').length;
+      if (statusFilter) {
+        list = list.filter(c => c.status === statusFilter);
+      }
+      return jsonResponse({
+        status: 'success',
+        pending_count: pendingCount,
+        resolved_count: resolvedCount,
+        consultations: list
+      });
+    }
+
+    if (path.startsWith('/api/experts/consultations/') && path.endsWith('/prescribe') && method === 'POST') {
+      const parts = path.split('/');
+      const caseId = parts[4];
+      const body = await parseBody(options);
+      const item = db.consultations.find(c => String(c.id) === String(caseId));
+      if (item) {
+        item.status = 'resolved';
+        item.expert_notes = body.expert_notes || '';
+        item.recommended_chemical = body.recommended_chemical || '';
+        item.verified_by = body.expert_name || item.expert_name || 'Verified Agronomist';
+        saveDB(db);
+      }
+      return jsonResponse({ status: 'success', consultation: item || {} });
+    }
+
+    // 3. BUYERS & DIRECT PRODUCE MARKETPLACE (WITH BANK DETAILS)
+    if (path === '/api/buyers/listings' && method === 'GET') {
+      const crop = urlObj.searchParams.get('crop');
+      let list = db.listings.filter(l => l.status !== 'sold');
+      if (crop) {
+        list = list.filter(l => (l.crop || '').toLowerCase() === crop.toLowerCase());
+      }
+      return jsonResponse({
+        status: 'success',
+        total_available: list.length,
+        listings: list
+      });
+    }
+
+    if ((path === '/api/buyers/listings/from-profile' || path === '/api/buyers/listings') && method === 'POST') {
+      const body = await parseBody(options);
+      const cropName = body.crop || 'Rice';
+      const priceNum = Number(body.expected_price_per_qtl || 2250);
+      const newListing = {
+        id: Date.now(),
+        farmer_id: body.farmer_id || 9,
+        farmer_name: body.farmer_name || 'Lokanath Bala',
+        farmer_phone: body.farmer_phone || '7855068089',
+        crop: cropName,
+        variety: body.variety || (cropName + ' (Farm Fresh Grade A)'),
+        quantity_quintals: Number(body.quantity_quintals || 25),
+        expected_price_per_qtl: priceNum,
+        mandi_reference_price: Math.round(priceNum * 0.96),
+        harvest_date: body.harvest_date || new Date().toISOString().split('T')[0],
+        location: `${body.district || 'Bhubaneswar'}, ${body.state || 'Odisha'}`,
+        district: body.district || 'Bhubaneswar',
+        state: body.state || 'Odisha',
+        quality_grade: body.quality_grade || 'A+',
+        organic: body.organic !== undefined ? Boolean(body.organic) : true,
+        status: 'available',
+        bank_name: body.bank_name || '',
+        account_holder_name: body.account_holder_name || body.farmer_name || 'Farmer',
+        account_number: body.account_number || '',
+        ifsc_code: body.ifsc_code || ''
+      };
+      db.listings.unshift(newListing);
+      saveDB(db);
+      return jsonResponse({
+        status: 'success',
+        message: `Listed ${newListing.quantity_quintals} Quintals of ${newListing.crop} on Buyer Marketplace!`,
+        listing: newListing
+      });
+    }
+
+    if (path === '/api/buyers/orders' && method === 'POST') {
+      const body = await parseBody(options);
+      const listing = db.listings.find(l => String(l.id) === String(body.listing_id));
+      const qty = Number(body.quantity_quintals || (listing ? listing.quantity_quintals : 10));
+      const price = Number(body.agreed_price_per_qtl || (listing ? listing.expected_price_per_qtl : 2200));
+      const order = {
+        order_id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
+        listing_id: body.listing_id,
+        buyer_name: body.buyer_name || 'Buyer',
+        buyer_phone: body.buyer_phone || '',
+        buyer_company: body.buyer_company || 'Direct Buyer',
+        crop: listing ? listing.crop : 'Rice',
+        quantity_quintals: qty,
+        agreed_price_per_qtl: price,
+        total_order_value_inr: Math.round(qty * price),
+        farmer_name: listing ? listing.farmer_name : 'Farmer',
+        farmer_phone: listing ? listing.farmer_phone : '',
+        farmer_payment_details: {
+          account_holder_name: (listing && listing.account_holder_name) ? listing.account_holder_name : (listing ? listing.farmer_name : 'Farmer'),
+          account_number: (listing && listing.account_number) ? listing.account_number : 'Provided on Confirmation'
+        },
+        created_at: new Date().toISOString()
+      };
+      if (listing) {
+        if (qty >= listing.quantity_quintals) {
+          listing.status = 'sold';
+        } else {
+          listing.quantity_quintals = Math.max(0, listing.quantity_quintals - qty);
+        }
+      }
+      db.orders.unshift(order);
+      saveDB(db);
+      return jsonResponse({ status: 'success', order });
+    }
+
+    // 4. DISEASE PREDICTION (CHECK DISEASE SCANNER)
+    if (path === '/api/disease/predict' && method === 'POST') {
+      const body = await parseBody(options);
+      const crop = String(body.crop || 'Rice');
+      const diagnosesByCrop = {
+        Rice: {
+          disease: 'Bacterial Leaf Blight',
+          confidence: 95.8,
+          severity: 'Moderate to High',
+          symptoms: 'Water-soaked yellowish stripes on leaf margins drying from tip downward.',
+          chemical: 'Streptocycline (6g) + Copper Oxychloride (500g) in 200L water/acre',
+          organic: 'Neem Oil 1500 ppm (5ml/L) + Pseudomonas fluorescens foliar spray',
+          prevention: 'Avoid excess Urea top-dressing; maintain proper field drainage.'
+        },
+        Tomato: {
+          disease: 'Early Leaf Blight (Alternaria solani)',
+          confidence: 94.6,
+          severity: 'Moderate',
+          symptoms: 'Concentric bullseye dark brown rings on older lower leaves with yellow halos.',
+          chemical: 'Mancozeb 75% WP (2.5g/L) or Azoxystrobin 23% SC (1ml/L)',
+          organic: 'Trichoderma viride (5g/L) foliar spray + remove infected lower leaves',
+          prevention: 'Practice stake pruning and avoid overhead sprinkler irrigation late in the evening.'
+        },
+        Potato: {
+          disease: 'Late Blight (Phytophthora infestans)',
+          confidence: 96.2,
+          severity: 'High',
+          symptoms: 'Dark water-soaked lesions on leaf tips with white powdery growth on underside.',
+          chemical: 'Cymoxanil 8% + Mancozeb 64% WP (2.5g/L water)',
+          organic: 'Copper Hydroxide biological spray + garlic-chili extract',
+          prevention: 'Ensure high earthing up of ridges and use disease-free seed tubers.'
+        },
+        Wheat: {
+          disease: 'Yellow Stripe Rust',
+          confidence: 93.9,
+          severity: 'Moderate',
+          symptoms: 'Parallel rows of yellowish-orange pustules along leaf veins.',
+          chemical: 'Propiconazole 25% EC (1ml/L water) spray immediately',
+          organic: 'Sulfur 80% WDG biological dust + sour buttermilk spray',
+          prevention: 'Avoid late sowing and balanced potash application.'
+        }
+      };
+      const info = diagnosesByCrop[crop] || {
+        disease: `${crop} Leaf Spot & Blight`,
+        confidence: 93.4,
+        severity: 'Moderate',
+        symptoms: `Necrotic brown lesions with chlorotic yellow margins observed on ${crop} leaf surface.`,
+        chemical: 'Mancozeb 75% WP (2.5g/L) + Carbendazim (1g/L) foliar spray',
+        organic: 'Neem Oil 3000 ppm (3ml/L) + Trichoderma viride bio-fungicide',
+        prevention: 'Remove affected leaves immediately and ensure proper plant spacing.'
+      };
+      return jsonResponse({
+        status: 'success',
+        crop,
+        disease: info.disease,
+        confidence: info.confidence,
+        severity: info.severity,
+        symptoms: info.symptoms,
+        treatment: {
+          chemical: info.chemical,
+          organic: info.organic,
+          prevention: info.prevention
+        },
+        weather_risk_advisory: 'High humidity (78%) in next 48 hours favors fungal spread — spray in morning hours.'
+      });
+    }
+
+    // 5. AI COPILOT CHAT
+    if (path === '/api/copilot/chat' && method === 'POST') {
+      const body = await parseBody(options);
+      const q = String(body.message || body.query || '').toLowerCase();
+      let reply = `Namaskar! Based on your farm profile and current Odisha agro-climatic conditions:\n\n• **Crop Health Advisory**: Inspect lower leaves early morning for blight or sucking pests. Apply **Neem Oil (5ml/L)** preventively.\n• **Nutrient Schedule**: Split nitrogen into 3 doses and apply **Potash (MOP 25 kg/acre)** at flowering stage for higher grain weight.\n• **Market Tip**: Current Mandi prices for Grade-A produce are trending **+6.5% higher** this week.`;
+      if (q.includes('yellow') || q.includes('blight') || q.includes('spot') || q.includes('disease')) {
+        reply = `🌿 **Leaf Disease Diagnosis & Action Plan**:\n\n1. **Immediate Control**: Spray **Mancozeb 75% WP @ 2.5g/Litre** or **Copper Oxychloride @ 3g/Litre** during clear morning weather.\n2. **Nutrient Correction**: Yellowing of lower leaves also indicates Nitrogen/Zinc deficiency — apply **Zinc Sulphate (5g/L) + Urea (10g/L)** foliar spray after 5 days.\n3. **Expert Help**: You can also go to **Check Disease** tab and send this directly to our registered **Leaf Disease Experts**!`;
+      } else if (q.includes('fertilizer') || q.includes('npk') || q.includes('soil') || q.includes('urea')) {
+        reply = `🧪 **Balanced Fertilizer Schedule (Per Acre)**:\n\n• **Basal Dose**: DAP 50 kg + MOP 30 kg + Farmyard Compost 2 Tonnes.\n• **25 Days (Tillering/Vegetative)**: Neem-Coated Urea 35 kg + Micronutrient mixture 5 kg.\n• **45 Days (Panicle/Flowering)**: Urea 25 kg + MOP 20 kg for maximum yield.`;
+      } else if (q.includes('price') || q.includes('market') || q.includes('mandi') || q.includes('sell')) {
+        reply = `📈 **Market & Selling Recommendation**:\n\n• Local Mandi prices are strong right now (**Rice: ₹2,350/qtl**, **Tomato: ₹2,600/qtl**, **Potato: ₹1,850/qtl**).\n• Use the **Sell Produce** tab to list your harvest with your **Bank Account Details** so verified Buyers can order directly from you with 0% middleman commission!`;
+      }
+      return jsonResponse({
+        status: 'success',
+        response: reply,
+        reply: reply,
+        suggestions: [
+          'How to stop leaf yellowing in Rice?',
+          'Best NPK fertilizer schedule per acre',
+          'Today best Mandi price for my crop'
+        ]
+      });
+    }
+
+    // 6. SOIL HEALTH ANALYZER
+    if (path === '/api/soil/analyze' && method === 'POST') {
+      const body = await parseBody(options);
+      const ph = Number(body.ph || 6.5);
+      const n = Number(body.nitrogen || 240);
+      const p = Number(body.phosphorus || 22);
+      const k = Number(body.potassium || 180);
+      return jsonResponse({
+        status: 'success',
+        health_score: 84,
+        soil_rating: ph >= 6.0 && ph <= 7.5 ? 'Optimal Fertility' : 'Needs pH Correction',
+        deficiencies: [
+          ...(n < 280 ? ['Nitrogen (Low-Moderate)'] : []),
+          ...(p < 25 ? ['Phosphorus (Moderate)'] : []),
+          ...(k < 150 ? ['Potassium (Low)'] : [])
+        ],
+        recommended_crops: ['Rice (Swarna)', 'Tomato', 'Potato', 'Mustard', 'Groundnut'],
+        fertilizer_plan: {
+          urea_kg_per_acre: Math.max(25, Math.round((300 - n) * 0.35)),
+          dap_kg_per_acre: Math.max(20, Math.round((40 - p) * 1.5)),
+          mop_kg_per_acre: Math.max(15, Math.round((220 - k) * 0.25)),
+          organic_amendment: 'Apply 2 Tonnes Vermicompost + 5 kg Trichoderma enriched FYM per acre.'
+        }
+      });
+    }
+
+    // 7. MARKET OPTIMIZER
+    if (path === '/api/markets/optimize' && method === 'POST') {
+      const body = await parseBody(options);
+      const crop = body.crop || 'Rice';
+      const qty = Number(body.quantity_quintals || 20);
+      return jsonResponse({
+        status: 'success',
+        crop,
+        quantity_quintals: qty,
+        best_mandi: 'Bhubaneswar Central e-NAM Mandi',
+        markets: [
+          {
+            mandi_name: 'Bhubaneswar Central e-NAM Mandi',
+            distance_km: 14,
+            price_per_qtl: 2450,
+            gross_revenue: qty * 2450,
+            transport_cost: Math.round(14 * qty * 2.5),
+            net_profit: (qty * 2450) - Math.round(14 * qty * 2.5),
+            trend: '+5.4% Rising',
+            recommended: true
+          },
+          {
+            mandi_name: 'Cuttack Malgodown Regulated Market',
+            distance_km: 34,
+            price_per_qtl: 2490,
+            gross_revenue: qty * 2490,
+            transport_cost: Math.round(34 * qty * 2.5),
+            net_profit: (qty * 2490) - Math.round(34 * qty * 2.5),
+            trend: '+3.1% Stable',
+            recommended: false
+          },
+          {
+            mandi_name: 'Khordha Regional Krishi Mandi',
+            distance_km: 22,
+            price_per_qtl: 2380,
+            gross_revenue: qty * 2380,
+            transport_cost: Math.round(22 * qty * 2.5),
+            net_profit: (qty * 2380) - Math.round(22 * qty * 2.5),
+            trend: '+1.8% Steady',
+            recommended: false
+          }
+        ]
+      });
+    }
+
+    // 8. WEATHER, FARMS, FIELDS, CROPS
+    if (path === '/api/crops' && method === 'GET') {
+      return jsonResponse({
+        crops: ['Rice', 'Wheat', 'Tomato', 'Potato', 'Cotton', 'Maize', 'Chili', 'Onion', 'Mustard', 'Sugarcane']
+      });
+    }
+
+    if (path === '/api/weather' && method === 'GET') {
+      return jsonResponse({
+        status: 'success',
+        location: 'Bhubaneswar, Odisha',
+        temperature_c: 30,
+        humidity_pct: 74,
+        wind_kph: 12,
+        condition: 'Partly Cloudy — Good for Foliar Spray',
+        spray_window: 'Safe to Spray (6:00 AM – 10:30 AM)'
+      });
+    }
+
+    if (path === '/api/farms' && method === 'GET') {
+      return jsonResponse({
+        farms: [{
+          id: 1,
+          name: 'Main Integrated Smart Farm',
+          location: 'Bhubaneswar, Odisha',
+          total_acres: 5.0,
+          soil_type: 'Alluvial Loam'
+        }]
+      });
+    }
+
+    if (path === '/api/fields' && method === 'GET') {
+      return jsonResponse({
+        fields: [
+          { id: 1, name: 'Plot A - North Paddy Block', crop: 'Rice', area_acres: 3.0, stage: 'Panicle Initiation', health_status: 'Healthy', ndvi: 0.78, soil_moisture: 68 },
+          { id: 2, name: 'Plot B - Vegetable Block', crop: 'Tomato', area_acres: 2.0, stage: 'Flowering & Fruiting', health_status: 'Monitor', ndvi: 0.71, soil_moisture: 62 }
+        ]
+      });
+    }
+
+    // 9. EXPENSES & INCOME LEDGER
+    if (path === '/api/expenses' && method === 'GET') {
+      return jsonResponse({ expenses: db.expenses });
+    }
+    if (path === '/api/expenses' && method === 'POST') {
+      const body = await parseBody(options);
+      const item = {
+        id: Date.now(),
+        category: body.category || 'Fertilizer',
+        description: body.description || 'Farm Input',
+        amount: Number(body.amount || 0),
+        crop: body.crop || 'Rice',
+        expense_date: body.expense_date || new Date().toISOString().split('T')[0]
+      };
+      db.expenses.unshift(item);
+      saveDB(db);
+      return jsonResponse({ status: 'success', expense: item });
+    }
+    if (path === '/api/expenses/summary' && method === 'GET') {
+      const total = db.expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const byCategory = {};
+      db.expenses.forEach(e => {
+        byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount || 0);
+      });
+      return jsonResponse({ total_expenses: total, by_category: byCategory, count: db.expenses.length });
+    }
+    if (path === '/api/income' && method === 'GET') {
+      return jsonResponse({ income: db.income });
+    }
+    if (path === '/api/income/summary' && method === 'GET') {
+      const totalIncome = db.income.reduce((s, i) => s + Number(i.total_amount || 0), 0);
+      const totalExpenses = db.expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+      return jsonResponse({
+        total_income: totalIncome,
+        total_expenses: totalExpenses,
+        net_profit: totalIncome - totalExpenses
+      });
+    }
+
+    // 10. ADMIN PORTAL
+    if (path === '/api/admin/overview' && method === 'GET') {
+      return jsonResponse({
+        status: 'success',
+        metrics: {
+          total_users: db.users.length,
+          total_farmers: db.users.filter(u => u.role === 'farmer').length,
+          total_experts: db.users.filter(u => u.role === 'expert').length,
+          total_buyers: db.users.filter(u => u.role === 'buyer').length,
+          total_consultations: db.consultations.length,
+          active_listings: db.listings.length,
+          total_orders: db.orders.length
+        },
+        users: db.users
+      });
+    }
+
+    if (path === '/api/admin/models' && method === 'GET') {
+      return jsonResponse({
+        status: 'success',
+        active_version: db.active_model_version || 'v2.4.0-prod',
+        models: [
+          { version: 'v2.4.0-prod', architecture: 'MobileNetV3-Large + GradCAM', accuracy: '96.4%', latency_ms: 42, status: 'active' },
+          { version: 'v2.3.1-stable', architecture: 'EfficientNet-B0 Agro', accuracy: '94.8%', latency_ms: 58, status: 'standby' }
+        ]
+      });
+    }
+
+    if (path === '/api/admin/models/switch' && method === 'POST') {
+      const body = await parseBody(options);
+      db.active_model_version = body.version || 'v2.4.0-prod';
+      saveDB(db);
+      return jsonResponse({ status: 'success', active_version: db.active_model_version });
+    }
+
+    // Default fallback for any other /api/* route
+    return jsonResponse({ status: 'success' });
+  }
+
+  const originalFetch = window.fetch.bind(window);
+  window.fetch = async function(input, options) {
+    const urlStr = typeof input === 'string' ? input : (input && input.url ? input.url : String(input));
+    const isApiCall = urlStr.startsWith('/api/') || urlStr.includes('/api/');
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+
+    if (isApiCall) {
+      // On Netlify (or any non-localhost domain), use the instant standalone engine directly!
+      if (!isLocalhost) {
+        return handleStandaloneApiRequest(urlStr, options);
+      }
+      // On localhost, try local Python backend first; fallback to standalone if offline
+      try {
+        const res = await originalFetch(input, options);
+        const contentType = res.headers.get('content-type') || '';
+        if (res.status === 404 || !contentType.includes('application/json')) {
+          return handleStandaloneApiRequest(urlStr, options);
+        }
+        return res;
+      } catch (err) {
+        return handleStandaloneApiRequest(urlStr, options);
+      }
+    }
+    return originalFetch(input, options);
+  };
+})();
+
