@@ -593,13 +593,28 @@ function handleRegRoleChange() {
   const selectedRole = roleSelect ? roleSelect.value : 'FARMER';
   const leafExpertContainer = document.getElementById('regLeafExpertContainer');
   const farmNameInput = document.getElementById('regFarmName');
+  const landAndCropsContainer = document.getElementById('regLandAndCropsContainer');
+  const landAreaInput = document.getElementById('regLandArea');
+  const cropsInput = document.getElementById('regCrops');
 
+  // Show Leaf Disease Expert ONLY when Expert (AGRICULTURAL_EXPERT) is selected
   if (leafExpertContainer) {
     if (selectedRole === 'AGRICULTURAL_EXPERT') {
       leafExpertContainer.classList.remove('hidden');
     } else {
       leafExpertContainer.classList.add('hidden');
       if (farmNameInput) farmNameInput.value = '';
+    }
+  }
+
+  // Hide Land (Acres) and Crops when Expert or Buyer (or Admin) is selected; show ONLY for Farmer
+  if (landAndCropsContainer) {
+    if (selectedRole === 'FARMER') {
+      landAndCropsContainer.classList.remove('hidden');
+    } else {
+      landAndCropsContainer.classList.add('hidden');
+      if (landAreaInput) landAreaInput.value = '';
+      if (cropsInput) cropsInput.value = '';
     }
   }
 }
