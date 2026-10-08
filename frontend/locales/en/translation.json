@@ -18,6 +18,8 @@
     "business": "Farm Business",
     "market": "Market Optimizer",
     "marketplace": "Sell Produce",
+    "pesticides": "Pesticides",
+    "buyer_portal": "Buyer Portal",
     "ask_expert": "Expert Advice",
     "seller_store": "Input Store",
     "admin_portal": "Admin Portal"

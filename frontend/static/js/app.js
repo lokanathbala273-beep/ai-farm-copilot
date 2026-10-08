@@ -126,19 +126,1691 @@ function create3DParticles() {
   }
 }
 
-// Translation & i18n Engine
-async function loadTranslations(lang) {
+// ====================================================
+// FULL-INTERFACE TRANSLATION & i18n ENGINE (EN / OD / HI)
+// Converts 100% of static HTML, forms, placeholders, select options,
+// modals, and dynamically rendered cards across the entire website.
+// ====================================================
+
+const _origTextNodeMap = new WeakMap();
+const _lastTranslatedTextNodeMap = new WeakMap();
+const _origPlaceholderMap = new WeakMap();
+const _origTitleMap = new WeakMap();
+let _i18nObserverInitialized = false;
+let _i18nApplying = false;
+let _i18nDebounceTimer = null;
+
+// Comprehensive Exact Phrase & Term Dictionary for Odia (od) and Hindi (hi)
+const FULL_INTERFACE_DICTIONARY = {
+  od: {
+    // App Header & Roles
+    "AI Farm Co-Pilot": "ଏଆଇ ଫାର୍ମ କୋ-ପାଇଲଟ୍",
+    "AI Farm Co-Pilot & Market Optimizer": "ଏଆଇ ଫାର୍ମ କୋ-ପାଇଲଟ୍ ଏବଂ ବଜାର ଅପ୍ଟିମାଇଜର୍",
+    "Smart Agricultural Assistant for Indian Farmers": "ଭାରତୀୟ ଚାଷୀଙ୍କ ପାଇଁ ସ୍ମାର୍ଟ ଡିଜିଟାଲ୍ କୃଷି ସହାୟକ",
+    "Odisha Edition": "ଓଡ଼ିଶା ସଂସ୍କରଣ",
+    "Sign Out": "ଲଗ୍ ଆଉଟ୍ (Sign Out)",
+    "Farmer": "ଚାଷୀ (Farmer)",
+    "Expert": "କୃଷି ବିଶେଷଜ୍ଞ (Expert)",
+    "Buyer": "କ୍ରେତା / ବ୍ୟବସାୟୀ (Buyer)",
+    "Admin": "ପ୍ରଶାସକ (Admin)",
+    "Agricultural Expert": "କୃଷି ବିଶେଷଜ୍ଞ",
+    "Produce Buyer": "ଫସଲ କ୍ରେତା",
+    "System Admin": "ସିଷ୍ଟମ୍ ପ୍ରଶାସକ",
+
+    // Navigation Tabs
+    "My Farm": "ମୋ ଫାର୍ମ",
+    "Check Disease": "ରୋଗ ପରୀକ୍ଷା",
+    "AI Co-Pilot": "ଏଆଇ କୋ-ପାଇଲଟ୍",
+    "Soil Health": "ମାଟି ସ୍ୱାସ୍ଥ୍ୟ",
+    "Farm Business": "ଚାଷ ବ୍ୟବସାୟ",
+    "Market Optimizer": "ମଣ୍ଡି ଦର ଅପ୍ଟିମାଇଜର୍",
+    "Sell Produce": "ଫସଲ ବିକ୍ରି",
+    "Pesticides": "କୀଟନାଶକ ଔଷଧ",
+    "Buyer Portal": "କ୍ରେତା ପୋର୍ଟାଲ",
+    "Expert Advice": "ବିଶେଷଜ୍ଞ ପରାମର୍ଶ",
+    "Input Store": "ଔଷଧ ଦୋକାନ",
+    "Admin Portal": "ପ୍ରଶାସନ ପୋର୍ଟାଲ",
+
+    // 1st Screen Auth Portal
+    "1ST SCREEN • MANDATORY ACCOUNT PORTAL": "ପ୍ରଥମ ସ୍କ୍ରିନ୍ • ବାଧ୍ୟତାମୂଳକ ଆକାଉଣ୍ଟ୍ ପୋର୍ଟାଲ୍",
+    "Register or Sign In with your": "ଆପଣଙ୍କ",
+    "Gmail": "ଜିମେଲ୍ (Gmail)",
+    "Mobile Number": "ମୋବାଇଲ୍ ନମ୍ବର",
+    "&": "ଏବଂ",
+    "Own Password": "নিজ ପାସୱାର୍ଡ",
+    "Select your role below (": "ତଳେ ଆପଣଙ୍କ ଭୂମିକା ବାଛନ୍ତୁ (",
+    "is 1st Priority) to enter your dedicated portal.": "ପ୍ରଥମ ପ୍ରାଥମିକତା) ଏବଂ ନିଜ ପୋର୍ଟାଲରେ ପ୍ରବେଶ କରନ୍ତୁ।",
+    "1. Select Who You Are (Role Priority)": "୧. ଆପଣ କିଏ ବାଛନ୍ତୁ (ଭୂମିକା ପ୍ରାଥମିକତା)",
+    "1ST PRIORITY": "ପ୍ରଥମ ପ୍ରାଥମିକତା",
+    "Crop & Soil": "ଫସଲ ଓ ମାଟି",
+    "Plant Doctor": "ଉଦ୍ଭିଦ ଡାକ୍ତର",
+    "Buy Crops": "ଫସଲ କିଣନ୍ତୁ",
+    "System": "ସିଷ୍ଟମ୍",
+    "📝 Sign Up (Create Account)": "📝 ସାଇନ୍ ଅପ୍ (ନୂଆ ଆକାଉଣ୍ଟ୍ ଖୋଲନ୍ତୁ)",
+    "🔐 Sign In (Existing User)": "🔐 ସାଇନ୍ ଇନ୍ (ପୁରୁଣା ଆକାଉଣ୍ଟ୍)",
+    "Full Name *": "ସମ୍ପୂର୍ଣ୍ଣ ନାମ *",
+    "Gmail / Email ID *": "ଜିମେଲ୍ / ଇମେଲ୍ ଆଇଡି *",
+    "Mobile Phone Number *": "ମୋବାଇଲ୍ ଫୋନ୍ ନମ୍ବର *",
+    "State & District (Odisha) *": "ରାଜ୍ୟ ଓ ଜିଲ୍ଲା (ଓଡ଼ିଶା) *",
+    "Create Own Password *": "ନିଜର ପାସୱାର୍ଡ ତିଆରି କରନ୍ତୁ *",
+    "Confirm Password *": "ପାସୱାର୍ଡ ନିଶ୍ଚିତ କରନ୍ତୁ *",
+    "🌾 Farmer Profile Details": "🌾 ଚାଷୀ ପ୍ରୋଫାଇଲ୍ ବିବରଣୀ",
+    "Farm Name": "ଫାର୍ମ / ଜମିର ନାମ",
+    "Leaf Disease Expert": "ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞ",
+    "Land (Acres)": "ଜମି ପରିମାଣ (ଏକର)",
+    "Crops Grown": "ଚାଷ କରୁଥିବା ଫସଲ",
+    "👨‍🔬 Agricultural Expert Details": "👨‍🔬 କୃଷି ବିଶେଷଜ୍ଞ ବିବରଣୀ",
+    "Specialization": "ବିଶେଷଜ୍ଞତା ବିଭାଗ",
+    "Qualification / University": "ଶିକ୍ଷାଗତ ଯୋଗ୍ୟତା / ବିଶ୍ୱବିଦ୍ୟାଳୟ",
+    "Experience (Years)": "ଅଭିଜ୍ଞତା (ବର୍ଷ)",
+    "🛒 Produce Buyer / Trader Details": "🛒 ଫସଲ କ୍ରେତା / ବ୍ୟବସାୟୀ ବିବରଣୀ",
+    "Business / Company Name": "ବ୍ୟବସାୟ / କମ୍ପାନୀ ନାମ",
+    "Buyer Type": "କ୍ରେତା ପ୍ରକାର",
+    "Interested Crops": "କିଣିବାକୁ ଚାହୁଁଥିବା ଫସଲ",
+    "🛡️ System Administrator Details": "🛡️ ସିଷ୍ଟମ୍ ପ୍ରଶାସକ ବିବରଣୀ",
+    "Admin Access Code / Department": "ଆଡମିନ୍ ଆକ୍ସେସ୍ କୋଡ୍ / ବିଭାଗ",
+    "🚀 Complete Sign Up & Enter Portal": "🚀 ସାଇନ୍ ଅପ୍ সম্পূর্ণ କରନ୍ତୁ ଓ ପ୍ରବେଶ କରନ୍ତୁ",
+    "Registered Gmail OR Mobile Number *": "ପଞ୍ଜୀକୃତ ଜିମେଲ୍ କିମ୍ବା ମୋବାଇଲ୍ ନମ୍ବର *",
+    "Your Password *": "ଆପଣଙ୍କ ପାସୱାର୍ଡ *",
+    "🔓 Sign In & Enter Portal": "🔓 ସାଇନ୍ ଇନ୍ କରନ୍ତୁ ଓ ପ୍ରବେଶ କରନ୍ତୁ",
+
+    // Dashboard & Weather
+    "Welcome back": "ସ୍ୱାଗତମ୍",
+    "Active Fields": "ସକ୍ରିୟ ଜମି",
+    "Today's Microclimate": "ଆଜିର ପାଣିପାଗ",
+    "Season Expenses": "ଋତୁର ମୋଟ ଖର୍ଚ୍ଚ",
+    "Realized Revenue": "ମୋଟ ଆୟ",
+    "Smart Agricultural Alerts": "ସ୍ମାର୍ଟ କୃଷି ସତର୍କତା",
+    "Quick Farmer Actions": "ତୁରନ୍ତ ଚାଷୀ କାର୍ଯ୍ୟ",
+    "📍 Share My Live GPS Location": "📍 ମୋ ଲାଇଭ୍ GPS ଲୋକେସନ୍ ସେୟାର୍ କରନ୍ତୁ",
+    "Live GPS Verified": "ଲାଇଭ୍ GPS ପ୍ରମାଣିତ",
+    "Localized Microclimate Weather": "ଆପଣଙ୍କ ଜମିର ସଠିକ୍ ପାଣିପାଗ",
+    "Real-Time Local Disease & Weather Risk Alert": "ସ୍ଥାନୀୟ ରୋଗ ଏବଂ ପାଣିପାଗ ବିପଦ ସତର୍କତା",
+    "Temperature": "ତାପମାତ୍ରା",
+    "Humidity": "ଆର୍ଦ୍ରତା",
+    "Wind Speed": "ପବନ ବେଗ",
+    "Rain Probability": "ବର୍ଷା ସମ୍ଭାବନା",
+    "Soil Moisture": "ମାଟି ଆର୍ଦ୍ରତା",
+    "Solar UV Index": "ସୌର UV ସୂଚକାଙ୍କ",
+    "7-Day Agricultural Spray & Harvest Forecast": "୭-ଦିନିଆ କୃଷି ସ୍ପ୍ରେ ଏବଂ ଅମଳ ପୂର୍ବାନୁମାନ",
+
+    // Check Disease & Leaf Scanner
+    "AI Leaf Disease Computer Vision Scanner": "ଏଆଇ ପତ୍ର ରୋଗ କମ୍ପ୍ୟୁଟର ଭିଜନ୍ ସ୍କାନର୍",
+    "Scan leaf photo or capture from live camera to identify diseases, get verified treatments, and connect with experts.": "ପତ୍ର ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ କିମ୍ବା ଲାଇଭ୍ କ୍ୟାମେରା ବ୍ୟବହାର କରି ରୋଗ ଚିହ୍ନଟ କରନ୍ତୁ, ସଠିକ୍ ଔଷଧ ଜାଣନ୍ତୁ ଏବଂ ବିଶେଷଜ୍ଞଙ୍କ ସହ ଯୋଡ଼ି ହୁଅନ୍ତୁ।",
+    "Select Crop to Diagnose": "ରୋଗ ପରୀକ୍ଷା ପାଇଁ ଫସଲ ବାଛନ୍ତୁ",
+    "Upload Image": "ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ",
+    "Live Webcam": "ଲାଇଭ୍ କ୍ୟାମେରା",
+    "Webcam Stream URL": "ୱେବକ୍ୟାମ୍ ଲିଙ୍କ୍ (URL)",
+    "Capture & Diagnose": "ଫଟୋ ନିଅନ୍ତୁ ଓ ରୋଗ ଯାଞ୍ଚ କରନ୍ତୁ",
+    "Fetch & Analyze URL": "ଲିଙ୍କ୍ ରୁ ଫଟୋ ଆଣି ଯାଞ୍ଚ କରନ୍ତୁ",
+    "Analyze Leaf Image Now": "ବର୍ତ୍ତମାନ ପତ୍ର ଫଟୋ ଯାଞ୍ଚ କରନ୍ତୁ",
+    "AI Diagnostic Result": "ଏଆଇ ରୋଗ ନିର୍ଣ୍ଣୟ ଫଳାଫଳ",
+    "AI Confidence": "ଏଆଇ ବିଶ୍ୱସନୀୟତା",
+    "Severity Level": "ଗମ୍ଭୀରତା ସ୍ତର",
+    "Pathological Symptoms": "ରୋଗର ଲକ୍ଷଣ",
+    "Possible Causes & Vectors": "ସମ୍ଭାବ୍ୟ କାରଣ ଓ ବାହକ",
+    "IPM & Field Management": "ସମନ୍ୱିତ ରୋଗ ନିୟନ୍ତ୍ରଣ ଓ ପରିଚାଳନା",
+    "Verified Agricultural Medicines / Inputs": "ପ୍ରମାଣିତ କୃଷି ଔଷଧ ଓ ଉପଚାର",
+    "Dosage & Application": "ଔଷଧର ପରିମାଣ ଓ ସ୍ପ୍ରେ ପଦ୍ଧତି",
+    "Safety & Pre-Harvest Interval (PHI)": "ସୁରକ୍ଷା ଓ ଅମଳ ପୂର୍ବ ସମୟ (PHI)",
+    "Consult Plant Pathologist": "କୃଷି ବିଶେଷଜ୍ଞଙ୍କ ସହ ପରାମର୍ଶ କରନ୍ତୁ",
+    "Ask Our Leaf Disease Experts": "ଆମ ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞଙ୍କୁ ପଚାରନ୍ତୁ",
+    "Send Direct Consultation Request": "ସିଧାସଳଖ ବିଶେଷଜ୍ଞ ପରାମର୍ଶ ପଠାନ୍ତୁ",
+    "My Expert Consultations & Prescriptions": "ମୋର ବିଶେଷଜ୍ଞ ପରାମର୍ଶ ଓ ପ୍ରେସକ୍ରିପସନ୍",
+
+    // AI Co-Pilot
+    "Ask AI Farm Co-Pilot": "ଏଆଇ ଫାର୍ମ କୋ-ପାଇଲଟ୍ କୁ ପଚାରନ୍ତୁ",
+    "Voice or text enabled agricultural assistant aware of your farm, crops, soil, and local mandi prices.": "ଭଏସ୍ କିମ୍ବା ଟେକ୍ସଟ୍ ମାଧ୍ୟମରେ ଆପଣଙ୍କ ଫସଲ, ମାଟି, ପାଣିପାଗ ଏବଂ ମଣ୍ଡି ଦର ବିଷୟରେ ଯେକୌଣସି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ।",
+    "🎙️ Ask AI Farm Co-Pilot": "🎙️ ଏଆଇ କୋ-ପାଇଲଟ୍ କୁ ପଚାରନ୍ତୁ",
+    "Send": "ପଠାନ୍ତୁ",
+    "Speak": "କୁହନ୍ତୁ",
+    "Clear Chat": "ଚାଟ୍ ସଫା କରନ୍ତୁ",
+
+    // Soil Health
+    "Soil Intelligence & Nutrient Advisory": "ମାଟି ସ୍ୱାସ୍ଥ୍ୟ ଓ ପୋଷକ ତତ୍ତ୍ୱ ପରାମର୍ଶ",
+    "Understand your soil parameters, crop suitability index, and fertilizer recommendations.": "ମାଟି ପରୀକ୍ଷା ରିପୋର୍ଟ ଅନୁଯାୟୀ ଉପଯୁକ୍ତ ଫସଲ ଏବଂ ସାର ପ୍ରୟୋଗ ପରିମାଣ ଜାଣନ୍ତୁ।",
+    "Soil pH": "ମାଟି pH ମାନ",
+    "Available Nitrogen (N kg/ha)": "ଉପଲବ୍ଧ ଯବକ୍ଷାରଜାନ (N kg/ha)",
+    "Phosphorus (P kg/ha)": "ଫସଫରସ୍ (P kg/ha)",
+    "Potassium (K kg/ha)": "ପୋଟାସିୟମ୍ (K kg/ha)",
+    "Organic Carbon (%)": "ଜୈବିକ ଅଙ୍ଗାରକ (%)",
+    "Moisture (%)": "ଆର୍ଦ୍ରତା (%)",
+    "Soil Type": "ମାଟି ପ୍ରକାର",
+    "Analyze Soil & Get Crop Suitability": "ମାଟି ବିଶ୍ଳେଷଣ କରନ୍ତୁ ଓ ଉପଯୁକ୍ତ ଫସଲ ଜାଣନ୍ତୁ",
+    "Overall Fertility Score": "ମୋଟ ମାଟି ଉର୍ବରତା ସ୍କୋର",
+    "Crop Suitability Ranking": "ଉପଯୁକ୍ତ ଫସଲ ତାଲିକା",
+    "Targeted Nutrient Corrections": "ଆବଶ୍ୟକୀୟ ସାର ଓ ପୋଷକ ତତ୍ତ୍ୱ ପରାମର୍ଶ",
+
+    // Farm Business
+    "Farm Business Maker & Expense Tracker": "ଚାଷ ବ୍ୟବସାୟ ଯୋଜନା ଓ ଖର୍ଚ୍ଚ ହିସାବ",
+    "Simulate crop budgets, record daily expenses by voice, and track farm profits.": "ଚାଷ ଖର୍ଚ୍ଚ ଆକଳନ କରନ୍ତୁ, କଥା କହି ଦୈନିକ ଖର୍ଚ୍ଚ ଲେଖନ୍ତୁ ଏବଂ ନିଟ୍ ଲାଭ ଦେଖନ୍ତୁ।",
+    "Business Scenario Planner": "ବ୍ୟବସାୟ ଯୋଜନା",
+    "Expense Tracker": "ଖର୍ଚ୍ଚ ଟ୍ରାକର୍",
+    "Income & Sales": "ଆୟ ଓ ବିକ୍ରି",
+    "Land Area (Acres)": "ଜମି ପରିମାଣ (ଏକର)",
+    "Seed Cost (₹)": "ବିହନ ଖର୍ଚ୍ଚ (₹)",
+    "Fertilizer Cost (₹)": "ଖତ/ସାର ଖର୍ଚ୍ଚ (₹)",
+    "Labour Cost (₹)": "ଶ୍ରମିକ ଖର୍ଚ୍ଚ (₹)",
+    "Irrigation Cost (₹)": "ଜଳସେଚନ ଖର୍ଚ୍ଚ (₹)",
+    "Pesticide/Protection Cost (₹)": "କୀଟନାଶକ ଔଷଧ ଖର୍ଚ୍ଚ (₹)",
+    "Machinery/Tractor Cost (₹)": "ଟ୍ରାକ୍ଟର/ଯନ୍ତ୍ରପାତି ଖର୍ଚ୍ଚ (₹)",
+    "Transport Freight Cost (₹)": "ଗାଡ଼ି ଭଡ଼ା ଖର୍ଚ୍ଚ (₹)",
+    "Expected Yield (Quintals)": "ଆନୁମାନିକ ଉତ୍ପାଦନ (କ୍ୱିଣ୍ଟାଲ)",
+    "Expected Price / Quintal (₹)": "ଆନୁମାନିକ ବିକ୍ରି ଦର / କ୍ୱିଣ୍ଟାଲ (₹)",
+    "Calculate Profitability Scenario": "ଲାଭ-କ୍ଷତି ହିସାବ କରନ୍ତୁ",
+    "🎙️ Log Expense by Voice": "🎙️ କଥା କହି ଖର୍ଚ୍ଚ ରେକର୍ଡ କରନ୍ତୁ",
+    "Estimated Total Cost": "ମୋଟ ଆନୁମାନିକ ଖର୍ଚ୍ଚ",
+    "Estimated Gross Revenue": "ମୋଟ ଆନୁମାନିକ ଆୟ",
+    "Estimated Net Return": "ଆନୁମାନିକ ନିଟ୍ ଲାଭ",
+    "Simulated Net ROI": "ଆନୁମାନିକ ଲାଭ ହାର (%)",
+
+    // Market Optimizer
+    "Mandi Market Optimizer": "ମଣ୍ଡି ଦର ଅପ୍ଟିମାଇଜର୍",
+    "Compare nearby APMC mandis by transparent net realization after transport and commission fees.": "ନିକଟସ୍ଥ ମଣ୍ଡିଗୁଡ଼ିକର ଦର, ପରିବହନ ଭଡ଼ା ଏବଂ କମିଶନ କାଟି ସର୍ବାଧିକ ନିଟ୍ ଲାଭ ଦେଉଥିବା ମଣ୍ଡି ବାଛନ୍ତୁ।",
+    "Harvest Quantity to Sell (Quintals)": "ବିକ୍ରି ପରିମାଣ (କ୍ୱିଣ୍ଟାଲ)",
+    "Quality / Produce Grade": "ଫସଲର ଗୁଣବତ୍ତା / ଗ୍ରେଡ୍",
+    "Calculate Optimal Selling Mandi": "ସର୍ବୋତ୍ତମ ମଣ୍ଡି ହିସାବ କରନ୍ତୁ",
+    "HIGHEST NET PROFIT": "ସର୍ବାଧିକ ନିଟ୍ ଲାଭ",
+    "Mandi / Market Yard": "ମଣ୍ଡି ନାମ",
+    "Modal Price / Qtl": "ମଣ୍ଡି ଦର / କ୍ୱିଣ୍ଟାଲ",
+    "Distance": "ଦୂରତା",
+    "Transport Freight": "ଗାଡ଼ି ଭଡ଼ା",
+    "Mandi Fee (1.5%)": "ମଣ୍ଡି ଫିସ୍ (୧.୫%)",
+    "Estimated Net Realization": "ନିଟ୍ ମିଳିବାକୁ ଥିବା ଟଙ୍କା",
+    "Net Price Received / Qtl": "କ୍ୱିଣ୍ଟାଲ ପିଛା ନିଟ୍ ଦର",
+
+    // Sell Produce & Farmer Bank Details
+    "Direct Farmer-to-Buyer Produce Marketplace": "ସିଧାସଳଖ ଚାଷୀ-କ୍ରେତା ଫସଲ ବିକ୍ରି ବଜାର",
+    "List your harvested crops with photos, expected price, and bank payout details for verified Odisha buyers.": "ଆପଣଙ୍କ ଅମଳ ଫସଲର ଫଟୋ, ମୂଲ୍ୟ ଏବଂ ବ୍ୟାଙ୍କ ଖାତା ବିବରଣୀ ସହ ଓଡ଼ିଶାର ପ୍ରମାଣିତ କ୍ରେତାଙ୍କ ନିକଟରେ ସିଧା ବିକ୍ରି କରନ୍ତୁ।",
+    "Post Harvest Lot for Sale": "ବିକ୍ରି ପାଇଁ ଫସଲ ତାଲିକାଭୁକ୍ତ କରନ୍ତୁ",
+    "Crop Name *": "ଫସଲ ନାମ *",
+    "Variety / Grade": "କିସମ / ଗ୍ରେଡ୍",
+    "Available Quantity (Quintals) *": "ଉପଲବ୍ଧ ପରିମାଣ (କ୍ୱିଣ୍ଟାଲ) *",
+    "Asking Price / Quintal (₹) *": "ବିକ୍ରି ମୂଲ୍ୟ / କ୍ୱିଣ୍ଟାଲ (₹) *",
+    "Harvest / Pickup Location *": "ଅମଳ / ଉଠାଇବା ସ୍ଥାନ *",
+    "Farmer Payout Bank Details (For Direct Buyer Payment)": "ଚାଷୀଙ୍କ ବ୍ୟାଙ୍କ ଖାତା ବିବରଣୀ (ସିଧାସଳଖ ଟଙ୍କା ପାଇବା ପାଇଁ)",
+    "Bank Name *": "ବ୍ୟାଙ୍କ ନାମ *",
+    "Account Holder Name *": "ଖାତାଧାରୀଙ୍କ ନାମ *",
+    "Bank Account Number *": "ବ୍ୟାଙ୍କ ଆକାଉଣ୍ଟ୍ ନମ୍ବର *",
+    "IFSC Code *": "IFSC କୋଡ୍ *",
+    "UPI ID (Optional)": "UPI ଆଇଡି (ଇଚ୍ଛାଧୀନ)",
+    "🌾 Publish Crop to Buyer Marketplace": "🌾 କ୍ରେତା ବଜାରରେ ଫସଲ ପ୍ରକାଶ କରନ୍ତୁ",
+    "My Active Crop Listings": "ମୋର ସକ୍ରିୟ ଫସଲ ବିକ୍ରି ତାଲିକା",
+    "Incoming Buyer Purchase Orders": "କ୍ରେତାଙ୍କ ଠାରୁ ଆସିଥିବା ଅର୍ଡର",
+
+    // Pesticides Store & Razorpay E-Commerce
+    "Pesticides & Crop Protection Store": "କୀଟନାଶକ ଏବଂ ଫସଲ ସୁରକ୍ଷା ଔଷଧ ଦୋକାନ",
+    "VERIFIED AGRI INPUTS • RAZORPAY SECURE CHECKOUT": "ପ୍ରମାଣିତ କୃଷି ଔଷଧ • ରେଜରପେ (RAZORPAY) ସୁରକ୍ଷିତ ପେମେଣ୍ଟ",
+    "Authentic agricultural insecticides, fungicides, bio-fungicides, and herbicides with expert dosage guidance and instant Razorpay online payment.": "ସଠିକ୍ ମାତ୍ରା ପରାମର୍ଶ ଏବଂ ରେଜରପେ ଅନଲାଇନ୍ ପେମେଣ୍ଟ ସୁବିଧା ସହ ଅସଲି କୀଟନାଶକ, କବକନାଶକ, ଜୈବିକ କବକନାଶକ ଏବଂ ଘାସମରା ଔଷଧ।",
+    "My Orders": "ମୋର ଅର୍ଡରଗୁଡ଼ିକ",
+    "Cart": "କାର୍ଟ (Cart)",
+    "Search by medicine name, brand, crop (Rice, Tomato, Potato, Cotton), or pest/disease...": "ଔଷଧ ନାମ, ବ୍ରାଣ୍ଡ, ଫସଲ (ଧାନ, ଟମାଟୋ, ଆଳୁ, କପା) କିମ୍ବା ରୋଗ/ପୋକ ନାମରେ ଖୋଜନ୍ତୁ...",
+    "All Categories": "ସମସ୍ତ ବିଭାଗ (All Categories)",
+    "Insecticide": "କୀଟନାଶକ (Insecticide)",
+    "Fungicide": "କବକନାଶକ (Fungicide)",
+    "Bio Fungicide": "ଜୈବିକ କବକନାଶକ (Bio Fungicide)",
+    "Herbicide": "ଘାସମରା ଔଷଧ (Herbicide)",
+    "All Crops": "ସମସ୍ତ ଫସଲ (All Crops)",
+    "5 Verified Medicines": "୫ଟି ପ୍ରମାଣିତ କୃଷି ଔଷଧ",
+    "In Stock": "ଷ୍ଟକ୍ ଅଛି (In Stock)",
+    "Out of Stock": "ଷ୍ଟକ୍ ନାହିଁ",
+    "Add to Cart": "କାର୍ଟରେ ଯୋଡ଼ନ୍ତୁ",
+    "Buy Now": "ବର୍ତ୍ତମାନ କିଣନ୍ତୁ",
+    "Consult Expert": "ବିଶେଷଜ୍ଞଙ୍କୁ ପଚାରନ୍ତୁ",
+    "View Details": "ବିବରଣୀ ଦେଖନ୍ତୁ",
+    "Pack Size": "ପ୍ୟାକ୍ ସାଇଜ୍",
+    "Suitable Crops": "ଉପଯୁକ୍ତ ଫସଲ",
+    "Target Pests / Diseases": "ଲକ୍ଷ୍ୟ ପୋକ / ରୋଗ",
+    "Dosage & Application": "ମାତ୍ରା ଏବଂ ସ୍ପ୍ରେ ପଦ୍ଧତି",
+    "Safety Information & PHI": "ସୁରକ୍ଷା ସୂଚନା ଏବଂ ଅମଳ ପୂର୍ବ ସମୟ",
+    "Your Agri Medicine Cart": "ଆପଣଙ୍କ କୃଷି ଔଷଧ କାର୍ଟ",
+    "Proceed to Checkout": "ଚେକଆଉଟ୍ (Checkout) କୁ ଯାଆନ୍ତୁ",
+    "Checkout & Delivery Details": "ଚେକଆଉଟ୍ ଏବଂ ଡେଲିଭରି ଠିକଣା",
+    "Delivery Address Details": "ଡେଲିଭରି ଠିକଣା ବିବରଣୀ",
+    "Select Payment Method": "ପେମେଣ୍ଟ ପଦ୍ଧତି ବାଛନ୍ତୁ",
+    "Online Payment — Razorpay (UPI / Google Pay / PhonePe / Cards / NetBanking)": "ଅନଲାଇନ୍ ପେମେଣ୍ଟ — Razorpay (UPI / Google Pay / PhonePe / କାର୍ଡ / ନେଟ୍ ବ୍ୟାଙ୍କିଙ୍ଗ୍)",
+    "Cash on Delivery (Pay at Farm Doorstep)": "କ୍ୟାସ୍ ଅନ୍ ଡେଲିଭରି (ଘରେ ଔଷଧ ପାଇলে ଟଙ୍କା ଦିଅନ୍ତୁ)",
+    "Pay Online with Razorpay": "Razorpay ଦ୍ୱାରା ଅନଲାଇନ୍ ପେମେଣ୍ଟ କରନ୍ତୁ",
+    "Place Cash on Delivery Order": "କ୍ୟାସ୍ ଅନ୍ ଡେଲିଭରି ଅର୍ଡର କରନ୍ତୁ",
+    "Order Summary & Price Breakdown": "ଅର୍ଡର ସାରାଂଶ ଏବଂ ମୂଲ୍ୟ ବିବରଣୀ",
+    "Subtotal": "ମୋଟ ମୂଲ୍ୟ (Subtotal)",
+    "Discount Savings": "ରିହାତି ସଞ୍ଚୟ",
+    "Shipping / Delivery": "ଡେଲିଭରି ଚାର୍ଜ",
+    "FREE": "ମାଗଣା (FREE)",
+    "Total Payable Amount": "ମୋଟ ଦେବାକୁ ଥିବା ଟଙ୍କା",
+    "My Pesticide & Medicine Orders": "ମୋର କୀଟନାଶକ ଏବଂ ଔଷଧ ଅର୍ଡର ଇତିହାସ",
+    "Refresh Orders": "ଅର୍ଡର ରିଫ୍ରେସ୍ କରନ୍ତୁ",
+
+    // Product Names & Descriptions in Odia
+    "Adama Tapuz Insecticide": "ଆଦାମା ତାପୁଜ୍ କୀଟନାଶକ (Adama Tapuz Insecticide)",
+    "Anand Dr.Bacto's Ampelo Bio Fungicide - Ampelomyces Quisqualis 2.0 A.S.": "ଆନନ୍ଦ ଡା. ବ୍ୟାକ୍ଟୋସ୍ ଆମ୍ପେଲୋ ଜୈବିକ କବକନାଶକ (Anand Ampelo Bio Fungicide)",
+    "Best Agro Promos Fungicide - Metiram 55% + Pyraclostrobin 5% WG": "ବେଷ୍ଟ ଏଗ୍ରୋ ପ୍ରୋମୋସ୍ କବକନାଶକ (Best Agro Promos Fungicide)",
+    "IIL Milquat Herbicide": "ଆଇଆଇଏଲ୍ ମିଲକ୍ୱାଟ୍ ଘାସମରା ଔଷଧ (IIL Milquat Herbicide)",
+    "JU Jupiter 505 Insecticide": "ଜେୟୁ ଜୁପିଟର ୫୦୫ କୀଟନାଶକ (JU Jupiter 505 Insecticide)",
+
+    // Admin Payment Management
+    "Agri E-Commerce & Razorpay Payment Management": "କୃଷି ଇ-କମର୍ସ ଏବଂ ରେଜରପେ (Razorpay) ପେମେଣ୍ଟ ପରିଚାଳନା",
+    "Monitor live Razorpay transactions, order statuses, payment verification, and issue instant refunds.": "ଲାଇଭ୍ ରେଜରପେ ପେମେଣ୍ଟ, ଅର୍ଡର ସ୍ଥିତି, ପେମେଣ୍ଟ ଯାଞ୍ଚ ଏବଂ ରିଫଣ୍ଡ ପରିଚାଳନା କରନ୍ତୁ।",
+    "All Payments": "ସମସ୍ତ ପେମେଣ୍ଟ",
+    "Paid (Verified)": "ପୈଠ ହୋଇଛି (PAID)",
+    "Pending": "ବାକି ଅଛି (PENDING)",
+    "Failed": "ବିଫଳ (FAILED)",
+    "Refunded": "ଫେରସ୍ତ ହୋଇଛି (REFUNDED)",
+    "Order ID": "ଅର୍ଡର ଆଇଡି",
+    "Farmer / Customer": "ଚାଷୀ / ଗ୍ରାହକ",
+    "Medicines": "ଔଷଧ ସାମଗ୍ରୀ",
+    "Amount": "ଟଙ୍କା ପରିମାଣ",
+    "Method": "ପେମେଣ୍ଟ ମାଧ୍ୟମ",
+    "Payment Status": "ପେମେଣ୍ଟ ସ୍ଥିତି",
+    "Razorpay IDs": "ରେଜରପେ ଆଇଡି",
+    "Order Status": "ଅର୍ଡର ସ୍ଥିତି",
+    "Actions": "କାର୍ଯ୍ୟ",
+    "TITAN 2.0": "ଟାଇଟାନ୍ ୨.୦ (TITAN 2.0)",
+    "Complete Digital Agricultural Assistant for Indian Farmers": "ଭାରତୀୟ ଚାଷୀଙ୍କ ପାଇଁ ସମ୍ପୂର୍ଣ୍ଣ ଡିଜିଟାଲ୍ କୃଷି ସହାୟକ",
+    "1st Screen Access Gate • TITAN 2.0": "ପ୍ରଥମ ସ୍କ୍ରିନ୍ ପ୍ରବେଶ ଦ୍ୱାର • ଟାଇଟାନ୍ ୨.୦",
+    "• Strict Individual User Portal Security": "• ବ୍ୟକ୍ତିଗତ ୟୁଜର୍ ପୋର୍ଟାଲ୍ ସୁରକ୍ଷା",
+    "Register with your Gmail ID and create your secure password. Sign in to unlock full farm features.": "ଆପଣଙ୍କ ଜିମେଲ୍ ଆଇଡି ଦ୍ୱାରା ପଞ୍ଜୀକରଣ କରନ୍ତୁ ଏବଂ ସୁରକ୍ଷିତ ପାସୱାର୍ଡ ତିଆରି କରନ୍ତୁ। ସମସ୍ତ ସୁବିଧା ପାଇಲು ସାଇନ୍ ଇନ୍ କରନ୍ତୁ।",
+    "📧 Gmail ID / Email Address": "📧 ଜିମେଲ୍ ଆଇଡି / ଇମେଲ୍ ଠିକଣା",
+    "🏷️ Select Who You Are (Your Role)": "🏷️ ଆପଣ କିଏ ବାଛନ୍ତୁ (ଆପଣଙ୍କ ଭୂମିକା)",
+    "🩺 Expert (Leaf Disease Expert)": "🩺 ବିଶେଷଜ୍ଞ (ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞ)",
+    "🛒 Buyer (Crop Produce Buyer)": "🛒 କ୍ରେତା (ଫସଲ କ୍ରେତା / ବ୍ୟବସାୟୀ)",
+    "⚙️ Admin (System Administrator)": "⚙️ ଆଡମିନ୍ (ସିଷ୍ଟମ୍ ପ୍ରଶାସକ)",
+    "(Specialist Crop / Disease)": "(ବିଶେଷଜ୍ଞ ଫସଲ / ରୋଗ)",
+    "📍 State & District / Village": "📍 ରାଜ୍ୟ ଓ ଜିଲ୍ଲା / ଗ୍ରାମ",
+    "🌾 Crops": "🌾 ଫସଲ ସମୂହ",
+    "Create Account & Enter Selected Portal": "ଆକାଉଣ୍ଟ୍ ଖୋଲନ୍ତୁ ଓ ପୋର୍ଟାଲରେ ପ୍ରବେଶ କରନ୍ତୁ",
+    "🔒 End-to-end encrypted passwords. Only the interface for your selected role will be shown after login.": "🔒 ସମ୍ପୂର୍ଣ୍ଣ ସୁରକ୍ଷିତ ପାସୱାର୍ଡ। ଲଗଇନ୍ ପରେ କେବଳ ଆପଣଙ୍କ ଭୂମିକା ଅନୁযାୟୀ ପୋର୍ଟାଲ୍ ଦେଖାଯିବ।",
+    "1️⃣ Choose Who You Are (Select Your Role)": "1️⃣ ଆପଣ କିଏ ବାଛନ୍ତୁ (ନିଜ ଭୂମିକା ଚୟନ କରନ୍ତୁ)",
+    "2️⃣ Registered Gmail ID": "2️⃣ ପଞ୍ଜୀକୃତ ଜିମେଲ୍ ଆଇଡି",
+    "5️⃣ 🌿 Leaf Disease Expert": "5️⃣ 🌿 ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞ",
+    "Farmer Account": "ଚାଷୀ ଆକାଉଣ୍ଟ୍",
+    "FARMER": "ଚାଷୀ (FARMER)",
+    "Protected 🔐": "ସୁରକ୍ଷିତ 🔐",
+    "Register New User": "ନୂଆ ୟୁଜର୍ ପଞ୍ଜୀକରଣ",
+    "Log Out / Change Mobile": "ଲଗ୍ ଆଉଟ୍ / ମୋବାଇଲ୍ ବଦଳାନ୍ତୁ",
+    "Farm Health Status": "ଫାର୍ମ ସ୍ୱାସ୍ଥ୍ୟ ସ୍ଥିତି",
+    "Good Vigour": "ଉତ୍ତମ ସ୍ୱାସ୍ଥ୍ୟ",
+    "Kishan Smart Farm": "କିଷାନ୍ ସ୍ମାର୍ଟ ଫାର୍ମ",
+    "Shared Live Field Location": "ସେୟାର୍ ହୋଇଥିବା ଲାଇଭ୍ ଜମି ଲୋକେସନ୍",
+    "Check Plant Disease": "ଗଛ/ପତ୍ର ରୋଗ ଯାଞ୍ଚ କରନ୍ତୁ",
+    "Live Location Weather": "ଲାଇଭ୍ ଲୋକେସନ୍ ପାଣିପାଗ",
+    "Checking...": "ଯାଞ୍ଚ ହେଉଛି...",
+    "Feels like: --°C": "ଅନୁଭୂତ ତାପମାତ୍ରା: --°C",
+    "Detecting Location...": "ଲୋକେସନ୍ ଖୋଜା ଚାଲିଛି...",
+    "💨 Wind:": "💨 ପବନ ବେଗ:",
+    "📍 GPS: Detecting Device Satellite Location...": "📍 GPS: ସାଟେଲାଇଟ୍ ଲୋକେସନ୍ ଖୋଜା ଚାଲିଛି...",
+    "Device Status: Ready": "ଡିଭାଇସ୍ ସ୍ଥିତି: ପ୍ରସ୍ତୁତ",
+    "Live Microclimate Weather at Your Exact Field Location": "ଆପଣଙ୍କ ଜମିର ସଠିକ୍ ଲାଇଭ୍ ପାଣିପାଗ ବିବରଣୀ",
+    "Click below to share your device live GPS. Real-time temperature, humidity, rainfall probability (बारिश की संभावना), and foliar disease outbreak risk alerts will immediately recalculate for your exact live coordinates.": "ଆପଣଙ୍କ ଲାଇଭ୍ GPS ସେୟାର୍ କରିବାକୁ ତଳେ କ୍ଲିକ୍ କରନ୍ତୁ। ସଠିକ୍ ତାପମାତ୍ରା, ଆର୍ଦ୍ରତା, ବର୍ଷା ସମ୍ଭାବନା ଏବଂ ପତ୍ର ରୋଗ ସତର୍କତା ତୁରନ୍ତ ଦେଖାଯିବ।",
+    "Share Live GPS Location": "ଲାଇଭ୍ GPS ଲୋକେସନ୍ ସେୟାର୍ କରନ୍ତୁ",
+    "📍 Preset: Khordha / Bhubaneswar": "📍 ପ୍ରିସେଟ୍: ଖୋର୍ଦ୍ଧା / ଭୁବନେଶ୍ୱର",
+    "📍 Preset: Cuttack Mahanadi Basin": "📍 ପ୍ରିସେଟ୍: କଟକ ମହାନଦୀ ଅଞ୍ଚଳ",
+    "📍 Preset: Puri Coastal Agro-Zone": "📍 ପ୍ରିସେଟ୍: ପୁରୀ ଉପକୂଳ କୃଷି କ୍ଷେତ୍ର",
+    "📍 Preset: Balasore Coastal Plains": "📍 ପ୍ରିସେଟ୍: ବାଲେଶ୍ୱର ଉପକୂଳ ସମତଳ",
+    "📍 Preset: Ganjam South Agro-Zone": "📍 ପ୍ରିସେଟ୍: ଗଞ୍ଜାମ ଦକ୍ଷିଣ କୃଷି କ୍ଷେତ୍ର",
+    "📍 Preset: Koraput Hill Agro-Zone": "📍 ପ୍ରିସେଟ୍: କୋରାପୁଟ ପାର୍ବତ୍ୟ କ୍ଷେତ୍ର",
+    "📍 Bhubaneswar, Odisha": "📍 ଭୁବନେଶ୍ୱର, ଓଡ଼ିଶା",
+    "Partly Cloudy ⛅": "ଆଂଶିକ ମେଘୁଆ ⛅",
+    "Coordinates: 20.2961° N, 85.8245° E (Live GPS Telemetry)": "ଅକ୍ଷାଂଶ/ଦ୍ରାଘିମା: 20.2961° N, 85.8245° E (ଲାଇଭ୍ GPS)",
+    "🌡️ Real Temp:": "🌡️ ପ୍ରକୃତ ତାପମାତ୍ରା:",
+    "Live AI Triggers": "ଲାଇଭ୍ ଏଆଇ ସତର୍କତା",
+    "Active Plots": "ସକ୍ରିୟ ଜମି ପ୍ଲଟ୍",
+    "3 Plots": "୩ଟି ପ୍ଲଟ୍",
+    "Realized Sales": "ମୋଟ ବିକ୍ରି ଆୟ",
+    "+₹77,200 Net Return": "+₹77,200 ନିଟ୍ ଲାଭ",
+    "Model Accuracy": "ମଡେଲ୍ ସଠିକତା",
+    "Calibrated Ensemble v1.0": "କ୍ୟାଲିବ୍ରେଟେଡ୍ ଏନସେମ୍ବଲ୍ v1.0",
+    "Live Camera Input Mode": "ଲାଇଭ୍ କ୍ୟାମେରା ମୋଡ୍",
+    "Live Camera Snap": "ଲାଇଭ୍ କ୍ୟାମେରା ଫଟୋ",
+    "Open Live Webcam": "ଲାଇଭ୍ ୱେବକ୍ୟାମ୍ ଖୋଲନ୍ତୁ",
+    "Webcam / IP Camera URL": "ୱେବକ୍ୟାମ୍ / IP କ୍ୟାମେରା ଲିଙ୍କ୍",
+    "Photo Capture Through URL Link of Webcam / IP Camera": "ୱେବକ୍ୟାମ୍ ବା IP କ୍ୟାମେରା URL ଲିଙ୍କ୍ ମାଧ୍ୟମରେ ଫଟୋ ନିଅନ୍ତୁ",
+    "Fetch & Scan": "ଫଟୋ ଆଣନ୍ତୁ ଓ ସ୍କାନ୍ କରନ୍ତୁ",
+    "Or test with realistic foliar specimens:": "କିମ୍ବା ନମୁନା ପତ୍ର ଫଟୋ ଦ୍ୱାରା ପରୀକ୍ଷା କରନ୍ତୁ:",
+    "🌱 Healthy Foliage": "🌱 ସୁସ୍ଥ ସବୁଜ ପତ୍ର",
+    "No leaf selected yet.": "ଏପର୍ଯ୍ୟନ୍ତ କୌଣସି ପତ୍ର ବଛାଯାଇ ନାହିଁ।",
+    "Point Live Camera, open Webcam, or choose a Specimen above.": "ଲାଇଭ୍ କ୍ୟାମେରା ଦେଖାନ୍ତୁ, ୱେବକ୍ୟାମ୍ ଖୋଲନ୍ତୁ କିମ୍ବା ଉପରେ ନମୁନା ପତ୍ର ବାଛନ୍ତୁ।",
+    "🤖 AI Folate Verification Engine:": "🤖 ଏଆଇ ପତ୍ର ପରୀକ୍ଷଣ ଇଞ୍ଜିନ୍:",
+    "Our computer vision model verifies plant foliar tissue (Excess Green Index & HSV chromaticity), segments necrotic lesion spots, and cross-checks with ICAR pathological profiles.": "ଆମର କମ୍ପ୍ୟୁଟର ଭିଜନ୍ ମଡେଲ୍ ପତ୍ରର ସବୁଜ ଅଂଶ ଓ ରୋଗ ଦାଗ ଚିହ୍ନଟ କରି ICAR ତଥ୍ୟ ସହ ମିଳାଇ ସଠିକ୍ ଔଷଧ ପରାମର୍ଶ ଦେଇଥାଏ।",
+    "Analyze Leaf with AI": "ଏଆଇ ଦ୍ୱାରା ପତ୍ର ଯାଞ୍ଚ କରନ୍ତୁ",
+    "AI Model analyzing foliar tissue and pathological lesions...": "ଏଆଇ ମଡେଲ୍ ପତ୍ର ଏବଂ ରୋଗର ଲକ୍ଷଣ ଯାଞ୍ଚ କରୁଛି...",
+    "Early Blight": "ଆଗୁଆ ପତ୍ରପୋଡ଼ା ରୋଗ (Early Blight)",
+    "Moderate": "ମଧ୍ୟମ (Moderate)",
+    "AI confidence is low. Please upload a clearer image or consult an agricultural expert.": "ଏଆଇ ବିଶ୍ୱସନୀୟତା କମ୍ ଅଛି। ଦୟାକରି ସଫା ଫଟୋ ଅପଲୋଡ୍ କରନ୍ତୁ କିମ୍ବା କୃଷି ବିଶେଷଜ୍ଞଙ୍କ ପରାମର୍ଶ ନିଅନ୍ତୁ।",
+    "Symptoms": "ରୋଗର ଲକ୍ଷଣ",
+    "Possible Causes": "ସମ୍ଭାବ୍ୟ କାରଣ",
+    "Management": "ନିୟନ୍ତ୍ରଣ ଓ ପରିଚାଳନା",
+    "Ask Our Leaf Disease Experts (विशेषज्ञ से सवाल पूछें)": "ଆମ ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞଙ୍କୁ ପଚାରନ୍ତୁ",
+    "🌿 आपका जो पत्ती का रोग (Leaf Disease) है, अगर आप चाहें तो हमारे Experts से सवाल पूछ सकते हैं और अपनी समस्या सीधे भेज सकते हैं।": "🌿 ଆପଣଙ୍କ ଫସଲର ପତ୍ର ରୋଗ ବିଷୟରେ ଆମର କୃଷି ବିଶେଷଜ୍ଞଙ୍କୁ ସିଧାସଳଖ ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ ଏବଂ ସମସ୍ୟା ପଠାନ୍ତୁ।",
+    "Select a registered Leaf Disease Specialist below and send your leaf disease problem directly:": "ତଳେ ଜଣେ ପଞ୍ଜୀକୃତ ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞଙ୍କୁ ବାଛନ୍ତୁ ଏବଂ ଆପଣଙ୍କ ସମସ୍ୟା ସିଧାସଳଖ ପଠାନ୍ତୁ:",
+    "✍️ अपना सवाल या पत्ती के रोग की समस्या लिखें (Write Your Leaf Disease Problem / Question for the Expert):": "✍️ ବିଶେଷଜ୍ଞଙ୍କ ପାଇଁ ଆପଣଙ୍କ ପତ୍ର ରୋଗ ସମସ୍ୟା କିମ୍ବା ପ୍ରଶ୍ନ ଏଠାରେ ଲେଖନ୍ତୁ:",
+    "Send Problem Directly to Selected Expert": "ବଛାଯାଇଥିବା ବିଶେଷଜ୍ଞଙ୍କୁ ସମସ୍ୟା ପଠାନ୍ତୁ",
+    "View registered Leaf Disease Experts and track answers to the problems you sent.": "ପଞ୍ଜୀକୃତ ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞଙ୍କୁ ଦେଖନ୍ତୁ ଏବଂ ଆପଣ ପଠାଇଥିବା ପ୍ରଶ୍ନର ଉତ୍ତର ଜାଣନ୍ତୁ।",
+    "🔄 Refresh Experts & Replies": "🔄 ବିଶେଷଜ୍ଞ ଓ ଉତ୍ତର ରିଫ୍ରେସ୍ କରନ୍ତୁ",
+    "Context Active": "ସକ୍ରିୟ ତଥ୍ୟ",
+    "🍃 Yellow Leaves Advice": "🍃 ହଳଦିଆ ପତ୍ର ପରାମର୍ଶ",
+    "💧 Irrigation Timing": "💧 ଜଳସେଚନ ସମୟ",
+    "💰 Monthly Expenses": "💰 ମାସିକ ଖର୍ଚ୍ଚ",
+    "📈 Mandi Prices": "📈 ମଣ୍ଡି ଦର",
+    "🌧️ Post-Rain Guidance": "🌧️ ବର୍ଷା ପରବର୍ତ୍ତୀ ପରାମର୍ଶ",
+    "Soil Test Parameters": "ମାଟି ପରୀକ୍ଷା ମାନଦଣ୍ଡ",
+    "Alluvial Loam": "ପଟୁ ଦୋରସା ମାଟି (Alluvial Loam)",
+    "Red Laterite Soil": "ଲାଲ୍ ମାଙ୍କଡ଼ା ମାଟି (Red Laterite)",
+    "Sandy Loam": "ବାଲିଆ ଦୋରସା ମାଟି (Sandy Loam)",
+    "Clay Loam": "ମଟାଳ ଦୋରସା ମାଟି (Clay Loam)",
+    "Nitrogen (N)": "ଯବକ୍ଷାରଜାନ (N)",
+    "Phosphorus (P)": "ଫସଫରସ୍ (P)",
+    "Potassium (K)": "ପୋଟାସିୟମ୍ (K)",
+    "Overall Fertility Index": "ମୋଟ ଉର୍ବରତା ସୂଚକାଙ୍କ",
+    "pH Reaction:": "pH ପ୍ରତିକ୍ରିୟା:",
+    "Optimal Neutral": "ଉତ୍ତମ ନିରପେକ୍ଷ (Neutral)",
+    "Nitrogen (N):": "ଯବକ୍ଷାରଜାନ (N):",
+    "Medium (260 kg/ha)": "ମଧ୍ୟମ (260 kg/ha)",
+    "Phosphorus (P):": "ଫସଫରସ୍ (P):",
+    "Medium (22 kg/ha)": "ମଧ୍ୟମ (22 kg/ha)",
+    "Potassium (K):": "ପୋଟାସିୟମ୍ (K):",
+    "Medium (190 kg/ha)": "ମଧ୍ୟମ (190 kg/ha)",
+    "Crop Suitability Matrix (Top Matches for Your Soil)": "ଆପଣଙ୍କ ମାଟି ପାଇଁ ସର୍ବୋତ୍ତମ ଉପଯୁକ୍ତ ଫସଲ ତାଲିକା",
+    "Expense & Income Records": "ଖର୍ଚ୍ଚ ଏବଂ ଆୟ ହିସାବ",
+    "Crop": "ଫସଲ",
+    "Chilli": "ଲଙ୍କା",
+    "Protection (₹)": "ଫସଲ ସୁରକ୍ଷା / ଔଷଧ (₹)",
+    "Machinery (₹)": "ଯନ୍ତ୍ରପାତି / ଟ୍ରାକ୍ଟର (₹)",
+    "Freight (₹)": "ପରିବହନ ଭଡ଼ା (₹)",
+    "Expected Yield (Qtl)": "ଆନୁମାନିକ ଅମଳ (କ୍ୱିଣ୍ଟାଲ)",
+    "Expected Price/Qtl (₹)": "ଆନୁମାନିକ ଦର/କ୍ୱିଣ୍ଟାଲ (₹)",
+    "Simulation Summary": "ଆକଳନ ସାରାଂଶ",
+    "Estimated Cost": "ଆନୁମାନିକ ଖର୍ଚ୍ଚ",
+    "Estimated Revenue": "ଆନୁମାନିକ ଆୟ",
+    "Projected ROI": "ଆନୁମାନିକ ଲାଭ ହାର (ROI)",
+    "Figures are scenario projections based on entered cost inputs. Actual realizations depend on weather and harvest conditions.": "ଏହି ହିସାବ ଆପଣ ଦେଇଥିବା ଖର୍ଚ୍ଚ ଉପରେ ଆଧାରିତ। ପ୍ରକୃତ ଲାଭ ପାଣିପାଗ ଓ ବଜାର ଦର ଉପରେ ନିର୍ଭର କରେ।",
+    "🎙️ Speak Expense to Log Instantly": "🎙️ କଥା କହି ତୁରନ୍ତ ଖର୍ଚ୍ଚ ଲେଖନ୍ତୁ",
+    "Say: \"I spent 1500 on fertilizer\" or \"ଖତ ପାଇଁ ୧୫୦୦ ଟଙ୍କା ଖର୍ଚ୍ଚ କଲି\"": "କୁହନ୍ତୁ: \"ଖତ ପାଇଁ ୧୫୦୦ ଟଙ୍କା ଖର୍ଚ୍ଚ କଲି\"",
+    "Speak Expense": "କଥା କହି ଖର୍ଚ୍ଚ ଲେଖନ୍ତୁ",
+    "Amount (₹)": "ଟଙ୍କା ପରିମାଣ (₹)",
+    "Category": "ବିଭାଗ",
+    "Seed": "ବିହନ",
+    "Labour": "ଶ୍ରମିକ ମଜୁରୀ",
+    "Irrigation": "ଜଳସେଚନ",
+    "Pesticide": "କୀଟନାଶକ ଔଷଧ",
+    "Equipment / Tractor": "ଯନ୍ତ୍ରପାତି / ଟ୍ରାକ୍ଟର",
+    "Transport": "ପରିବହନ / ଗାଡ଼ି ଭଡ଼ା",
+    "Other": "ଅନ୍ୟାନ୍ୟ",
+    "Notes / Description": "ବିବରଣୀ / ଟିପ୍ପଣୀ",
+    "+ Save Expense": "+ ଖର୍ଚ୍ଚ ସେଭ୍ କରନ୍ତୁ",
+    "Recent Recorded Expenses": "ନିକଟରେ ଲେଖାଯାଇଥିବା ଖର୍ଚ୍ଚ",
+    "Date": "ତାରିଖ",
+    "Notes": "ଟିପ୍ପଣୀ",
+    "Odisha State-Wise APMC Network": "ଓଡ଼ିଶା ରାଜ୍ୟସ୍ତରୀୟ APMC ମଣ୍ଡି ନେଟୱାର୍କ",
+    "21 Regulated Mandis Active": "୨୧ଟି ସରକାରୀ ମଣ୍ଡି ସକ୍ରିୟ",
+    "Real per-day analysis across all 21 Odisha state-wise APMC/RMC mandis. Computes daily modal price, transport freight, strict 1.5% Mandi Fee, and net realization.": "ଓଡ଼ିଶାର ସମସ୍ତ ୨୧ଟି APMC/RMC ମଣ୍ଡିର ଦୈନିକ ଦର, ଗାଡ଼ି ଭଡ଼ା, ୧.୫% ମଣ୍ଡି ଫିସ୍ ଏବଂ ନିଟ୍ ଲାଭର ସଠିକ୍ ବିଶ୍ଳେଷଣ।",
+    "Chilli (Guntur / Desi)": "ଲଙ୍କା (ଗୁଣ୍ଟୁର / ଦେଶୀ)",
+    "Banana (Champa / Robusta)": "କଦଳୀ (ଚମ୍ପା / ରୋବଷ୍ଟା)",
+    "Apple (Simla / Kinnaur)": "ସେଓ (ଶିମলা / କିନ୍ନୌର)",
+    "Filter District / Zone": "ଜିଲ୍ଲା / ଅଞ୍ଚଳ ବାଛନ୍ତୁ",
+    "All Odisha Mandis (21 APMC/RMC)": "ସମସ୍ତ ଓଡ଼ିଶା ମଣ୍ଡି (୨୧ APMC/RMC)",
+    "Khordha (Bhubaneswar, Jatni)": "ଖୋର୍ଦ୍ଧା (ଭୁବନେଶ୍ୱର, ଜଟଣୀ)",
+    "Cuttack (Malgodown)": "କଟକ (ମାଲଗୋଦାମ)",
+    "Puri RMC": "ପୁରୀ RMC",
+    "Bargarh APMC": "ବରଗଡ଼ APMC",
+    "Sambalpur (Khetrajpur)": "ସମ୍ବଲପୁର (କ୍ଷେତ୍ରାଜପୁର)",
+    "Ganjam (Berhampur)": "ଗଞ୍ଜାମ (ବ୍ରହ୍ମପୁର)",
+    "Balasore RMC": "ବାଲେଶ୍ୱର RMC",
+    "Bhadrak APMC": "ଭଦ୍ରକ APMC",
+    "Koraput (Jeypore)": "କୋରାପୁଟ (ଜୟପୁର)",
+    "Bolangir RMC": "ବଲାଙ୍ଗୀର RMC",
+    "Kalahandi (Bhawanipatna)": "କଳାହାଣ୍ଡି (ଭବାନୀପାଟଣା)",
+    "Angul RMC": "ଅନୁଗୁଳ RMC",
+    "Dhenkanal APMC": "ଢେଙ୍କାନାଳ APMC",
+    "Kendujhar (Keonjhar)": "କେନ୍ଦୁଝର",
+    "Jajpur Road APMC": "ଯାଜପୁର ରୋଡ୍ APMC",
+    "Sundargarh (Rourkela Panposh)": "ସୁନ୍ଦରଗଡ଼ (ରାଉରକେଲା ପାନପୋଷ)",
+    "Rayagada APMC": "ରାୟଗଡ଼ା APMC",
+    "Produce Grade": "ଫସଲର ଗ୍ରେଡ୍ / ଗୁଣବତ୍ତା",
+    "Grade A (Premium)": "ଗ୍ରେଡ୍ A (ସର୍ବୋତ୍ତମ ମାନ)",
+    "Grade B (Standard)": "ଗ୍ରେଡ୍ B (ସାଧାରଣ ମାନ)",
+    "Grade C (Fair)": "ଗ୍ରେଡ୍ C (ମଧ୍ୟମ ମାନ)",
+    "Calculate Optimal Mandi": "ସର୍ବୋତ୍ତମ ମଣ୍ଡି ହିସାବ କରନ୍ତୁ",
+    "Real Per-Day APMC Market Analysis": "ଦୈନିକ APMC ମଣ୍ଡି ଦର ବିଶ୍ଳେଷଣ",
+    "Daily Bulletin: Loading live rates...": "ଦୈନିକ ବୁଲେଟିନ୍: ଲାଇଭ୍ ଦର ଲୋଡ୍ ହେଉଛି...",
+    "⚖️ Mandi Fee Fixed: 1.5% (OSAMB Norm)": "⚖️ ମଣ୍ଡି ଫିସ୍: ୧.୫% (OSAMB ନିୟମ)",
+    "🚚 Real Freight Modeling": "🚚 ପ୍ରକୃତ ପରିବହନ ଭଡ଼ା ହିସାବ",
+    "Transparent Odisha State-Wise Mandi Comparison (": "ସ୍ୱଚ୍ଛ ଓଡ଼ିଶା ରାଜ୍ୟସ୍ତରୀୟ ମଣ୍ଡି ତୁଳନା (",
+    "Mandis)": "ମଣ୍ଡି)",
+    "Sorted by Net Realization (Highest Profit First)": "ସର୍ବାଧିକ ନିଟ୍ ଲାଭ ଅନୁଯାୟୀ ସଜାଯାଇଛି",
+    "👨‍🌾 Farmer Direct Selling & Bank Payment Setup": "👨‍🌾 ଚାଷୀ ସିଧାସଳଖ ଫସଲ ବିକ୍ରି ଓ ବ୍ୟାଙ୍କ ପେମେଣ୍ଟ ସେଟଅପ୍",
+    "+ Quick Popup Form": "+ ତୁରନ୍ତ ଫର୍ମ ଖୋଲନ୍ତୁ",
+    "Sell Farm Produce & Farmer Bank Details Form": "ଫସଲ ବିକ୍ରି ଏବଂ ଚାଷୀ ବ୍ୟାଙ୍କ ଖାତା ବିବରଣୀ ଫର୍ମ",
+    "Direct Bank Payment Enabled": "ସିଧାସଳଖ ବ୍ୟାଙ୍କ ପେମେଣ୍ଟ ସକ୍ରିୟ",
+    "🌾 Select Crop": "🌾 ଫସଲ ବାଛନ୍ତୁ",
+    "Chilli (Desi Fresh)": "ଲଙ୍କା (ଦେଶୀ ତାଜା)",
+    "Banana (Champa)": "କଦଳୀ (ଚମ୍ପା)",
+    "⭐ Produce Grade": "⭐ ଫସଲ ଗ୍ରେଡ୍",
+    "Grade A (Premium Sorted)": "ଗ୍ରେଡ୍ A (ସର୍ବୋତ୍ତମ ବଛା ଫସଲ)",
+    "Grade B (Standard Market)": "ଗ୍ରେଡ୍ B (ବଜାର ମାନକ)",
+    "Grade C (Fair Average)": "ଗ୍ରେଡ୍ C (ହାରାହାରି ମାନ)",
+    "📍 Farm Location": "📍 ଜମି / ଗ୍ରାମ ଠିକଣା",
+    "Farmer Contact & Bank Account Details (For Buyer Payment)": "ଚାଷୀଙ୍କ ଯୋଗାଯୋଗ ଓ ବ୍ୟାଙ୍କ ଖାତା ବିବରଣୀ (କ୍ରେତାଙ୍କ ଠାରୁ ଟଙ୍କା ପାଇବା ପାଇଁ)",
+    "📝 Harvest Quality Notes (Optional)": "📝 ଫସଲ ଗୁଣବତ୍ତା ବିବରଣୀ (ଇଚ୍ଛାଧୀନ)",
+    "My Published Farm Produce Listings": "ମୋର ପ୍ରକାଶିତ ଫସଲ ବିକ୍ରି ତାଲିକା",
+    "RAZORPAY TEST MODE": "ରେଜରପେ ଟେଷ୍ଟ ମୋଡ୍ (RAZORPAY TEST MODE)",
+    "Medicines (5)": "ଔଷଧ (୫)",
+    "All (5)": "ସମସ୍ତ (୫)",
+    "Your Agricultural Medicine Cart": "ଆପଣଙ୍କ କୃଷି ଔଷଧ କାର୍ଟ",
+    "All prices and discounts are validated directly by the server before payment.": "ପେମେଣ୍ଟ ପୂର୍ବରୁ ସମସ୍ତ ମୂଲ୍ୟ ଏବଂ ରିହାତି ସର୍ଭର ଦ୍ୱାରା ଯାଞ୍ଚ କରାଯାଇଥାଏ।",
+    "← Continue Shopping": "← କିଣାକିଣି ଜାରି ରଖନ୍ତୁ",
+    "Your Cart is Empty": "ଆପଣଙ୍କ କାର୍ଟ ଖାଲି ଅଛି",
+    "Browse our 5 verified crop protection medicines and add them to your cart.": "ଆମର ୫ଟି ପ୍ରମାଣିତ ଫସଲ ସୁରକ୍ଷା ଔଷଧ ଦେଖନ୍ତୁ ଏବଂ କାର୍ଟରେ ଯୋଡ଼ନ୍ତୁ।",
+    "🧴 Browse Medicines": "🧴 ଔଷଧ ଦେଖନ୍ତୁ",
+    "Server Calculated": "ସର୍ଭର ଦ୍ୱାରା ହିସାବ",
+    "Total MRP (": "ମୋଟ MRP (",
+    "items)": "ଟି ସାମଗ୍ରୀ)",
+    "Delivery Charge (Free ≥ ₹499)": "ଡେଲିଭରି ଚାର୍ଜ (₹499 ରୁ ଅଧିକ ହେଲେ ମାଗଣା)",
+    "Final Payable Amount": "ମୋଟ ଦେବାକୁ ଥିବା ଟଙ୍କା",
+    "Proceed to Secure Checkout": "ସୁରକ୍ଷିତ ଚେକଆଉଟ୍ କୁ ଯାଆନ୍ତୁ",
+    "Secure Checkout & Delivery Details": "ସୁରକ୍ଷିତ ଚେକଆଉଟ୍ ଓ ଡେଲିଭରି ବିବରଣୀ",
+    "← Back to Cart": "← କାର୍ଟକୁ ଫେରନ୍ତୁ",
+    "🏡 Village / Plot / Landmark Address": "🏡 ଗ୍ରାମ / ପ୍ଲଟ୍ / ଲ୍ୟାଣ୍ଡମାର୍କ ଠିକଣା",
+    "🏙️ City / District": "🏙️ ସହର / ଜିଲ୍ଲା",
+    "🗺️ State": "🗺️ ରାଜ୍ୟ",
+    "📮 PIN Code": "📮 ପିନ୍ କୋଡ୍ (PIN Code)",
+    "Secured by Razorpay 256-Bit SSL": "Razorpay 256-Bit SSL ଦ୍ୱାରା ସୁରକ୍ଷିତ",
+    "RECOMMENDED": "ସର୍ବୋତ୍ତମ (RECOMMENDED)",
+    "Instant & secure online payment processed by Razorpay. Supports all major methods:": "Razorpay ଦ୍ୱାରା ତୁରନ୍ତ ଓ ସୁରକ୍ଷିତ ଅନଲାଇନ୍ ପେମେଣ୍ଟ। ସମସ୍ତ ମାଧ୍ୟମ ଉପଲବ୍ଧ:",
+    "📱 UPI (GPay / PhonePe / Paytm)": "📱 UPI (GPay / PhonePe / Paytm)",
+    "💳 Credit Card": "💳 କ୍ରେଡିଟ୍ କାର୍ଡ",
+    "🏧 Debit Card": "🏧 ଡେବିଟ୍ କାର୍ଡ",
+    "🏦 Net Banking": "🏦 ନେଟ୍ ବ୍ୟାଙ୍କିଙ୍ଗ୍",
+    "👛 Wallets": "👛 ୱାଲେଟ୍ (Wallets)",
+    "Pay in cash at your doorstep when the sealed pesticide package is delivered to your farm.": "ଆପଣଙ୍କ ଘରେ ବା ଫାର୍ମରେ ଔଷଧ ପ୍ୟାକେଟ୍ ପହଞ୍ଚିବା ପରେ ନଗଦ ଟଙ୍କା ଦିଅନ୍ତୁ।",
+    "Total MRP": "ମୋଟ MRP",
+    "Total Savings": "ମୋଟ ସଞ୍ଚୟ (ରିହାତି)",
+    "Delivery Charge": "ଡେଲିଭରି ଚାର୍ଜ",
+    "Final Total": "ସର୍ବମୋଟ ଦେୟ",
+    "Pay ₹0 Securely": "ସୁରକ୍ଷିତ ପେମେଣ୍ଟ କରନ୍ତୁ",
+    "🔐 Processed securely by": "🔐 ସୁରକ୍ଷିତ ପେମେଣ୍ଟ:",
+    "• Server-side HMAC-SHA256 Signature Verification": "• ସର୍ଭର HMAC-SHA256 ସୁରକ୍ଷା ଯାଞ୍ଚ",
+    "🎉 Payment Successful": "🎉 ପେମେଣ୍ଟ ସଫଳ ହୋଇଛି!",
+    "Your agricultural medicine order is confirmed and being prepared for dispatch.": "ଆପଣଙ୍କ କୃଷି ଔଷଧ ଅର୍ଡର ନିଶ୍ଚିତ ହୋଇଛି ଏବଂ ପଠାଇବା ପାଇଁ ପ୍ରସ୍ତୁତ ହେଉଛି।",
+    "Razorpay Payment ID": "ରେଜରପେ ପେମେଣ୍ଟ ଆଇଡି",
+    "Order Date": "ଅର୍ଡର ତାରିଖ",
+    "CONFIRMED": "ନିଶ୍ଚିତ (CONFIRMED)",
+    "Ordered Medicines": "ଅର୍ଡର ହୋଇଥିବା ଔଷଧ",
+    "Track Order": "ଅର୍ଡର ଟ୍ରାକ୍ କରନ୍ତୁ",
+    "View Order History": "ଅର୍ଡର ଇତିହାସ ଦେଖନ୍ତୁ",
+    "Continue Shopping": "କିଣାକିଣି ଜାରି ରଖନ୍ତୁ",
+    "Payment Incomplete": "ପେମେଣ୍ଟ ଅସମ୍ପୂର୍ଣ୍ଣ",
+    "Payment was not completed.": "ପେମେଣ୍ଟ ସମ୍ପୂର୍ଣ୍ଣ ହୋଇପାରିଲା ନାହିଁ।",
+    "Payment was cancelled or declined. Your order has not been charged.": "ପେମେଣ୍ଟ ବାତିଲ୍ କିମ୍ବା ବିଫଳ ହୋଇଛି। ଆପଣଙ୍କ ଆକାଉଣ୍ଟରୁ ଟଙ୍କା କଟିନାହିଁ।",
+    "Order Reference": "ଅର୍ଡର ରେଫରେନ୍ସ",
+    "FAILED": "ବିଫଳ (FAILED)",
+    "Retry Payment": "ପୁଣି ପେମେଣ୍ଟ ଚେଷ୍ଟା କରନ୍ତୁ",
+    "🛒 Back to Cart": "🛒 କାର୍ଟକୁ ଫେରନ୍ତୁ",
+    "🛍️ Continue Shopping": "🛍️ କିଣାକିଣି ଜାରି ରଖନ୍ତୁ",
+    "My Pesticide Orders & Payment History": "ମୋର କୀଟନାଶକ ଅର୍ଡର ଏବଂ ପେମେଣ୍ଟ ଇତିହାସ",
+    "Track live delivery status and verified Razorpay / COD payment receipts.": "ଲାଇଭ୍ ଡେଲିଭରି ସ୍ଥିତି ଏବଂ ପ୍ରମାଣିତ Razorpay / COD ରସିଦ୍ ଦେଖନ୍ତୁ।",
+    "+ Shop Medicines": "+ ଔଷଧ କିଣନ୍ତୁ",
+    "Review farmer leaf disease problems sent to you and reply with verified treatment prescriptions.": "ଚାଷୀମାନେ ପଠାଇଥିବା ପତ୍ର ରୋଗ ସମସ୍ୟା ଦେଖନ୍ତୁ ଏବଂ ପ୍ରମାଣିତ ଔଷଧ ପରାମର୍ଶ ଦିଅନ୍ତୁ।",
+    "🌿 Leaf Disease Specialist": "🌿 ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞ",
+    "Farmer Leaf Disease Questions & Problems Sent to You": "ଚାଷୀମାନେ ଆପଣଙ୍କୁ ପଠାଇଥିବା ପତ୍ର ରୋଗ ପ୍ରଶ୍ନ ଓ ସମସ୍ୟା",
+    "🛒 Direct Wholesale Buyer Interface": "🛒 ସିଧାସଳଖ ପାଇକାରୀ କ୍ରେତା ପୋର୍ଟାଲ୍",
+    "Browse verified farmer harvest lots across Odisha, inspect quality grades, and place direct farm-gate purchase orders.": "ଓଡ଼ିଶାର ଚାଷୀମାନଙ୍କ ପ୍ରମାଣିତ ଅମଳ ଫସଲ ଦେଖନ୍ତୁ, ଗୁଣବତ୍ତା ଯାଞ୍ଚ କରନ୍ତୁ ଏବଂ ସିଧାସଳଖ ଅର୍ଡର ଦିଅନ୍ତୁ।",
+    "Procurement Mode": "କିଣିବା ପଦ୍ଧତି",
+    "Direct Farm-Gate (0% Broker)": "ସିଧାସଳଖ ଚାଷୀଙ୍କ ଠାରୁ (୦% ଦଲାଲ୍)",
+    "Buyer Trading Hub": "କ୍ରେତା ବାଣିଜ୍ୟ କେନ୍ଦ୍ର",
+    "Odisha APMC & Wholesale": "ଓଡ଼ିଶା APMC ଏବଂ ପାଇକାରୀ ବଜାର",
+    "System Administrator": "ସିଷ୍ଟମ୍ ପ୍ରଶାସକ",
+    "Total Users": "ମୋଟ ଉପଭୋକ୍ତା",
+    "Farmers": "ଚାଷୀ",
+    "Total Leaf Scans": "ମୋଟ ପତ୍ର ସ୍କାନ୍",
+    "Avg Confidence": "ହାରାହାରି ସଠିକତା",
+    "Active AI Model": "ସକ୍ରିୟ ଏଆଇ ମଡେଲ୍",
+    "AI Model Version Registry": "ଏଆଇ ମଡେଲ୍ ସଂସ୍କରଣ ତାଲିକା",
+    "Payment Management (Razorpay & Pesticide Orders)": "ପେମେଣ୍ଟ ପରିଚାଳନା (Razorpay ଏବଂ କୀଟନାଶକ ଅର୍ଡର)",
+    "Monitor Razorpay Order IDs, Payment IDs, customer transactions, and initiate verified refunds. (Razorpay Secret Key is strictly hidden on server).": "Razorpay ଅର୍ଡର ଆଇଡି, ପେମେଣ୍ଟ ଆଇଡି, ଗ୍ରାହକ କାରବାର ଦେଖନ୍ତୁ ଏବଂ ରିଫଣ୍ଡ ପରିଚାଳନା କରନ୍ତୁ।",
+    "All": "ସମସ୍ତ",
+    "Customer": "ଗ୍ରାହକ / ଚାଷୀ",
+    "Products": "ଔଷଧ / ସାମଗ୍ରୀ",
+    "Razorpay Order ID": "ରେଜରପେ ଅର୍ଡର ଆଇଡି",
+    "Action": "କାର୍ଯ୍ୟ",
+    "Loading payment records...": "ପେମେଣ୍ଟ ତଥ୍ୟ ଲୋଡ୍ ହେଉଛି...",
+    "Track individual crop plots, growth stages, and visual health indicators.": "ପ୍ରତ୍ୟେକ ଫସଲ ପ୍ଲଟ୍, ବୃଦ୍ଧି ଅବସ୍ଥା ଏବଂ ସ୍ୱାସ୍ଥ୍ୟ ସୂଚକାଙ୍କ ଦେଖନ୍ତୁ।",
+    "Product Name": "ଔଷଧ ନାମ",
+    "Brand Name": "ବ୍ରାଣ୍ଡ ନାମ",
+    "Sold By": "ବିକ୍ରେତା",
+    "Stock & Rating": "ଷ୍ଟକ୍ ଏବଂ ରେଟିଂ",
+    "Inclusive of all taxes • Authentic Sealed Pack": "ସମସ୍ତ ଟ্যাক୍ସ ଅନ୍ତର୍ଭୁକ୍ତ • ଅସଲି ସିଲ୍ ପ୍ୟାକ୍",
+    "🧪 Active Composition": "🧪 ସକ୍ରିୟ ରାସାୟନିକ ଉପାଦାନ",
+    "Consult Leaf Disease Expert": "ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞଙ୍କ ପରାମର୍ଶ ନିଅନ୍ତୁ",
+    "📖 Full Product Description & Mode of Action": "📖 ଔଷଧର ସମ୍ପୂର୍ଣ୍ଣ ବିବରଣୀ ଓ କାର୍ଯ୍ୟ ପ୍ରଣାଳୀ",
+    "💧 Recommended Field Dosage & Application": "💧 ଜମିରେ ପ୍ରୟୋଗ ମାତ୍ରା ଓ ସ୍ପ୍ରେ ପଦ୍ଧତି",
+    "Live Camera Viewfinder": "ଲାଇଭ୍ କ୍ୟାମେରା ଭ୍ୟୁଫାଇଣ୍ଡର୍",
+    "Align Leaf Here": "ପତ୍ରକୁ ଏଠାରେ ରଖନ୍ତୁ",
+    "📸 Capture Snapshot": "📸 ଫଟୋ ଉଠାନ୍ତୁ",
+    "Cancel": "ବାତିଲ୍ କରନ୍ତୁ",
+    "Farmer Name": "ଚାଷୀଙ୍କ ନାମ",
+    "Select Crop": "ଫସଲ ବାଛନ୍ତୁ",
+    "Farmer Bank Details (For Buyer Payment)": "ଚାଷୀଙ୍କ ବ୍ୟାଙ୍କ ବିବରଣୀ (କ୍ରେତା ପେମେଣ୍ଟ ପାଇଁ)",
+    "Harvest Description & Quality Notes": "ଅମଳ ଫସଲର ବିବରଣୀ ଓ ଗୁଣବତ୍ତା",
+    "Publish Produce to Marketplace": "ବଜାରରେ ଫସଲ ପ୍ରକାଶ କରନ୍ତୁ",
+    "Place Produce Order & Pay Farmer": "ଫସଲ ଅର୍ଡର କରନ୍ତୁ ଓ ଚାଷୀଙ୍କୁ ପେମେଣ୍ଟ କରନ୍ତୁ",
+    "Crop:": "ଫସଲ:",
+    "Direct Farmer Harvest": "ସିଧାସଳଖ ଚାଷୀଙ୍କ ଅମଳ ଫସଲ",
+    "Pay to Farmer (Farmer Payment Account)": "ଚାଷୀଙ୍କୁ ପେମେଣ୍ଟ କରନ୍ତୁ (ଚାଷୀଙ୍କ ବ୍ୟାଙ୍କ ଖାତା)",
+    "Buyer / Trading Firm Name": "କ୍ରେତା / ବ୍ୟବସାୟ ପ୍ରତିଷ୍ଠାନ ନାମ",
+    "Buyer Contact Phone": "କ୍ରେତାଙ୍କ ଫୋନ୍ ନମ୍ବର",
+    "Buyer Warehouse / Shop Location (Address)": "କ୍ରେତାଙ୍କ ଗୋଦାମ / ଦୋକାନ ଠିକଣା",
+    "Procurement Hub & District Corridor": "କ୍ରୟ କେନ୍ଦ୍ର ଓ ଜିଲ୍ଲା",
+    "Notes / Logistics Pickup Date": "ଟିପ୍ପଣୀ / ଗାଡ଼ି ଉଠାଇବା ତାରିଖ",
+    "Confirm Order & Pay to Farmer Account": "ଅର୍ଡର ନିଶ୍ଚିତ କରନ୍ତୁ ଓ ଚାଷୀ ଖାତାକୁ ଟଙ୍କା ପଠାନ୍ତୁ",
+    "Secure Phone & OTP Login": "ସୁରକ୍ଷିତ ଫୋନ୍ ଓ OTP ଲଗଇନ୍",
+    "OTP sent to": "OTP ପଠାଯାଇଛି:",
+    "Change Number": "ନମ୍ବର ବଦଳାନ୍ତୁ",
+    "Enter 6-Digit Verification Code": "୬-ଅଙ୍କ ବିଶିଷ୍ଟ OTP କୋଡ୍ ଦିଅନ୍ତୁ",
+    "Enter the 6-digit verification code sent to your mobile.": "ଆପଣଙ୍କ ମୋବାଇଲକୁ ପଠାଯାଇଥିବା ୬-ଅଙ୍କ OTP କୋଡ୍ ଦିଅନ୍ତୁ।",
+
+    // Placeholders in Odia
+    "Enter your full name": "ଆପଣଙ୍କ ସମ୍ପୂର୍ଣ୍ଣ ନାମ ଲେଖନ୍ତୁ",
+    "10-digit mobile number": "୧୦-ଅଙ୍କ ମୋବାଇଲ୍ ନମ୍ବର",
+    "Create your secure password": "ଆପଣଙ୍କ ସୁରକ୍ଷିତ ପାସୱାର୍ଡ ତିଆରି କରନ୍ତୁ",
+    "Re-enter your password": "ପାସୱାର୍ଡ ପୁଣି ଥରେ ଲେଖନ୍ତୁ",
+    "e.g. Tomato & Rice Leaf Disease Specialist": "ଯଥା: ଟମାଟୋ ଓ ଧାନ ପତ୍ର ରୋଗ ବିଶେଷଜ୍ଞ",
+    "e.g. Khordha, Odisha": "ଯଥା: ଖୋର୍ଦ୍ଧା, ଓଡ଼ିଶା",
+    "e.g. Rice, Tomato": "ଯଥା: ଧାନ, ଟମାଟୋ",
+    "Enter your Gmail ID": "ଆପଣଙ୍କ ଜିମେଲ୍ ଆଇଡି ଲେଖନ୍ତୁ",
+    "Enter your password": "ଆପଣଙ୍କ ପାସୱାର୍ଡ ଲେଖନ୍ତୁ",
+    "Enter your name": "ଆପଣଙ୍କ ନାମ ଲେଖନ୍ତୁ",
+    "Paste remote webcam or IP camera snapshot URL (e.g. http://.../snapshot.jpg)": "ୱେବକ୍ୟାମ୍ ବା IP କ୍ୟାମେରା ଫଟୋ ଲିଙ୍କ୍ ଏଠାରେ ପେଷ୍ଟ କରନ୍ତୁ...",
+    "e.g. Mere fasal ke patton par daag aa rahe hain, kripya sahi dawai aur matra batayein...": "ଯଥା: ମୋ ଫସଲ ପତ୍ରରେ କଳା ଦାଗ ଦେଖାଯାଉଛି, ଦୟାକରି ସଠିକ୍ ଔଷଧ ଓ ମାତ୍ରା ଜଣାନ୍ତୁ...",
+    "Ask anything in English, Odia, or Hindi...": "ଓଡ଼ିଆ, ହିନ୍ଦୀ କିମ୍ବା ଇଂରାଜୀରେ ଯେକୌଣସି କୃଷି ପ୍ରଶ୍ନ ପଚାରନ୍ତୁ...",
+    "e.g. 2 bags urea": "ଯଥା: ୨ ବସ୍ତା ୟୁରିଆ ସାର",
+    "Village, District, Odisha": "ଗ୍ରାମ, ଜିଲ୍ଲା, ଓଡ଼ିଶା",
+    "e.g. State Bank of India": "ଯଥା: ଷ୍ଟେଟ୍ ବ୍ୟାଙ୍କ ଅଫ୍ ଇଣ୍ଡିଆ (SBI)",
+    "Enter Account Holder Name": "ଖାତାଧାରୀଙ୍କ ନାମ ଲେଖନ୍ତୁ",
+    "Enter Bank Account No.": "ବ୍ୟାଙ୍କ ଆକାଉଣ୍ଟ୍ ନମ୍ବର ଲେଖନ୍ତୁ",
+    "Freshly harvested, clean sorted, ready for buyer pickup.": "ତାଜା ଅମଳ, ସଫା ଓ ବଛା ହୋଇଥିବା ଫସଲ, ବିକ୍ରି ପାଇଁ ପ୍ରସ୍ତୁତ।",
+    "🔍 Search medicine, crop, pest...": "🔍 ଔଷଧ, ଫସଲ କିମ୍ବା ପୋକ/ରୋଗ ନାମ ଖୋଜନ୍ତୁ...",
+    "Enter receiver full name": "ଗ୍ରାହକଙ୍କ ସମ୍ପୂର୍ଣ୍ଣ ନାମ ଲେଖନ୍ତୁ",
+    "House No, Village, GP, Near Mandi / Block Road": "ଘର ନଂ, ଗ୍ରାମ, ପଞ୍ଚାୟତ, ମଣ୍ଡି / ବ୍ଲକ୍ ରୋଡ୍ ପାଖ",
+    "e.g. Bhubaneswar, Khordha": "ଯଥା: ଭୁବନେଶ୍ୱର, ଖୋର୍ଦ୍ଧା",
+    "Account Holder Name": "ଖାତାଧାରୀଙ୍କ ନାମ",
+    "Bank Account Number": "ବ୍ୟାଙ୍କ ଆକାଉଣ୍ଟ୍ ନମ୍ବର",
+    "Freshly harvested, clean sorted, IPM managed. Ready for immediate mandi/buyer pickup.": "ତାଜା ଅମଳ ଓ ସଫା ଫସଲ। ତୁରନ୍ତ ବିକ୍ରି ପାଇଁ ପ୍ରସ୍ତୁତ।",
+    "Enter buyer firm name": "କ୍ରେତା କମ୍ପାନୀ/ଦୋକାନ ନାମ ଲେଖନ୍ତୁ",
+    "Enter contact phone": "ଯୋଗାଯୋଗ ଫୋନ୍ ନମ୍ବର ଲେଖନ୍ତୁ",
+    "e.g. Buyer provides mandi transport truck; pickup on Tuesday morning.": "ଯଥା: ମଙ୍ଗଳବାର ସକାଳେ ଗାଡ଼ି ଦ୍ୱାରା ଫସଲ ଉଠାଯିବ।"
+  },
+
+  hi: {
+    // App Header & Roles
+    "AI Farm Co-Pilot": "एआई फार्म को-पायलट",
+    "AI Farm Co-Pilot & Market Optimizer": "एआई फार्म को-पायलट और मार्केट ऑप्टिमाइज़र",
+    "Smart Agricultural Assistant for Indian Farmers": "भारतीय किसानों के लिए स्मार्ट डिजिटल कृषि सहायक",
+    "Odisha Edition": "ओडिशा संस्करण",
+    "Sign Out": "लॉग आउट (Sign Out)",
+    "Farmer": "किसान (Farmer)",
+    "Expert": "कृषि विशेषज्ञ (Expert)",
+    "Buyer": "खरीदार / व्यापारी (Buyer)",
+    "Admin": "सिस्टम एडमिन (Admin)",
+    "Agricultural Expert": "कृषि विशेषज्ञ",
+    "Produce Buyer": "फसल खरीदार",
+    "System Admin": "सिस्टम एडमिन",
+
+    // Navigation Tabs
+    "My Farm": "मेरा खेत",
+    "Check Disease": "रोग जांच",
+    "AI Co-Pilot": "एआई को-पायलट",
+    "Soil Health": "मृदा स्वास्थ्य",
+    "Farm Business": "कृषि व्यापार",
+    "Market Optimizer": "मंडी भाव तुलना",
+    "Sell Produce": "फसल बेचें",
+    "Pesticides": "कीटनाशक दवाएं",
+    "Buyer Portal": "खरीदार पोर्टल",
+    "Expert Advice": "विशेषज्ञ सलाह",
+    "Input Store": "दवा दुकान",
+    "Admin Portal": "एडमिन पोर्टल",
+
+    // 1st Screen Auth Portal
+    "1ST SCREEN • MANDATORY ACCOUNT PORTAL": "प्रथम स्क्रीन • अनिवार्य खाता पोर्टल",
+    "Register or Sign In with your": "अपने",
+    "Gmail": "जीमेल (Gmail)",
+    "Mobile Number": "मोबाइल नंबर",
+    "&": "और",
+    "Own Password": "खुद के पासवर्ड",
+    "Select your role below (": "नीचे अपनी भूमिका चुनें (",
+    "is 1st Priority) to enter your dedicated portal.": "प्रथम प्राथमिकता) और अपने पोर्टल में प्रवेश करें।",
+    "1. Select Who You Are (Role Priority)": "1. चुनें कि आप कौन हैं (भूमिका प्राथमिकता)",
+    "1ST PRIORITY": "प्रथम प्राथमिकता",
+    "Crop & Soil": "फसल और मिट्टी",
+    "Plant Doctor": "पौधा डॉक्टर",
+    "Buy Crops": "फसल खरीदें",
+    "System": "सिस्टम",
+    "📝 Sign Up (Create Account)": "📝 साइन अप (नया खाता बनाएं)",
+    "🔐 Sign In (Existing User)": "🔐 साइन इन (मौजूदा उपयोगकर्ता)",
+    "Full Name *": "पूरा नाम *",
+    "Gmail / Email ID *": "जीमेल / ईमेल आईडी *",
+    "Mobile Phone Number *": "मोबाइल फोन नंबर *",
+    "State & District (Odisha) *": "राज्य और जिला (ओडिशा) *",
+    "Create Own Password *": "अपना पासवर्ड बनाएं *",
+    "Confirm Password *": "पासवर्ड की पुष्टि करें *",
+    "🌾 Farmer Profile Details": "🌾 किसान प्रोफ़ाइल विवरण",
+    "Farm Name": "खेत / फार्म का नाम",
+    "Leaf Disease Expert": "पत्ती रोग विशेषज्ञ",
+    "Land (Acres)": "जमीन (एकड़)",
+    "Crops Grown": "उगाई जाने वाली फसलें",
+    "👨‍🔬 Agricultural Expert Details": "👨‍🔬 कृषि विशेषज्ञ विवरण",
+    "Specialization": "विशेषज्ञता विभाग",
+    "Qualification / University": "योग्यता / विश्वविद्यालय",
+    "Experience (Years)": "अनुभव (वर्ष)",
+    "🛒 Produce Buyer / Trader Details": "🛒 फसल खरीदार / व्यापारी विवरण",
+    "Business / Company Name": "व्यापार / कंपनी का नाम",
+    "Buyer Type": "खरीदार का प्रकार",
+    "Interested Crops": "खरीदने के लिए इच्छुक फसलें",
+    "🛡️ System Administrator Details": "🛡️ सिस्टम प्रशासक विवरण",
+    "Admin Access Code / Department": "एडमिन एक्सेस कोड / विभाग",
+    "🚀 Complete Sign Up & Enter Portal": "🚀 साइन अप पूरा करें और पोर्टल में प्रवेश करें",
+    "Registered Gmail OR Mobile Number *": "पंजीकृत जीमेल या मोबाइल नंबर *",
+    "Your Password *": "आपका पासवर्ड *",
+    "🔓 Sign In & Enter Portal": "🔓 साइन इन करें और पोर्टल में प्रवेश करें",
+
+    // Dashboard & Weather
+    "Welcome back": "नमस्ते, स्वागत है",
+    "Active Fields": "सक्रिय खेत/प्लॉट",
+    "Today's Microclimate": "आज का मौसम",
+    "Season Expenses": "कुल मौसमी खर्च",
+    "Realized Revenue": "कुल शुद्ध आय",
+    "Smart Agricultural Alerts": "स्मार्ट कृषि अलर्ट",
+    "Quick Farmer Actions": "त्वरित किसान कार्य",
+    "📍 Share My Live GPS Location": "📍 मेरी लाइव GPS लोकेशन साझा करें",
+    "Live GPS Verified": "लाइव GPS सत्यापित",
+    "Localized Microclimate Weather": "आपके खेत का सटीक मौसम",
+    "Real-Time Local Disease & Weather Risk Alert": "स्थानीय रोग एवं मौसम जोखिम अलर्ट",
+    "Temperature": "तापमान",
+    "Humidity": "नमी (Humidity)",
+    "Wind Speed": "हवा की गति",
+    "Rain Probability": "बारिश की संभावना",
+    "Soil Moisture": "मिट्टी की नमी",
+    "Solar UV Index": "सौर UV सूचकांक",
+    "7-Day Agricultural Spray & Harvest Forecast": "7-दिवसीय कृषि छिड़काव एवं कटाई पूर्वानुमान",
+
+    // Check Disease & Leaf Scanner
+    "AI Leaf Disease Computer Vision Scanner": "एआई पत्ती रोग कंप्यूटर विजन स्कैनर",
+    "Scan leaf photo or capture from live camera to identify diseases, get verified treatments, and connect with experts.": "पत्ती का फोटो अपलोड करें या सीधे कैमरे से स्कैन करके रोग पहचानें, प्रमाणित दवा जानें और विशेषज्ञों से जुड़ें।",
+    "Select Crop to Diagnose": "जांच के लिए फसल चुनें",
+    "Upload Image": "फोटो अपलोड करें",
+    "Live Webcam": "लाइव कैमरा",
+    "Webcam Stream URL": "वेबकैम लिंक (URL)",
+    "Capture & Diagnose": "फोटो खींचें और जांचें",
+    "Fetch & Analyze URL": "URL से फोटो लाकर जांचें",
+    "Analyze Leaf Image Now": "अभी पत्ती फोटो की जांच करें",
+    "AI Diagnostic Result": "एआई रोग पहचान परिणाम",
+    "AI Confidence": "एआई सटीकता विश्वास",
+    "Severity Level": "गंभीरता स्तर",
+    "Pathological Symptoms": "रोग के लक्षण",
+    "Possible Causes & Vectors": "संभावित कारण और वाहक",
+    "IPM & Field Management": "रोकथाम और खेत प्रबंधन",
+    "Verified Agricultural Medicines / Inputs": "प्रमाणित कृषि दवाएं और उपचार",
+    "Dosage & Application": "दवा की मात्रा और छिड़काव विधि",
+    "Safety & Pre-Harvest Interval (PHI)": "सुरक्षा और कटाई पूर्व अवधि (PHI)",
+    "Consult Plant Pathologist": "कृषि वैज्ञानिक से सलाह लें",
+    "Ask Our Leaf Disease Experts": "हमारे पत्ती रोग विशेषज्ञों से पूछें",
+    "Send Direct Consultation Request": "सीधे विशेषज्ञ परामर्श अनुरोध भेजें",
+    "My Expert Consultations & Prescriptions": "मेरे विशेषज्ञ परामर्श और उपचार पर्चियां",
+
+    // AI Co-Pilot
+    "Ask AI Farm Co-Pilot": "एआई फार्म को-पायलट से पूछें",
+    "Voice or text enabled agricultural assistant aware of your farm, crops, soil, and local mandi prices.": "आवाज या टेक्स्ट के माध्यम से अपनी फसल, मिट्टी, मौसम और मंडी भाव के बारे में कोई भी सवाल पूछें।",
+    "🎙️ Ask AI Farm Co-Pilot": "🎙️ एआई को-पायलट से पूछें",
+    "Send": "भेजें",
+    "Speak": "बोलें",
+    "Clear Chat": "चैट साफ़ करें",
+
+    // Soil Health
+    "Soil Intelligence & Nutrient Advisory": "मृदा स्वास्थ्य और पोषक तत्व सलाह",
+    "Understand your soil parameters, crop suitability index, and fertilizer recommendations.": "मिट्टी परीक्षण के आधार पर उपयुक्त फसलें और आवश्यक खाद की सटीक मात्रा जानें।",
+    "Soil pH": "मिट्टी का pH",
+    "Available Nitrogen (N kg/ha)": "उपलब्ध नाइट्रोजन (N kg/ha)",
+    "Phosphorus (P kg/ha)": "फास्फोरस (P kg/ha)",
+    "Potassium (K kg/ha)": "पोटैशियम (K kg/ha)",
+    "Organic Carbon (%)": "जैविक कार्बन (%)",
+    "Moisture (%)": "नमी (%)",
+    "Soil Type": "मिट्टी का प्रकार",
+    "Analyze Soil & Get Crop Suitability": "मिट्टी का विश्लेषण करें और उपयुक्त फसल जानें",
+    "Overall Fertility Score": "कुल उर्वरता स्कोर",
+    "Crop Suitability Ranking": "उपयुक्त फसलों की रैंकिंग",
+    "Targeted Nutrient Corrections": "पोषक तत्व एवं खाद सुधार सुझाव",
+
+    // Farm Business
+    "Farm Business Maker & Expense Tracker": "कृषि व्यापार योजना और खर्च प्रबंधन",
+    "Simulate crop budgets, record daily expenses by voice, and track farm profits.": "खेती की लागत का अनुमान लगाएं, बोलकर दैनिक खर्च दर्ज करें और शुद्ध लाभ देखें।",
+    "Business Scenario Planner": "व्यापार योजनाकार",
+    "Expense Tracker": "खर्च ट्रैकर",
+    "Income & Sales": "आय और बिक्री",
+    "Land Area (Acres)": "जमीन का क्षेत्रफल (एकड़)",
+    "Seed Cost (₹)": "बीज लागत (₹)",
+    "Fertilizer Cost (₹)": "खाद/उर्वरक लागत (₹)",
+    "Labour Cost (₹)": "मजदूरी लागत (₹)",
+    "Irrigation Cost (₹)": "सिंचाई लागत (₹)",
+    "Pesticide/Protection Cost (₹)": "कीटनाशक लागत (₹)",
+    "Machinery/Tractor Cost (₹)": "ट्रैक्टर/उपकरण किराया (₹)",
+    "Transport Freight Cost (₹)": "परिवहन/भाड़ा लागत (₹)",
+    "Expected Yield (Quintals)": "अनुमानित पैदावार (क्विंटल)",
+    "Expected Price / Quintal (₹)": "अनुमानित बिक्री भाव / क्विंटल (₹)",
+    "Calculate Profitability Scenario": "लाभ-हानि गणना करें",
+    "🎙️ Log Expense by Voice": "🎙️ बोलकर खर्च दर्ज करें",
+    "Estimated Total Cost": "अनुमानित कुल लागत",
+    "Estimated Gross Revenue": "अनुमानित कुल आय",
+    "Estimated Net Return": "अनुमानित शुद्ध लाभ",
+    "Simulated Net ROI": "अनुमानित लाभ दर (%)",
+
+    // Market Optimizer
+    "Mandi Market Optimizer": "मंडी भाव ऑप्टिमाइज़र",
+    "Compare nearby APMC mandis by transparent net realization after transport and commission fees.": "परिवहन भाड़ा और मंडी टैक्स घटाकर सबसे ज्यादा शुद्ध मुनाफा देने वाली मंडी चुनें।",
+    "Harvest Quantity to Sell (Quintals)": "बेचने हेतु मात्रा (क्विंटल)",
+    "Quality / Produce Grade": "फसल की गुणवत्ता / ग्रेड",
+    "Calculate Optimal Selling Mandi": "सर्वोत्तम मंडी की गणना करें",
+    "HIGHEST NET PROFIT": "सर्वाधिक शुद्ध मुनाफा",
+    "Mandi / Market Yard": "मंडी का नाम",
+    "Modal Price / Qtl": "मंडी भाव / क्विंटल",
+    "Distance": "दूरी",
+    "Transport Freight": "परिवहन भाड़ा",
+    "Mandi Fee (1.5%)": "मंडी शुल्क (1.5%)",
+    "Estimated Net Realization": "हाथ में आने वाला शुद्ध पैसा",
+    "Net Price Received / Qtl": "प्रति क्विंटल शुद्ध प्राप्त भाव",
+
+    // Sell Produce & Farmer Bank Details
+    "Direct Farmer-to-Buyer Produce Marketplace": "सीधा किसान-से-खरीदार फसल बिक्री बाजार",
+    "List your harvested crops with photos, expected price, and bank payout details for verified Odisha buyers.": "अपनी तैयार फसल को फोटो, कीमत और बैंक खाते के विवरण के साथ प्रमाणित खरीदारों को सीधे बेचें।",
+    "Post Harvest Lot for Sale": "बिक्री के लिए फसल सूचीबद्ध करें",
+    "Crop Name *": "फसल का नाम *",
+    "Variety / Grade": "किस्म / ग्रेड",
+    "Available Quantity (Quintals) *": "उपलब्ध मात्रा (क्विंटल) *",
+    "Asking Price / Quintal (₹) *": "मांगी गई कीमत / क्विंटल (₹) *",
+    "Harvest / Pickup Location *": "फसल उठाने का स्थान *",
+    "Farmer Payout Bank Details (For Direct Buyer Payment)": "किसान बैंक खाता विवरण (सीधे भुगतान प्राप्त करने हेतु)",
+    "Bank Name *": "बैंक का नाम *",
+    "Account Holder Name *": "खाताधारक का नाम *",
+    "Bank Account Number *": "बैंक खाता संख्या *",
+    "IFSC Code *": "IFSC कोड *",
+    "UPI ID (Optional)": "UPI आईडी (वैकल्पिक)",
+    "🌾 Publish Crop to Buyer Marketplace": "🌾 खरीदार बाजार में फसल प्रकाशित करें",
+    "My Active Crop Listings": "मेरी सक्रिय फसल बिक्री सूची",
+    "Incoming Buyer Purchase Orders": "खरीदारों से प्राप्त खरीद ऑर्डर",
+
+    // Pesticides Store & Razorpay E-Commerce
+    "Pesticides & Crop Protection Store": "कीटनाशक एवं फसल सुरक्षा दवा दुकान",
+    "VERIFIED AGRI INPUTS • RAZORPAY SECURE CHECKOUT": "प्रमाणित कृषि दवाएं • रेज़रपे (RAZORPAY) सुरक्षित ऑनलाइन भुगतान",
+    "Authentic agricultural insecticides, fungicides, bio-fungicides, and herbicides with expert dosage guidance and instant Razorpay online payment.": "विशेषज्ञ खुराक सलाह और तुरंत रेज़रपे (Razorpay) ऑनलाइन पेमेंट सुविधा के साथ असली कीटनाशक, फफूंदनाशक, जैविक फफूंदनाशक और खरपतवारनाशक दवाएं।",
+    "My Orders": "मेरे ऑर्डर",
+    "Cart": "कार्ट (Cart)",
+    "Search by medicine name, brand, crop (Rice, Tomato, Potato, Cotton), or pest/disease...": "दवा का नाम, ब्रांड, फसल (धान, टमाटर, आलू, कपास) या रोग/कीट के नाम से खोजें...",
+    "All Categories": "सभी श्रेणियां (All Categories)",
+    "Insecticide": "कीटनाशक (Insecticide)",
+    "Fungicide": "फफूंदनाशक (Fungicide)",
+    "Bio Fungicide": "जैविक फफूंदनाशक (Bio Fungicide)",
+    "Herbicide": "खरपतवारनाशक (Herbicide)",
+    "All Crops": "सभी फसलें (All Crops)",
+    "5 Verified Medicines": "5 प्रमाणित कृषि दवाएं",
+    "In Stock": "स्टॉक में उपलब्ध",
+    "Out of Stock": "स्टॉक समाप्त",
+    "Add to Cart": "कार्ट में जोड़ें",
+    "Buy Now": "अभी खरीदें",
+    "Consult Expert": "विशेषज्ञ से पूछें",
+    "View Details": "विवरण देखें",
+    "Pack Size": "पैक साइज",
+    "Suitable Crops": "उपयुक्त फसलें",
+    "Target Pests / Diseases": "लक्षित कीट / रोग",
+    "Safety Information & PHI": "सुरक्षा जानकारी एवं कटाई अंतराल",
+    "Your Agri Medicine Cart": "आपका कृषि दवा कार्ट",
+    "Proceed to Checkout": "चेकआउट (Checkout) पर जाएं",
+    "Checkout & Delivery Details": "चेकआउट और डिलीवरी विवरण",
+    "Delivery Address Details": "डिलीवरी पता विवरण",
+    "Select Payment Method": "भुगतान का तरीका चुनें",
+    "Online Payment — Razorpay (UPI / Google Pay / PhonePe / Cards / NetBanking)": "ऑनलाइन पेमेंट — Razorpay (UPI / Google Pay / PhonePe / कार्ड / नेटबैंकिंग)",
+    "Cash on Delivery (Pay at Farm Doorstep)": "कैश ऑन डिलीवरी (घर पर दवा मिलने पर पैसे दें)",
+    "Pay Online with Razorpay": "Razorpay से ऑनलाइन पेमेंट करें",
+    "Place Cash on Delivery Order": "कैश ऑन डिलीवरी ऑर्डर करें",
+    "Order Summary & Price Breakdown": "ऑर्डर सारांश और मूल्य विवरण",
+    "Subtotal": "उप-योग (Subtotal)",
+    "Discount Savings": "छूट बचत",
+    "Shipping / Delivery": "डिलीवरी शुल्क",
+    "FREE": "मुफ़्त (FREE)",
+    "Total Payable Amount": "कुल देय राशि",
+    "My Pesticide & Medicine Orders": "मेरे कीटनाशक और दवा ऑर्डर इतिहास",
+    "Refresh Orders": "ऑर्डर रिफ्रेश करें",
+
+    // Product Names in Hindi
+    "Adama Tapuz Insecticide": "अदामा तापुज़ कीटनाशक (Adama Tapuz Insecticide)",
+    "Anand Dr.Bacto's Ampelo Bio Fungicide - Ampelomyces Quisqualis 2.0 A.S.": "आनंद डॉ. बैक्टोज़ एम्पेलो जैविक फफूंदनाशक (Anand Ampelo Bio Fungicide)",
+    "Best Agro Promos Fungicide - Metiram 55% + Pyraclostrobin 5% WG": "बेस्ट एग्रो प्रोमोस फफूंदनाशक (Best Agro Promos Fungicide)",
+    "IIL Milquat Herbicide": "आईआईएल मिलक्वाट खरपतवारनाशक (IIL Milquat Herbicide)",
+    "JU Jupiter 505 Insecticide": "जेयू जुपिटर 505 कीटनाशक (JU Jupiter 505 Insecticide)",
+
+    // Admin Payment Management
+    "Agri E-Commerce & Razorpay Payment Management": "कृषि ई-कॉमर्स और रेज़रपे (Razorpay) भुगतान प्रबंधन",
+    "Monitor live Razorpay transactions, order statuses, payment verification, and issue instant refunds.": "लाइव रेज़रपे लेनदेन, ऑर्डर स्थिति, भुगतान सत्यापन की निगरानी करें और तुरंत रिफंड जारी करें।",
+    "All Payments": "सभी भुगतान",
+    "Paid (Verified)": "भुगतान सफल (PAID)",
+    "Pending": "लंबित (PENDING)",
+    "Failed": "असफल (FAILED)",
+    "Refunded": "रिफंड किया गया (REFUNDED)",
+    "Order ID": "ऑर्डर आईडी",
+    "Farmer / Customer": "किसान / ग्राहक",
+    "Medicines": "दवाइयां",
+    "Amount": "राशि",
+    "Method": "भुगतान माध्यम",
+    "Payment Status": "भुगतान स्थिति",
+    "Razorpay IDs": "रेज़रपे आईडी",
+    "Order Status": "ऑर्डर स्थिति",
+    "Actions": "कार्रवाई",
+    "TITAN 2.0": "टाइटन 2.0 (TITAN 2.0)",
+    "Complete Digital Agricultural Assistant for Indian Farmers": "भारतीय किसानों के लिए संपूर्ण डिजिटल कृषि सहायक",
+    "1st Screen Access Gate • TITAN 2.0": "प्रथम स्क्रीन प्रवेश द्वार • टाइटन 2.0",
+    "• Strict Individual User Portal Security": "• सख्त व्यक्तिगत उपयोगकर्ता पोर्टल सुरक्षा",
+    "Register with your Gmail ID and create your secure password. Sign in to unlock full farm features.": "अपनी जीमेल आईडी के साथ पंजीकरण करें और अपना सुरक्षित पासवर्ड बनाएं। सभी कृषि सुविधाओं के लिए साइन इन करें।",
+    "📧 Gmail ID / Email Address": "📧 जीमेल आईडी / ईमेल पता",
+    "🏷️ Select Who You Are (Your Role)": "🏷️ चुनें कि आप कौन हैं (आपकी भूमिका)",
+    "🩺 Expert (Leaf Disease Expert)": "🩺 विशेषज्ञ (पत्ती रोग विशेषज्ञ)",
+    "🛒 Buyer (Crop Produce Buyer)": "🛒 खरीदार (फसल खरीदार / व्यापारी)",
+    "⚙️ Admin (System Administrator)": "⚙️ एडमिन (सिस्टम प्रशासक)",
+    "(Specialist Crop / Disease)": "(विशेषज्ञ फसल / रोग)",
+    "📍 State & District / Village": "📍 राज्य और जिला / गांव",
+    "🌾 Crops": "🌾 फसलें",
+    "Create Account & Enter Selected Portal": "खाता बनाएं और चयनित पोर्टल में प्रवेश करें",
+    "🔒 End-to-end encrypted passwords. Only the interface for your selected role will be shown after login.": "🔒 एंड-टू-एंड सुरक्षित पासवर्ड। लॉगिन के बाद केवल आपकी चयनित भूमिका का पोर्टल दिखाई देगा।",
+    "1️⃣ Choose Who You Are (Select Your Role)": "1️⃣ चुनें कि आप कौन हैं (अपनी भूमिका चुनें)",
+    "2️⃣ Registered Gmail ID": "2️⃣ पंजीकृत जीमेल आईडी",
+    "5️⃣ 🌿 Leaf Disease Expert": "5️⃣ 🌿 पत्ती रोग विशेषज्ञ",
+    "Farmer Account": "किसान खाता",
+    "FARMER": "किसान (FARMER)",
+    "Protected 🔐": "सुरक्षित 🔐",
+    "Register New User": "नया उपयोगकर्ता पंजीकरण",
+    "Log Out / Change Mobile": "लॉग आउट / मोबाइल बदलें",
+    "Farm Health Status": "खेत की स्वास्थ्य स्थिति",
+    "Good Vigour": "उत्तम स्वास्थ्य",
+    "Kishan Smart Farm": "किसान स्मार्ट फार्म",
+    "Shared Live Field Location": "साझा की गई लाइव खेत लोकेशन",
+    "Check Plant Disease": "पौधा/पत्ती रोग जांचें",
+    "Live Location Weather": "लाइव लोकेशन मौसम",
+    "Checking...": "जांच हो रही है...",
+    "Feels like: --°C": "महसूस तापमान: --°C",
+    "Detecting Location...": "लोकेशन खोजी जा रही है...",
+    "💨 Wind:": "💨 हवा की गति:",
+    "📍 GPS: Detecting Device Satellite Location...": "📍 GPS: डिवाइस सैटेलाइट लोकेशन खोजी जा रही है...",
+    "Device Status: Ready": "डिवाइस स्थिति: तैयार",
+    "Live Microclimate Weather at Your Exact Field Location": "आपके खेत की सटीक लाइव मौसम जानकारी",
+    "Click below to share your device live GPS. Real-time temperature, humidity, rainfall probability (बारिश की संभावना), and foliar disease outbreak risk alerts will immediately recalculate for your exact live coordinates.": "अपनी लाइव GPS लोकेशन साझा करने के लिए नीचे क्लिक करें। तापमान, नमी, बारिश की संभावना और पत्ती रोग जोखिम अलर्ट तुरंत अपडेट हो जाएंगे।",
+    "Share Live GPS Location": "लाइव GPS लोकेशन साझा करें",
+    "📍 Preset: Khordha / Bhubaneswar": "📍 प्रीसेट: खोरधा / भुवनेश्वर",
+    "📍 Preset: Cuttack Mahanadi Basin": "📍 प्रीसेट: कटक महानदी क्षेत्र",
+    "📍 Preset: Puri Coastal Agro-Zone": "📍 प्रीसेट: पुरी तटीय कृषि क्षेत्र",
+    "📍 Preset: Balasore Coastal Plains": "📍 प्रीसेट: बालासोर तटीय मैदान",
+    "📍 Preset: Ganjam South Agro-Zone": "📍 प्रीसेट: गंजाम दक्षिण कृषि क्षेत्र",
+    "📍 Preset: Koraput Hill Agro-Zone": "📍 प्रीसेट: कोरापुट पहाड़ी क्षेत्र",
+    "📍 Bhubaneswar, Odisha": "📍 भुवनेश्वर, ओडिशा",
+    "Partly Cloudy ⛅": "आंशिक बादल ⛅",
+    "Coordinates: 20.2961° N, 85.8245° E (Live GPS Telemetry)": "निर्देशांक: 20.2961° N, 85.8245° E (लाइव GPS)",
+    "🌡️ Real Temp:": "🌡️ वास्तविक तापमान:",
+    "Live AI Triggers": "लाइव एआई अलर्ट",
+    "Active Plots": "सक्रिय खेत प्लॉट",
+    "3 Plots": "3 प्लॉट",
+    "Realized Sales": "कुल बिक्री आय",
+    "+₹77,200 Net Return": "+₹77,200 शुद्ध लाभ",
+    "Model Accuracy": "मॉडल सटीकता",
+    "Calibrated Ensemble v1.0": "कैलिब्रेटेड एन्सेम्बल v1.0",
+    "Live Camera Input Mode": "लाइव कैमरा इनपुट मोड",
+    "Live Camera Snap": "लाइव कैमरा फोटो",
+    "Open Live Webcam": "लाइव वेबकैम खोलें",
+    "Webcam / IP Camera URL": "वेबकैम / IP कैमरा लिंक",
+    "Photo Capture Through URL Link of Webcam / IP Camera": "वेबकैम या IP कैमरा URL लिंक के माध्यम से फोटो लें",
+    "Fetch & Scan": "फोटो लाएं और स्कैन करें",
+    "Or test with realistic foliar specimens:": "या नमूना पत्ती फोटो से परीक्षण करें:",
+    "🌱 Healthy Foliage": "🌱 स्वस्थ हरी पत्ती",
+    "No leaf selected yet.": "अभी तक कोई पत्ती नहीं चुनी गई है।",
+    "Point Live Camera, open Webcam, or choose a Specimen above.": "लाइव कैमरा दिखाएं, वेबकैम खोलें या ऊपर से नमूना पत्ती चुनें।",
+    "🤖 AI Folate Verification Engine:": "🤖 एआई पत्ती सत्यापन इंजन:",
+    "Our computer vision model verifies plant foliar tissue (Excess Green Index & HSV chromaticity), segments necrotic lesion spots, and cross-checks with ICAR pathological profiles.": "हमारा कंप्यूटर विजन मॉडल पत्ती के हरे ऊतकों और रोग के धब्बों की पहचान कर ICAR प्रोफाइल से मिलान करता है और सटीक दवा सुझाता है।",
+    "Analyze Leaf with AI": "एआई से पत्ती की जांच करें",
+    "AI Model analyzing foliar tissue and pathological lesions...": "एआई मॉडल पत्ती और रोग के लक्षणों की जांच कर रहा है...",
+    "Early Blight": "अगेती झुलसा रोग (Early Blight)",
+    "Moderate": "मध्यम (Moderate)",
+    "AI confidence is low. Please upload a clearer image or consult an agricultural expert.": "एआई सटीकता विश्वास कम है। कृपया स्पष्ट फोटो अपलोड करें या कृषि विशेषज्ञ से सलाह लें।",
+    "Symptoms": "रोग के लक्षण",
+    "Possible Causes": "संभावित कारण",
+    "Management": "रोकथाम और प्रबंधन",
+    "Ask Our Leaf Disease Experts (विशेषज्ञ से सवाल पूछें)": "हमारे पत्ती रोग विशेषज्ञों से सवाल पूछें",
+    "🌿 आपका जो पत्ती का रोग (Leaf Disease) है, अगर आप चाहें तो हमारे Experts से सवाल पूछ सकते हैं और अपनी समस्या सीधे भेज सकते हैं।": "🌿 आपका जो पत्ती का रोग है, उसके बारे में आप हमारे कृषि विशेषज्ञों से सीधे सवाल पूछ सकते हैं और अपनी समस्या भेज सकते हैं।",
+    "Select a registered Leaf Disease Specialist below and send your leaf disease problem directly:": "नीचे एक पंजीकृत पत्ती रोग विशेषज्ञ चुनें और अपनी समस्या सीधे भेजें:",
+    "✍️ अपना सवाल या पत्ती के रोग की समस्या लिखें (Write Your Leaf Disease Problem / Question for the Expert):": "✍️ अपना सवाल या पत्ती के रोग की समस्या यहाँ लिखें:",
+    "Send Problem Directly to Selected Expert": "चयनित विशेषज्ञ को सीधे समस्या भेजें",
+    "View registered Leaf Disease Experts and track answers to the problems you sent.": "पंजीकृत पत्ती रोग विशेषज्ञों को देखें और भेजे गए प्रश्नों के उत्तर ट्रैक करें।",
+    "🔄 Refresh Experts & Replies": "🔄 विशेषज्ञ और उत्तर रिफ्रेश करें",
+    "Context Active": "संदर्भ सक्रिय",
+    "🍃 Yellow Leaves Advice": "🍃 पीले पत्तों की सलाह",
+    "💧 Irrigation Timing": "💧 सिंचाई का समय",
+    "💰 Monthly Expenses": "💰 मासिक खर्च",
+    "📈 Mandi Prices": "📈 मंडी भाव",
+    "🌧️ Post-Rain Guidance": "🌧️ बारिश के बाद सलाह",
+    "Soil Test Parameters": "मिट्टी परीक्षण मापदंड",
+    "Alluvial Loam": "जलोढ़ दोमट मिट्टी (Alluvial Loam)",
+    "Red Laterite Soil": "लाल लैटेराइट मिट्टी (Red Laterite)",
+    "Sandy Loam": "बलुई दोमट मिट्टी (Sandy Loam)",
+    "Clay Loam": "चिकनी दोमट मिट्टी (Clay Loam)",
+    "Nitrogen (N)": "नाइट्रोजन (N)",
+    "Phosphorus (P)": "फास्फोरस (P)",
+    "Potassium (K)": "पोटैशियम (K)",
+    "Overall Fertility Index": "कुल उर्वरता सूचकांक",
+    "pH Reaction:": "pH प्रतिक्रिया:",
+    "Optimal Neutral": "उत्तम तटस्थ (Neutral)",
+    "Nitrogen (N):": "नाइट्रोजन (N):",
+    "Medium (260 kg/ha)": "मध्यम (260 kg/ha)",
+    "Phosphorus (P):": "फास्फोरस (P):",
+    "Medium (22 kg/ha)": "मध्यम (22 kg/ha)",
+    "Potassium (K):": "पोटैशियम (K):",
+    "Medium (190 kg/ha)": "मध्यम (190 kg/ha)",
+    "Crop Suitability Matrix (Top Matches for Your Soil)": "आपकी मिट्टी के लिए सर्वोत्तम उपयुक्त फसलें",
+    "Expense & Income Records": "खर्च और आय रिकॉर्ड",
+    "Crop": "फसल",
+    "Chilli": "मिर्च",
+    "Protection (₹)": "फसल सुरक्षा / कीटनाशक (₹)",
+    "Machinery (₹)": "मशीनरी / ट्रैक्टर (₹)",
+    "Freight (₹)": "परिवहन भाड़ा (₹)",
+    "Expected Yield (Qtl)": "अनुमानित पैदावार (क्विंटल)",
+    "Expected Price/Qtl (₹)": "अनुमानित भाव/क्विंटल (₹)",
+    "Simulation Summary": "अनुमान सारांश",
+    "Estimated Cost": "अनुमानित लागत",
+    "Estimated Revenue": "अनुमानित आय",
+    "Projected ROI": "अनुमानित लाभ दर (ROI)",
+    "Figures are scenario projections based on entered cost inputs. Actual realizations depend on weather and harvest conditions.": "ये आंकड़े दर्ज की गई लागत पर आधारित अनुमान हैं। वास्तविक लाभ मौसम और मंडी भाव पर निर्भर करता है।",
+    "🎙️ Speak Expense to Log Instantly": "🎙️ बोलकर तुरंत खर्च दर्ज करें",
+    "Say: \"I spent 1500 on fertilizer\" or \"ଖତ ପାଇଁ ୧୫୦୦ ଟଙ୍କା ଖର୍ଚ୍ଚ କଲି\"": "बोलें: \"खाद पर 1500 रुपये खर्च किए\"",
+    "Speak Expense": "बोलकर खर्च लिखें",
+    "Amount (₹)": "राशि (₹)",
+    "Category": "श्रेणी",
+    "Seed": "बीज",
+    "Labour": "मजदूरी",
+    "Irrigation": "सिंचाई",
+    "Pesticide": "कीटनाशक दवा",
+    "Equipment / Tractor": "उपकरण / ट्रैक्टर",
+    "Transport": "परिवहन / भाड़ा",
+    "Other": "अन्य",
+    "Notes / Description": "विवरण / नोट्स",
+    "+ Save Expense": "+ खर्च सेव करें",
+    "Recent Recorded Expenses": "हाल ही में दर्ज किए गए खर्च",
+    "Date": "तारीख",
+    "Notes": "विवरण",
+    "Odisha State-Wise APMC Network": "ओडिशा राज्य-स्तरीय APMC मंडी नेटवर्क",
+    "21 Regulated Mandis Active": "21 सरकारी मंडियां सक्रिय",
+    "Real per-day analysis across all 21 Odisha state-wise APMC/RMC mandis. Computes daily modal price, transport freight, strict 1.5% Mandi Fee, and net realization.": "ओडिशा की सभी 21 APMC/RMC मंडियों के दैनिक भाव, परिवहन भाड़ा, 1.5% मंडी शुल्क और शुद्ध लाभ का सटीक विश्लेषण।",
+    "Chilli (Guntur / Desi)": "मिर्च (गुंटूर / देसी)",
+    "Banana (Champa / Robusta)": "केला (चंपा / रोबस्टा)",
+    "Apple (Simla / Kinnaur)": "सेब (शिमला / किन्नौर)",
+    "Filter District / Zone": "जिला / क्षेत्र चुनें",
+    "All Odisha Mandis (21 APMC/RMC)": "सभी ओडिशा मंडियां (21 APMC/RMC)",
+    "Khordha (Bhubaneswar, Jatni)": "खोरधा (भुवनेश्वर, जटनी)",
+    "Cuttack (Malgodown)": "कटक (मालगोदाम)",
+    "Puri RMC": "पुरी RMC",
+    "Bargarh APMC": "बरगढ़ APMC",
+    "Sambalpur (Khetrajpur)": "संबलपुर (खेत्राजपुर)",
+    "Ganjam (Berhampur)": "गंजाम (ब्रह्मपुर)",
+    "Balasore RMC": "बालासोर RMC",
+    "Bhadrak APMC": "भद्रक APMC",
+    "Koraput (Jeypore)": "कोरापुट (जयपुर)",
+    "Bolangir RMC": "बलांगीर RMC",
+    "Kalahandi (Bhawanipatna)": "कालाहांडी (भवानीपटना)",
+    "Angul RMC": "अनुगुल RMC",
+    "Dhenkanal APMC": "ढेंकानाल APMC",
+    "Kendujhar (Keonjhar)": "केंदुझर (क्योंझर)",
+    "Jajpur Road APMC": "जाजपुर रोड APMC",
+    "Sundargarh (Rourkela Panposh)": "सुंदरगढ़ (राउरकेला पानपोष)",
+    "Rayagada APMC": "रायगड़ा APMC",
+    "Produce Grade": "फसल की ग्रेड / गुणवत्ता",
+    "Grade A (Premium)": "ग्रेड A (प्रीमियम गुणवत्ता)",
+    "Grade B (Standard)": "ग्रेड B (मानक गुणवत्ता)",
+    "Grade C (Fair)": "ग्रेड C (सामान्य गुणवत्ता)",
+    "Calculate Optimal Mandi": "सर्वोत्तम मंडी की गणना करें",
+    "Real Per-Day APMC Market Analysis": "दैनिक APMC मंडी भाव विश्लेषण",
+    "Daily Bulletin: Loading live rates...": "दैनिक बुलेटिन: लाइव मंडी भाव लोड हो रहे हैं...",
+    "⚖️ Mandi Fee Fixed: 1.5% (OSAMB Norm)": "⚖️ मंडी शुल्क: 1.5% (OSAMB नियम)",
+    "🚚 Real Freight Modeling": "🚚 वास्तविक परिवहन भाड़ा गणना",
+    "Transparent Odisha State-Wise Mandi Comparison (": "पारदर्शी ओडिशा मंडी तुलना (",
+    "Mandis)": "मंडियां)",
+    "Sorted by Net Realization (Highest Profit First)": "सर्वाधिक शुद्ध मुनाफे के अनुसार क्रमबद्ध",
+    "👨‍🌾 Farmer Direct Selling & Bank Payment Setup": "👨‍🌾 किसान सीधी फसल बिक्री और बैंक भुगतान सेटअप",
+    "+ Quick Popup Form": "+ त्वरित पॉपअप फॉर्म",
+    "Sell Farm Produce & Farmer Bank Details Form": "फसल बिक्री एवं किसान बैंक विवरण फॉर्म",
+    "Direct Bank Payment Enabled": "सीधा बैंक भुगतान सक्रिय",
+    "🌾 Select Crop": "🌾 फसल चुनें",
+    "Chilli (Desi Fresh)": "मिर्च (देसी ताज़ा)",
+    "Banana (Champa)": "केला (चंपा)",
+    "⭐ Produce Grade": "⭐ फसल ग्रेड",
+    "Grade A (Premium Sorted)": "ग्रेड A (प्रीमियम छँटाई)",
+    "Grade B (Standard Market)": "ग्रेड B (मानक मंडी)",
+    "Grade C (Fair Average)": "ग्रेड C (औसत गुणवत्ता)",
+    "📍 Farm Location": "📍 खेत / गांव का स्थान",
+    "Farmer Contact & Bank Account Details (For Buyer Payment)": "किसान संपर्क एवं बैंक खाता विवरण (खरीदार से भुगतान पाने हेतु)",
+    "📝 Harvest Quality Notes (Optional)": "📝 फसल गुणवत्ता विवरण (वैकल्पिक)",
+    "My Published Farm Produce Listings": "मेरी प्रकाशित फसल बिक्री सूची",
+    "RAZORPAY TEST MODE": "रेज़रपे टेस्ट मोड (RAZORPAY TEST MODE)",
+    "Medicines (5)": "दवाइयां (5)",
+    "All (5)": "सभी (5)",
+    "Your Agricultural Medicine Cart": "आपका कृषि दवा कार्ट",
+    "All prices and discounts are validated directly by the server before payment.": "भुगतान से पहले सभी कीमतें और छूट सर्वर द्वारा सीधे सत्यापित की जाती हैं।",
+    "← Continue Shopping": "← खरीदारी जारी रखें",
+    "Your Cart is Empty": "आपका कार्ट खाली है",
+    "Browse our 5 verified crop protection medicines and add them to your cart.": "हमारी 5 प्रमाणित फसल सुरक्षा दवाएं देखें और उन्हें कार्ट में जोड़ें।",
+    "🧴 Browse Medicines": "🧴 दवाइयां देखें",
+    "Server Calculated": "सर्वर द्वारा गणना",
+    "Total MRP (": "कुल MRP (",
+    "items)": "आइटम)",
+    "Delivery Charge (Free ≥ ₹499)": "डिलीवरी शुल्क (₹499 से अधिक पर मुफ़्त)",
+    "Final Payable Amount": "अंतिम देय राशि",
+    "Proceed to Secure Checkout": "सुरक्षित चेकआउट पर जाएं",
+    "Secure Checkout & Delivery Details": "सुरक्षित चेकआउट और डिलीवरी विवरण",
+    "← Back to Cart": "← कार्ट पर वापस जाएं",
+    "🏡 Village / Plot / Landmark Address": "🏡 गांव / प्लॉट / लैंडमार्क पता",
+    "🏙️ City / District": "🏙️ शहर / जिला",
+    "🗺️ State": "🗺️ राज्य",
+    "📮 PIN Code": "📮 पिन कोड (PIN Code)",
+    "Secured by Razorpay 256-Bit SSL": "Razorpay 256-Bit SSL द्वारा सुरक्षित",
+    "RECOMMENDED": "अनुशंसित (RECOMMENDED)",
+    "Instant & secure online payment processed by Razorpay. Supports all major methods:": "Razorpay द्वारा त्वरित और सुरक्षित ऑनलाइन भुगतान। सभी प्रमुख माध्यम उपलब्ध:",
+    "📱 UPI (GPay / PhonePe / Paytm)": "📱 UPI (GPay / PhonePe / Paytm)",
+    "💳 Credit Card": "💳 क्रेडिट कार्ड",
+    "🏧 Debit Card": "🏧 डेबिट कार्ड",
+    "🏦 Net Banking": "🏦 नेट बैंकिंग",
+    "👛 Wallets": "👛 वॉलेट (Wallets)",
+    "Pay in cash at your doorstep when the sealed pesticide package is delivered to your farm.": "जब सीलबंद कीटनाशक पैकेट आपके घर या खेत पर डिलीवर हो जाए तब नकद भुगतान करें।",
+    "Total MRP": "कुल MRP",
+    "Total Savings": "कुल बचत (छूट)",
+    "Delivery Charge": "डिलीवरी शुल्क",
+    "Final Total": "अंतिम कुल राशि",
+    "Pay ₹0 Securely": "सुरक्षित भुगतान करें",
+    "🔐 Processed securely by": "🔐 सुरक्षित भुगतान:",
+    "• Server-side HMAC-SHA256 Signature Verification": "• सर्वर-साइड HMAC-SHA256 हस्ताक्षर सत्यापन",
+    "🎉 Payment Successful": "🎉 भुगतान सफल रहा!",
+    "Your agricultural medicine order is confirmed and being prepared for dispatch.": "आपका कृषि दवा ऑर्डर कन्फर्म हो गया है और भेजने के लिए तैयार किया जा रहा है।",
+    "Razorpay Payment ID": "रेज़रपे पेमेंट आईडी",
+    "Order Date": "ऑर्डर की तारीख",
+    "CONFIRMED": "पुष्टि की गई (CONFIRMED)",
+    "Ordered Medicines": "ऑर्डर की गई दवाइयां",
+    "Track Order": "ऑर्डर ट्रैक करें",
+    "View Order History": "ऑर्डर इतिहास देखें",
+    "Continue Shopping": "खरीदारी जारी रखें",
+    "Payment Incomplete": "भुगतान अधूरा रहा",
+    "Payment was not completed.": "भुगतान पूरा नहीं हो सका।",
+    "Payment was cancelled or declined. Your order has not been charged.": "भुगतान रद्द या अस्वीकार कर दिया गया। आपके खाते से पैसे नहीं कटे हैं।",
+    "Order Reference": "ऑर्डर संदर्भ",
+    "FAILED": "असफल (FAILED)",
+    "Retry Payment": "पुनः भुगतान करें",
+    "🛒 Back to Cart": "🛒 कार्ट पर वापस जाएं",
+    "🛍️ Continue Shopping": "🛍️ खरीदारी जारी रखें",
+    "My Pesticide Orders & Payment History": "मेरे कीटनाशक ऑर्डर और भुगतान इतिहास",
+    "Track live delivery status and verified Razorpay / COD payment receipts.": "लाइव डिलीवरी स्थिति और सत्यापित Razorpay / COD भुगतान रसीदें ट्रैक करें।",
+    "+ Shop Medicines": "+ दवाइयां खरीदें",
+    "Review farmer leaf disease problems sent to you and reply with verified treatment prescriptions.": "किसानों द्वारा भेजी गई पत्ती रोग समस्याओं की समीक्षा करें और प्रमाणित उपचार सलाह भेजें।",
+    "🌿 Leaf Disease Specialist": "🌿 पत्ती रोग विशेषज्ञ",
+    "Farmer Leaf Disease Questions & Problems Sent to You": "किसानों द्वारा आपको भेजे गए पत्ती रोग प्रश्न और समस्याएं",
+    "🛒 Direct Wholesale Buyer Interface": "🛒 सीधा थोक खरीदार पोर्टल",
+    "Browse verified farmer harvest lots across Odisha, inspect quality grades, and place direct farm-gate purchase orders.": "ओडिशा के किसानों की प्रमाणित फसलें देखें, गुणवत्ता जांचें और सीधे खरीद ऑर्डर दें।",
+    "Procurement Mode": "खरीद मोड",
+    "Direct Farm-Gate (0% Broker)": "सीधे खेत से खरीद (0% बिचौलिया)",
+    "Buyer Trading Hub": "खरीदार व्यापार केंद्र",
+    "Odisha APMC & Wholesale": "ओडिशा APMC और थोक बाजार",
+    "System Administrator": "सिस्टम प्रशासक",
+    "Total Users": "कुल उपयोगकर्ता",
+    "Farmers": "किसान",
+    "Total Leaf Scans": "कुल पत्ती स्कैन",
+    "Avg Confidence": "औसत सटीकता",
+    "Active AI Model": "सक्रिय एआई मॉडल",
+    "AI Model Version Registry": "एआई मॉडल संस्करण रजिस्ट्री",
+    "Payment Management (Razorpay & Pesticide Orders)": "भुगतान प्रबंधन (Razorpay और कीटनाशक ऑर्डर)",
+    "Monitor Razorpay Order IDs, Payment IDs, customer transactions, and initiate verified refunds. (Razorpay Secret Key is strictly hidden on server).": "Razorpay ऑर्डर आईडी, पेमेंट आईडी, ग्राहक लेनदेन की निगरानी करें और सत्यापित रिफंड जारी करें।",
+    "All": "सभी",
+    "Customer": "ग्राहक / किसान",
+    "Products": "दवाइयां / उत्पाद",
+    "Razorpay Order ID": "रेज़रपे ऑर्डर आईडी",
+    "Action": "कार्रवाई",
+    "Loading payment records...": "भुगतान रिकॉर्ड लोड हो रहे हैं...",
+    "Track individual crop plots, growth stages, and visual health indicators.": "अलग-अलग फसल प्लॉट, विकास चरण और स्वास्थ्य संकेतकों को ट्रैक करें।",
+    "Product Name": "दवा का नाम",
+    "Brand Name": "ब्रांड का नाम",
+    "Sold By": "विक्रेता",
+    "Stock & Rating": "स्टॉक और रेटिंग",
+    "Inclusive of all taxes • Authentic Sealed Pack": "सभी करों सहित • असली सीलबंद पैक",
+    "🧪 Active Composition": "🧪 सक्रिय रासायनिक संरचना",
+    "Consult Leaf Disease Expert": "पत्ती रोग विशेषज्ञ से सलाह लें",
+    "📖 Full Product Description & Mode of Action": "📖 संपूर्ण दवा विवरण और कार्य प्रणाली",
+    "💧 Recommended Field Dosage & Application": "💧 अनुशंसित मात्रा और छिड़काव विधि",
+    "Live Camera Viewfinder": "लाइव कैमरा व्यूफाइंडर",
+    "Align Leaf Here": "पत्ती को यहाँ रखें",
+    "📸 Capture Snapshot": "📸 फोटो खींचें",
+    "Cancel": "रद्द करें",
+    "Farmer Name": "किसान का नाम",
+    "Select Crop": "फसल चुनें",
+    "Farmer Bank Details (For Buyer Payment)": "किसान बैंक विवरण (खरीदार भुगतान हेतु)",
+    "Harvest Description & Quality Notes": "फसल विवरण और गुणवत्ता नोट्स",
+    "Publish Produce to Marketplace": "बाजार में फसल प्रकाशित करें",
+    "Place Produce Order & Pay Farmer": "फसल ऑर्डर करें और किसान को भुगतान करें",
+    "Crop:": "फसल:",
+    "Direct Farmer Harvest": "सीधी किसान फसल",
+    "Pay to Farmer (Farmer Payment Account)": "किसान को भुगतान करें (किसान बैंक खाता)",
+    "Buyer / Trading Firm Name": "खरीदार / व्यापारिक फर्म का नाम",
+    "Buyer Contact Phone": "खरीदार संपर्क फोन",
+    "Buyer Warehouse / Shop Location (Address)": "खरीदार गोदाम / दुकान का पता",
+    "Procurement Hub & District Corridor": "खरीद केंद्र और जिला क्षेत्र",
+    "Notes / Logistics Pickup Date": "नोट्स / गाड़ी पिकअप तारीख",
+    "Confirm Order & Pay to Farmer Account": "ऑर्डर कन्फर्म करें और किसान के खाते में भुगतान करें",
+    "Secure Phone & OTP Login": "सुरक्षित फोन और OTP लॉगिन",
+    "OTP sent to": "OTP भेजा गया:",
+    "Change Number": "नंबर बदलें",
+    "Enter 6-Digit Verification Code": "6-अंकों का सत्यापन कोड दर्ज करें",
+    "Enter the 6-digit verification code sent to your mobile.": "अपने मोबाइल पर भेजा गया 6-अंकों का OTP कोड दर्ज करें।",
+
+    // Placeholders in Hindi
+    "Enter your full name": "अपना पूरा नाम दर्ज करें",
+    "10-digit mobile number": "10-अंकों का मोबाइल नंबर",
+    "Create your secure password": "अपना सुरक्षित पासवर्ड बनाएं",
+    "Re-enter your password": "पासवर्ड दोबारा दर्ज करें",
+    "e.g. Tomato & Rice Leaf Disease Specialist": "जैसे: टमाटर और धान पत्ती रोग विशेषज्ञ",
+    "e.g. Khordha, Odisha": "जैसे: खोरधा, ओडिशा",
+    "e.g. Rice, Tomato": "जैसे: धान, टमाटर",
+    "Enter your Gmail ID": "अपनी जीमेल आईडी दर्ज करें",
+    "Enter your password": "अपना पासवर्ड दर्ज करें",
+    "Enter your name": "अपना नाम दर्ज करें",
+    "Paste remote webcam or IP camera snapshot URL (e.g. http://.../snapshot.jpg)": "वेबकैम या IP कैमरा फोटो लिंक यहाँ पेस्ट करें...",
+    "e.g. Mere fasal ke patton par daag aa rahe hain, kripya sahi dawai aur matra batayein...": "जैसे: मेरी फसल के पत्तों पर काले दाग आ रहे हैं, कृपया सही दवाई और मात्रा बताएं...",
+    "Ask anything in English, Odia, or Hindi...": "हिंदी, ओडिया या अंग्रेजी में कोई भी कृषि सवाल पूछें...",
+    "e.g. 2 bags urea": "जैसे: 2 बोरी यूरिया खाद",
+    "Village, District, Odisha": "गांव, जिला, ओडिशा",
+    "e.g. State Bank of India": "जैसे: स्टेट बैंक ऑफ इंडिया (SBI)",
+    "Enter Account Holder Name": "खाताधारक का नाम दर्ज करें",
+    "Enter Bank Account No.": "बैंक खाता संख्या दर्ज करें",
+    "Freshly harvested, clean sorted, ready for buyer pickup.": "ताज़ा कटाई, साफ और छंटी हुई फसल, खरीदार पिकअप के लिए तैयार।",
+    "🔍 Search medicine, crop, pest...": "🔍 दवा, फसल या रोग/कीट का नाम खोजें...",
+    "Enter receiver full name": "प्राप्तकर्ता का पूरा नाम दर्ज करें",
+    "House No, Village, GP, Near Mandi / Block Road": "मकान नं., गांव, पंचायत, मंडी / ब्लॉक रोड के पास",
+    "e.g. Bhubaneswar, Khordha": "जैसे: भुवनेश्वर, खोरधा",
+    "Account Holder Name": "खाताधारक का नाम",
+    "Bank Account Number": "बैंक खाता संख्या",
+    "Freshly harvested, clean sorted, IPM managed. Ready for immediate mandi/buyer pickup.": "ताज़ा कटाई और साफ फसल। तुरंत पिकअप के लिए तैयार।",
+    "Enter buyer firm name": "खरीदार फर्म/दुकान का नाम दर्ज करें",
+    "Enter contact phone": "संपर्क फोन नंबर दर्ज करें",
+    "e.g. Buyer provides mandi transport truck; pickup on Tuesday morning.": "जैसे: मंगलवार सुबह ट्रक द्वारा फसल पिकअप।"
+  }
+};
+
+// Phrase & Common Term Replacements for Dynamic Sentences, Labels, Placeholders & Cards
+const PHRASE_REPLACEMENTS = {
+  od: [
+    ["Pesticides & Crop Protection Store", "କୀଟନାଶକ ଏବଂ ଫସଲ ସୁରକ୍ଷା ଔଷଧ ଦୋକାନ"],
+    ["Direct Farmer-to-Buyer Produce Marketplace", "ସିଧାସଳଖ ଚାଷୀ-କ୍ରେତା ଫସଲ ବିକ୍ରି ବଜାର"],
+    ["AI Leaf Disease Computer Vision Scanner", "ଏଆଇ ପତ୍ର ରୋଗ କମ୍ପ୍ୟୁଟର ଭିଜନ୍ ସ୍କାନର୍"],
+    ["Farm Business Maker & Expense Tracker", "ଚାଷ ବ୍ୟବସାୟ ଯୋଜନା ଓ ଖର୍ଚ୍ଚ ହିସାବ"],
+    ["Soil Intelligence & Nutrient Advisory", "ମାଟି ସ୍ୱାସ୍ଥ୍ୟ ଓ ପୋଷକ ତତ୍ତ୍ୱ ପରାମର୍ଶ"],
+    ["Mandi Market Optimizer", "ମଣ୍ଡି ଦର ଅପ୍ଟିମାଇଜର୍"],
+    ["Ask AI Farm Co-Pilot", "ଏଆଇ ଫାର୍ମ କୋ-ପାଇଲଟ୍ କୁ ପଚାରନ୍ତୁ"],
+    ["Proceed to Checkout", "ଚେକଆଉଟ୍ କୁ ଯାଆନ୍ତୁ"],
+    ["Pay Online with Razorpay", "Razorpay ଦ୍ୱାରା ଅନଲାଇନ୍ ପେମେଣ୍ଟ କରନ୍ତୁ"],
+    ["Place Cash on Delivery Order", "କ୍ୟାସ୍ ଅନ୍ ଡେଲିଭରି ଅର୍ଡର କରନ୍ତୁ"],
+    ["Cash on Delivery", "କ୍ୟାସ୍ ଅନ୍ ଡେଲିଭରି"],
+    ["Online Payment", "ଅନଲାଇନ୍ ପେମେଣ୍ଟ"],
+    ["Add to Cart", "କାର୍ଟରେ ଯୋଡ଼ନ୍ତୁ"],
+    ["Buy Now", "ବର୍ତ୍ତମାନ କିଣନ୍ତୁ"],
+    ["Consult Expert", "ବିଶେଷଜ୍ଞଙ୍କୁ ପଚାରନ୍ତୁ"],
+    ["View Details", "ବିବରଣୀ ଦେଖନ୍ତୁ"],
+    ["My Orders", "ମୋର ଅର୍ଡରଗୁଡ଼ିକ"],
+    ["Refresh Orders", "ଅର୍ଡର ରିଫ୍ରେସ୍ କରନ୍ତୁ"],
+    ["In Stock", "ଷ୍ଟକ୍ ଅଛି"],
+    ["Out of Stock", "ଷ୍ଟକ୍ ନାହିଁ"],
+    ["Suitable Crops", "ଉପଯୁକ୍ତ ଫସଲ"],
+    ["Target Disease", "ଲକ୍ଷ୍ୟ ରୋଗ ଓ ପୋକ"],
+    ["Target Pests", "ଲକ୍ଷ୍ୟ ପୋକ"],
+    ["Safety Information", "ସୁରକ୍ଷା ସୂଚନା"],
+    ["Pack Size", "ପ୍ୟାକ୍ ସାଇଜ୍"],
+    ["Quantity", "ପରିମାଣ"],
+    ["Price Summary", "ମୂଲ୍ୟ ବିବରଣୀ"],
+    ["Total Amount", "ମୋଟ ଟଙ୍କା"],
+    ["Delivery Address", "ଡେଲିଭରି ଠିକଣା"],
+    ["Payment Status", "ପେମେଣ୍ଟ ସ୍ଥିତି"],
+    ["Order Status", "ଅର୍ଡର ସ୍ଥିତି"],
+    ["Payment Method", "ପେମେଣ୍ଟ ମାଧ୍ୟମ"],
+    ["Bio Fungicide", "ଜୈବିକ କବକନାଶକ"],
+    ["Insecticide", "କୀଟନାଶକ"],
+    ["Fungicide", "କବକନାଶକ"],
+    ["Herbicide", "ଘାସମରା ଔଷଧ"],
+    ["Fertilizer", "ସାର / ଖତ"],
+    ["Check Disease", "ରୋଗ ପରୀକ୍ଷା"],
+    ["Sell Produce", "ଫସଲ ବିକ୍ରି"],
+    ["Pesticides", "କୀଟନାଶକ ଔଷଧ"],
+    ["Market Optimizer", "ମଣ୍ଡି ଦର ଅପ୍ଟିମାଇଜର୍"],
+    ["Farm Business", "ଚାଷ ବ୍ୟବସାୟ"],
+    ["Soil Health", "ମାଟି ସ୍ୱାସ୍ଥ୍ୟ"],
+    ["AI Co-Pilot", "ଏଆଇ କୋ-ପାଇଲଟ୍"],
+    ["My Farm", "ମୋ ଫାର୍ମ"],
+    ["Buyer Portal", "କ୍ରେତା ପୋର୍ଟାଲ"],
+    ["Expert Advice", "ବିଶେଷଜ୍ଞ ପରାମର୍ଶ"],
+    ["Admin Portal", "ପ୍ରଶାସନ ପୋର୍ଟାଲ"],
+    ["Sign Up", "ସାଇନ୍ ଅପ୍"],
+    ["Sign In", "ସାଇନ୍ ଇନ୍"],
+    ["Sign Out", "ଲଗ୍ ଆଉଟ୍"],
+    ["Full Name", "ସମ୍ପୂର୍ଣ୍ଣ ନାମ"],
+    ["Mobile Number", "ମୋବାଇଲ୍ ନମ୍ବର"],
+    ["Phone Number", "ଫୋନ୍ ନମ୍ବର"],
+    ["Password", "ପାସୱାର୍ଡ"],
+    ["Bank Name", "ବ୍ୟାଙ୍କ ନାମ"],
+    ["Account Holder Name", "ଖାତାଧାରୀଙ୍କ ନାମ"],
+    ["Account Number", "ଆକାଉଣ୍ଟ୍ ନମ୍ବର"],
+    ["IFSC Code", "IFSC କୋଡ୍"],
+    ["Temperature", "ତାପମାତ୍ରା"],
+    ["Humidity", "ଆର୍ଦ୍ରତା"],
+    ["Wind Speed", "ପବନ ବେଗ"],
+    ["Rain Chance", "ବର୍ଷା ସମ୍ଭାବନା"],
+    ["Quintals", "କ୍ୱିଣ୍ଟାଲ"],
+    ["Quintal", "କ୍ୱିଣ୍ଟାଲ"],
+    ["Acres", "ଏକର"],
+    ["Acre", "ଏକର"],
+    ["Rice", "ଧାନ"],
+    ["Paddy", "ଧାନ"],
+    ["Tomato", "ଟମାଟୋ"],
+    ["Potato", "ଆଳୁ"],
+    ["Cotton", "କପା"],
+    ["Chili", "ଲଙ୍କା"],
+    ["Brinjal", "ବାଇଗଣ"],
+    ["Onion", "ପିଆଜ"],
+    ["Groundnut", "ଚିନାବାଦାମ"],
+    ["Mustard", "ସୋରିଷ"],
+    ["Maize", "ମକା"],
+    ["Sugarcane", "ଆଖୁ"],
+    ["Okra", "ଭେଣ୍ଡି"],
+    ["Cabbage", "ବନ୍ଧାକୋବି"],
+    ["Cauliflower", "ଫୁଲକୋବି"],
+    ["Mango", "ଆମ୍ବ"],
+    ["Grapes", "ଅଙ୍ଗୁର"],
+    ["Soybean", "ସୋୟାବିନ୍"],
+    ["Wheat", "ଗହମ"],
+    ["Green Gram", "ମୁଗ"],
+    ["Black Gram", "ବିରି"],
+    ["Verified", "ପ୍ରମାଣିତ"],
+    ["Available", "ଉପଲବ୍ଧ"],
+    ["Reviews", "ସମୀକ୍ଷା"],
+    ["Sold by", "ବିକ୍ରେତା:"],
+    ["Discount", "ରିହାତି"],
+    ["Subtotal", "ମୋଟ ମୂଲ୍ୟ"],
+    ["Shipping", "ଡେଲିଭରି"],
+    ["Confirmed", "ନିଶ୍ଚିତ ହୋଇଛି"],
+    ["Placed", "ଅର୍ଡର ହୋଇଛି"],
+    ["Delivered", "ପହଞ୍ଚି ଯାଇଛି"],
+    ["Pending", "ବାକି ଅଛି"],
+    ["Paid", "ପୈଠ ହୋଇଛି"],
+    ["Failed", "ବିଫଳ"],
+    ["Refunded", "ଫେରସ୍ତ ହୋଇଛି"],
+    ["System Administration & AI Model Registry", "ସିଷ୍ଟମ୍ ପ୍ରଶାସନ ଓ ଏଆଇ ମଡେଲ୍ ରେଜିଷ୍ଟ୍ରି"],
+    ["Monitor platform users, AI telemetry, and switch active model versions.", "ଉପଭୋକ୍ତା ତଥ୍ୟ, ଏଆଇ ସଠିକତା ଏବଂ ମଡେଲ୍ ସଂସ୍କରଣ ନିୟନ୍ତ୍ରଣ କରନ୍ତୁ।"],
+    ["Designed for farmers – enter phone number, receive OTP, and access your digital farm co-pilot.", "ଚାଷୀ ଭାଇଙ୍କ ପାଇଁ ସରଳ ବ୍ୟବସ୍ଥା – ମୋବାଇଲ୍ ନମ୍ବର ଦିଅନ୍ତୁ, OTP ପାଆନ୍ତୁ ଏବଂ କୋ-ପାଇଲଟ୍ ବ୍ୟବହାର କରନ୍ତୁ।"],
+    ["Select Your Role (Farmer 1st Priority)", "ନିଜର ଭୂମିକା ବାଛନ୍ତୁ (ଚାଷୀ ପ୍ରଥମ ପ୍ରାଥମିକତା)"],
+    ["Send OTP to Mobile", "ମୋବାଇଲ୍ କୁ OTP ପଠାନ୍ତୁ"],
+    ["Resend OTP", "ପୁଣି OTP ପଠାନ୍ତୁ"],
+    ["Verify OTP & Enter", "OTP ଯାଞ୍ଚ କରନ୍ତୁ ଓ ପ୍ରବେଶ କରନ୍ତୁ"],
+    ["AI confidence is below threshold (", "ଏଆଇ ବିଶ୍ୱସନୀୟତା ସୀମା ଠାରୁ କମ୍ ("],
+    ["Notification message", "ସୂଚନା ବାର୍ତ୍ତା"],
+    ["0 Qtl", "୦ କ୍ୱିଣ୍ଟାଲ"],
+    ["Qtl", "କ୍ୱିଣ୍ଟାଲ"],
+    ["OFF", "ରିହାତି"],
+    ["per Acre", "ପ୍ରତି ଏକର"],
+    ["Litres of water", "ଲିଟର ପାଣିରେ"],
+    ["foliar spray", "ପତ୍ରରେ ସ୍ପ୍ରେ"],
+    ["Pre-Harvest Interval", "ଅମଳ ପୂର୍ବ ସମୟ"],
+    ["Brown Plant Hopper", "ମାଟିଆ ଗୁଣ୍ଡି ପୋକ (BPH)"],
+    ["Powdery Mildew", "ପାଉଁଶିଆ ରୋଗ (Powdery Mildew)"],
+    ["Early Blight", "ଆଗୁଆ ପତ୍ରପୋଡ଼ା (Early Blight)"],
+    ["Late Blight", "ପଛୁଆ ପତ୍ରପୋଡ଼ା (Late Blight)"],
+    ["Stem Borer", "କାଣ୍ଡ ବିନ୍ଧା ପୋକ (Stem Borer)"],
+    ["Leaf Folder", "ପତ୍ର ମୋଡ଼ା ପୋକ"]
+  ],
+  hi: [
+    ["Pesticides & Crop Protection Store", "कीटनाशक एवं फसल सुरक्षा दवा दुकान"],
+    ["Direct Farmer-to-Buyer Produce Marketplace", "सीधा किसान-से-खरीदार फसल बिक्री बाजार"],
+    ["AI Leaf Disease Computer Vision Scanner", "एआई पत्ती रोग कंप्यूटर विजन स्कैनर"],
+    ["Farm Business Maker & Expense Tracker", "कृषि व्यापार योजना और खर्च प्रबंधन"],
+    ["Soil Intelligence & Nutrient Advisory", "मृदा स्वास्थ्य और पोषक तत्व सलाह"],
+    ["Mandi Market Optimizer", "मंडी भाव ऑप्टिमाइज़र"],
+    ["Ask AI Farm Co-Pilot", "एआई फार्म को-पायलट से पूछें"],
+    ["Proceed to Checkout", "चेकआउट पर जाएं"],
+    ["Pay Online with Razorpay", "Razorpay से ऑनलाइन पेमेंट करें"],
+    ["Place Cash on Delivery Order", "कैश ऑन डिलीवरी ऑर्डर करें"],
+    ["Cash on Delivery", "कैश ऑन डिलीवरी"],
+    ["Online Payment", "ऑनलाइन पेमेंट"],
+    ["Add to Cart", "कार्ट में जोड़ें"],
+    ["Buy Now", "अभी खरीदें"],
+    ["Consult Expert", "विशेषज्ञ से पूछें"],
+    ["View Details", "विवरण देखें"],
+    ["My Orders", "मेरे ऑर्डर"],
+    ["Refresh Orders", "ऑर्डर रिफ्रेश करें"],
+    ["In Stock", "स्टॉक में उपलब्ध"],
+    ["Out of Stock", "स्टॉक समाप्त"],
+    ["Suitable Crops", "उपयुक्त फसलें"],
+    ["Target Disease", "लक्षित रोग और कीट"],
+    ["Target Pests", "लक्षित कीट"],
+    ["Safety Information", "सुरक्षा जानकारी"],
+    ["Pack Size", "पैक साइज"],
+    ["Quantity", "मात्रा"],
+    ["Price Summary", "मूल्य विवरण"],
+    ["Total Amount", "कुल राशि"],
+    ["Delivery Address", "डिलीवरी पता"],
+    ["Payment Status", "भुगतान स्थिति"],
+    ["Order Status", "ऑर्डर स्थिति"],
+    ["Payment Method", "भुगतान माध्यम"],
+    ["Bio Fungicide", "जैविक फफूंदनाशक"],
+    ["Insecticide", "कीटनाशक"],
+    ["Fungicide", "फफूंदनाशक"],
+    ["Herbicide", "खरपतवारनाशक"],
+    ["Fertilizer", "खाद / उर्वरक"],
+    ["Check Disease", "रोग जांच"],
+    ["Sell Produce", "फसल बेचें"],
+    ["Pesticides", "कीटनाशक दवाएं"],
+    ["Market Optimizer", "मंडी भाव तुलना"],
+    ["Farm Business", "कृषि व्यापार"],
+    ["Soil Health", "मृदा स्वास्थ्य"],
+    ["AI Co-Pilot", "एआई को-पायलट"],
+    ["My Farm", "मेरा खेत"],
+    ["Buyer Portal", "खरीदार पोर्टल"],
+    ["Expert Advice", "विशेषज्ञ सलाह"],
+    ["Admin Portal", "एडमिन पोर्टल"],
+    ["Sign Up", "साइन अप"],
+    ["Sign In", "साइन इन"],
+    ["Sign Out", "लॉग आउट"],
+    ["Full Name", "पूरा नाम"],
+    ["Mobile Number", "मोबाइल नंबर"],
+    ["Phone Number", "फोन नंबर"],
+    ["Password", "पासवर्ड"],
+    ["Bank Name", "बैंक का नाम"],
+    ["Account Holder Name", "खाताधारक का नाम"],
+    ["Account Number", "खाता संख्या"],
+    ["IFSC Code", "IFSC कोड"],
+    ["Temperature", "तापमान"],
+    ["Humidity", "नमी"],
+    ["Wind Speed", "हवा की गति"],
+    ["Rain Chance", "बारिश की संभावना"],
+    ["Quintals", "क्विंटल"],
+    ["Quintal", "क्विंटल"],
+    ["Acres", "एकड़"],
+    ["Acre", "एकड़"],
+    ["Rice", "धान"],
+    ["Paddy", "धान"],
+    ["Tomato", "टमाटर"],
+    ["Potato", "आलू"],
+    ["Cotton", "कपास"],
+    ["Chili", "मिर्च"],
+    ["Brinjal", "बैंगन"],
+    ["Onion", "प्याज"],
+    ["Groundnut", "मूंगफली"],
+    ["Mustard", "सरसों"],
+    ["Maize", "मक्का"],
+    ["Sugarcane", "गन्ना"],
+    ["Okra", "भिंडी"],
+    ["Cabbage", "पत्तागोभी"],
+    ["Cauliflower", "फूलगोभी"],
+    ["Mango", "आम"],
+    ["Grapes", "अंगूर"],
+    ["Soybean", "सोयाबीन"],
+    ["Wheat", "गेहूं"],
+    ["Green Gram", "मूंग"],
+    ["Black Gram", "उड़द"],
+    ["Verified", "प्रमाणित"],
+    ["Available", "उपलब्ध"],
+    ["Reviews", "समीक्षाएं"],
+    ["Sold by", "विक्रेता:"],
+    ["Discount", "छूट"],
+    ["Subtotal", "उप-योग"],
+    ["Shipping", "डिलीवरी"],
+    ["Confirmed", "पुष्टि की गई"],
+    ["Placed", "ऑर्डर किया गया"],
+    ["Delivered", "डिलीवर हो गया"],
+    ["Pending", "लंबित"],
+    ["Paid", "भुगतान सफल"],
+    ["Failed", "असफल"],
+    ["Refunded", "रिफंड किया गया"],
+    ["System Administration & AI Model Registry", "सिस्टम प्रशासन एवं एआई मॉडल रजिस्ट्री"],
+    ["Monitor platform users, AI telemetry, and switch active model versions.", "उपयोगकर्ताओं, एआई सटीकता और सक्रिय मॉडल संस्करणों का नियंत्रण करें।"],
+    ["Designed for farmers – enter phone number, receive OTP, and access your digital farm co-pilot.", "किसान भाइयों के लिए विशेष सुविधा – मोबाइल नंबर डालें, OTP प्राप्त करें और अपने फार्म को-पायलट का उपयोग करें।"],
+    ["Select Your Role (Farmer 1st Priority)", "अपनी भूमिका चुनें (किसान को प्रथम प्राथमिकता)"],
+    ["Send OTP to Mobile", "मोबाइल पर OTP भेजें"],
+    ["Resend OTP", "पुनः OTP भेजें"],
+    ["Verify OTP & Enter", "OTP सत्यापित करें और प्रवेश करें"],
+    ["AI confidence is below threshold (", "एआई विश्वास सीमा से कम है ("],
+    ["Notification message", "सूचना संदेश"],
+    ["0 Qtl", "0 क्विंटल"],
+    ["Qtl", "क्विंटल"],
+    ["OFF", "छूट"],
+    ["per Acre", "प्रति एकड़"],
+    ["Litres of water", "लीटर पानी में"],
+    ["foliar spray", "पत्ती पर छिड़काव"],
+    ["Pre-Harvest Interval", "कटाई पूर्व अंतराल"],
+    ["Brown Plant Hopper", "भूरा फुदका (BPH)"],
+    ["Powdery Mildew", "पाउडरी मिल्ड्यू (सफेद चूर्णी रोग)"],
+    ["Early Blight", "अगेती झुलसा (Early Blight)"],
+    ["Late Blight", "पछेती झुलसा (Late Blight)"],
+    ["Stem Borer", "तना छेदक (Stem Borer)"],
+    ["Leaf Folder", "पत्ती लपेटक कीट"]
+  ]
+};
+
+function translateTextValue(rawText, lang) {
+  if (!rawText || lang === 'en') return rawText;
+  const dict = FULL_INTERFACE_DICTIONARY[lang];
+  const phrases = PHRASE_REPLACEMENTS[lang];
+  if (!dict || !phrases) return rawText;
+
+  // Preserve leading and trailing whitespace
+  const leadingMatch = rawText.match(/^\s*/);
+  const trailingMatch = rawText.match(/\s*$/);
+  const leading = leadingMatch ? leadingMatch[0] : '';
+  const trailing = trailingMatch ? trailingMatch[0] : '';
+  const trimmed = rawText.trim();
+  if (!trimmed) return rawText;
+
+  // Normalize internal whitespace for dictionary lookup
+  const norm = trimmed.replace(/\s+/g, ' ');
+
+  // 1. Direct match in FULL_INTERFACE_DICTIONARY
+  if (dict[norm]) {
+    return leading + dict[norm] + trailing;
+  }
+
+  // 2. Check if string has leading emoji/icon prefix + known dictionary entry
+  const emojiMatch = norm.match(/^([^\w\u0900-\u097F\u0B00-\u0B7F]+)\s*(.+)$/);
+  if (emojiMatch) {
+    const prefix = emojiMatch[1];
+    const rest = emojiMatch[2].trim();
+    if (dict[rest]) {
+      return leading + prefix + ' ' + dict[rest] + trailing;
+    }
+  }
+
+  // 3. Apply phrase & term replacements for composite/dynamic strings
+  let result = norm;
+  for (const [eng, target] of phrases) {
+    if (result.includes(eng)) {
+      // Avoid replacing inside already-translated parenthetical like "(Farmer)"
+      const escaped = eng.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(?<!\\()\\b${escaped}\\b(?!\\))`, 'g');
+      if (regex.test(result)) {
+        result = result.replace(regex, target);
+      } else if (result === eng) {
+        result = target;
+      } else {
+        result = result.split(eng).join(target);
+      }
+    }
+  }
+
+  return leading + result + trailing;
+}
+
+function translateDOMSubtree(root, lang) {
+  if (!root || _i18nApplying) return;
+  _i18nApplying = true;
   try {
-    const res = await fetch(`/locales/${lang}/translation.json`);
+    // 1. Standard [data-i18n] elements
+    const i18nEls = root.querySelectorAll ? root.querySelectorAll('[data-i18n]') : [];
+    i18nEls.forEach(el => {
+      if (!el.dataset.origI18nText) {
+        el.dataset.origI18nText = el.innerText.trim();
+      }
+      const key = el.getAttribute('data-i18n');
+      if (lang === 'en') {
+        const val = t(key, el.dataset.origI18nText);
+        if (val && val !== key) el.innerText = val;
+        else el.innerText = el.dataset.origI18nText;
+      } else {
+        const val = t(key, '');
+        if (val && val !== key) {
+          el.innerText = val;
+        } else {
+          el.innerText = translateTextValue(el.dataset.origI18nText, lang);
+        }
+      }
+    });
+
+    // 2. Standard [data-i18n-placeholder] elements
+    const i18nPhEls = root.querySelectorAll ? root.querySelectorAll('[data-i18n-placeholder]') : [];
+    i18nPhEls.forEach(el => {
+      if (!el.dataset.origI18nPh) {
+        el.dataset.origI18nPh = el.getAttribute('placeholder') || '';
+      }
+      const key = el.getAttribute('data-i18n-placeholder');
+      if (lang === 'en') {
+        const val = t(key, el.dataset.origI18nPh);
+        el.setAttribute('placeholder', (val && val !== key) ? val : el.dataset.origI18nPh);
+      } else {
+        const val = t(key, '');
+        el.setAttribute('placeholder', (val && val !== key) ? val : translateTextValue(el.dataset.origI18nPh, lang));
+      }
+    });
+
+    // 3. All other [placeholder] inputs/textareas without data-i18n-placeholder
+    const allPhEls = root.querySelectorAll ? root.querySelectorAll('input[placeholder], textarea[placeholder]') : [];
+    allPhEls.forEach(el => {
+      if (el.hasAttribute('data-i18n-placeholder')) return;
+      const currPh = el.getAttribute('placeholder') || '';
+      if (!_origPlaceholderMap.has(el)) {
+        _origPlaceholderMap.set(el, currPh);
+      }
+      const origPh = _origPlaceholderMap.get(el);
+      if (lang === 'en') {
+        el.setAttribute('placeholder', origPh);
+      } else {
+        el.setAttribute('placeholder', translateTextValue(origPh, lang));
+      }
+    });
+
+    // 4. All [title] attributes
+    const allTitleEls = root.querySelectorAll ? root.querySelectorAll('[title]') : [];
+    allTitleEls.forEach(el => {
+      const currTitle = el.getAttribute('title') || '';
+      if (!_origTitleMap.has(el)) {
+        _origTitleMap.set(el, currTitle);
+      }
+      const origTitle = _origTitleMap.get(el);
+      if (lang === 'en') {
+        el.setAttribute('title', origTitle);
+      } else {
+        el.setAttribute('title', translateTextValue(origTitle, lang));
+      }
+    });
+
+    // 5. Walk all Text nodes across the entire DOM
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT,
+      {
+        acceptNode(node) {
+          const parent = node.parentElement;
+          if (!parent) return NodeFilter.FILTER_REJECT;
+          const tag = parent.tagName;
+          if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT' || tag === 'CODE' || tag === 'PRE') {
+            return NodeFilter.FILTER_REJECT;
+          }
+          // Skip language selector options so they always show English / ଓଡ଼ିଆ / हिंदी clearly
+          if (parent.closest && parent.closest('#langSelect')) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          // Skip elements already handled directly by [data-i18n] if they have no child elements
+          if (parent.hasAttribute('data-i18n') && parent.children.length === 0) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          if (!node.nodeValue || !node.nodeValue.trim()) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        }
+      }
+    );
+
+    const textNodes = [];
+    let currentNode = walker.nextNode();
+    while (currentNode) {
+      textNodes.push(currentNode);
+      currentNode = walker.nextNode();
+    }
+
+    for (const node of textNodes) {
+      const currentVal = node.nodeValue;
+      const lastTranslated = _lastTranslatedTextNodeMap.get(node);
+      // If this node was never seen OR was dynamically updated by JS since last translation
+      if (!_origTextNodeMap.has(node) || (lastTranslated !== undefined && currentVal !== lastTranslated)) {
+        _origTextNodeMap.set(node, currentVal);
+      }
+      const origVal = _origTextNodeMap.get(node);
+      if (lang === 'en') {
+        if (node.nodeValue !== origVal) {
+          node.nodeValue = origVal;
+        }
+        _lastTranslatedTextNodeMap.set(node, origVal);
+      } else {
+        const translatedVal = translateTextValue(origVal, lang);
+        if (node.nodeValue !== translatedVal) {
+          node.nodeValue = translatedVal;
+        }
+        _lastTranslatedTextNodeMap.set(node, translatedVal);
+      }
+    }
+  } finally {
+    _i18nApplying = false;
+  }
+}
+
+function initFullPageTranslationObserver() {
+  if (_i18nObserverInitialized || !document.body) return;
+  _i18nObserverInitialized = true;
+  const observer = new MutationObserver(() => {
+    if (_i18nApplying || !state.currentLang || state.currentLang === 'en') return;
+    if (_i18nDebounceTimer) clearTimeout(_i18nDebounceTimer);
+    _i18nDebounceTimer = setTimeout(() => {
+      translateDOMSubtree(document.body, state.currentLang);
+    }, 40);
+  });
+  observer.observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+async function loadTranslations(lang) {
+  state.currentLang = lang || 'en';
+  localStorage.setItem('lang', state.currentLang);
+  document.documentElement.lang = state.currentLang;
+  try {
+    const res = await fetch(`/locales/${state.currentLang}/translation.json`);
     if (res.ok) {
       state.translations = await res.json();
-      state.currentLang = lang;
-      localStorage.setItem('lang', lang);
-      applyTranslations();
     }
   } catch (err) {
-    console.error('Failed to load translations:', err);
+    console.warn('Using built-in full-interface translation dictionary for:', state.currentLang);
   }
+  applyTranslations();
+  initFullPageTranslationObserver();
 }
 
 function t(path, fallback = '') {
@@ -148,29 +1820,29 @@ function t(path, fallback = '') {
     if (curr && curr[p] !== undefined) {
       curr = curr[p];
     } else {
-      return fallback || path;
+      return fallback ? translateTextValue(fallback, state.currentLang) : path;
     }
   }
   return curr;
 }
 
 function applyTranslations() {
-  document.querySelectorAll('[data-i18n]').forEach(el => {
-    const key = el.getAttribute('data-i18n');
-    el.innerText = t(key, el.innerText);
-  });
-  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-    const key = el.getAttribute('data-i18n-placeholder');
-    el.setAttribute('placeholder', t(key, el.getAttribute('placeholder')));
-  });
+  translateDOMSubtree(document.body, state.currentLang || 'en');
   const langSelect = document.getElementById('langSelect');
-  if (langSelect) langSelect.value = state.currentLang;
+  if (langSelect) langSelect.value = state.currentLang || 'en';
 }
 
 async function switchLanguage(lang) {
   await loadTranslations(lang);
-  if (state.activeTab === 'dashboard') loadDashboardData();
-  if (state.activeTab === 'copilot') initCopilotView();
+  if (state.activeTab === 'dashboard' && typeof loadDashboardData === 'function') loadDashboardData();
+  if (state.activeTab === 'copilot' && typeof initCopilotView === 'function') initCopilotView();
+  if (state.activeTab === 'pesticides' && typeof renderPesticidesCatalog === 'function') {
+    renderPesticidesCatalog();
+    if (typeof renderPesticidesOrders === 'function') renderPesticidesOrders();
+  }
+  setTimeout(() => {
+    translateDOMSubtree(document.body, state.currentLang || 'en');
+  }, 80);
 }
 
 // ----------------------------------------------------
