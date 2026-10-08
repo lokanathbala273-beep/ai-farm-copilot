@@ -49,7 +49,7 @@ function getRoleDefaultTab(role) {
 }
 
 const ROLE_ALLOWED_TABS = {
-  'FARMER': ['dashboard', 'scanner', 'copilot', 'soil', 'business', 'market', 'marketplace', 'my_farm'],
+  'FARMER': ['dashboard', 'scanner', 'copilot', 'soil', 'business', 'market', 'marketplace', 'pesticides', 'my_farm'],
   'AGRICULTURAL_EXPERT': ['expert_portal'],
   'BUYER': ['buyer_portal'],
   'ADMIN': ['admin_portal']
@@ -1051,6 +1051,7 @@ function getTabDisplayName(tabId) {
     'business': 'Farm Business Planner',
     'market': 'Market Optimizer',
     'marketplace': 'Sell Produce Marketplace',
+    'pesticides': 'Pesticides & Crop Medicines Store',
     'expert_portal': 'Expert Advice Portal',
     'buyer_portal': 'Buyer Procurement Portal',
     'admin_portal': 'System Admin Portal',
@@ -1109,6 +1110,7 @@ function switchTab(tabId) {
   else if (tabId === 'business') initBusinessView();
   else if (tabId === 'market') initMarketView();
   else if (tabId === 'marketplace') initMarketplaceView();
+  else if (tabId === 'pesticides') initPesticidesView();
   else if (tabId === 'expert_portal') initExpertPortalView();
   else if (tabId === 'buyer_portal') initBuyerPortalView();
   else if (tabId === 'admin_portal') initAdminPortalView();
@@ -3287,6 +3289,9 @@ async function initAdminPortalView() {
       container.appendChild(card);
     });
   }
+
+  // Load Admin Payment Management Table
+  loadAdminPayments('ALL');
 }
 
 async function switchAdminModel(version) {
@@ -3373,6 +3378,1012 @@ function setupEventListeners() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('change', analyzeSoilParams);
   });
+}
+
+// =========================================================================
+// 🧴 12. PESTICIDES E-COMMERCE & RAZORPAY ONLINE PAYMENT CONTROLLER
+// =========================================================================
+const pesticideState = {
+  products: [],
+  selectedCategory: 'ALL',
+  cart: JSON.parse(localStorage.getItem('aifarm_pesticide_cart_v1') || '[]'),
+  serverPricing: null,
+  paymentMethod: 'RAZORPAY',
+  razorpayKeyId: '',
+  razorpayMode: 'TEST',
+  activeModalProduct: null,
+  activeModalPackSize: null,
+  lastCreatedOrder: null,
+  orders: []
+};
+
+function savePesticideCartToStorage() {
+  localStorage.setItem('aifarm_pesticide_cart_v1', JSON.stringify(pesticideState.cart));
+  updatePesticideCartBadges();
+}
+
+function updatePesticideCartBadges() {
+  const totalQty = pesticideState.cart.reduce((sum, item) => sum + Number(item.quantity || 1), 0);
+  const navBadge = document.getElementById('navPesticideCartBadge');
+  const headerBadge = document.getElementById('pestHeaderCartCount');
+  if (navBadge) {
+    navBadge.innerText = String(totalQty);
+    if (totalQty > 0) navBadge.classList.remove('hidden');
+    else navBadge.classList.add('hidden');
+  }
+  if (headerBadge) {
+    headerBadge.innerText = String(totalQty);
+  }
+}
+
+async function initPesticidesView() {
+  updatePesticideCartBadges();
+  try {
+    const res = await apiFetch('/pesticides/products');
+    if (res.ok) {
+      const data = await res.json();
+      pesticideState.products = data.products || [];
+      pesticideState.razorpayKeyId = data.razorpay_key_id || '';
+      pesticideState.razorpayMode = data.razorpay_mode || 'TEST';
+
+      const modeBadge = document.getElementById('pesticideRazorpayModeBadge');
+      if (modeBadge) {
+        if (pesticideState.razorpayMode === 'LIVE') {
+          modeBadge.className = 'px-2.5 py-0.5 rounded-full text-3xs font-black bg-emerald-100 text-emerald-800 uppercase tracking-wider border border-emerald-300 flex items-center gap-1';
+          modeBadge.innerHTML = '<span>💳</span> <span>RAZORPAY LIVE MODE</span>';
+        } else {
+          modeBadge.className = 'px-2.5 py-0.5 rounded-full text-3xs font-black bg-blue-100 text-blue-800 uppercase tracking-wider border border-blue-300 flex items-center gap-1';
+          modeBadge.innerHTML = '<span>💳</span> <span>RAZORPAY TEST MODE</span>';
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading pesticides catalog:', err);
+  }
+
+  renderPesticideCatalog();
+  loadMyPesticideOrders(true);
+}
+
+function switchPesticideSubView(viewName) {
+  const views = {
+    catalog: 'pesticidesCatalogView',
+    cart: 'pesticidesCartView',
+    checkout: 'pesticidesCheckoutView',
+    success: 'pesticidesSuccessView',
+    failure: 'pesticidesFailureView',
+    orders: 'pesticidesOrdersView'
+  };
+
+  Object.entries(views).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (key === viewName) el.classList.remove('hidden');
+    else el.classList.add('hidden');
+  });
+
+  ['catalog', 'cart', 'orders'].forEach(tabKey => {
+    const btn = document.getElementById(`pestTabBtn-${tabKey}`);
+    if (!btn) return;
+    if (tabKey === viewName || (viewName === 'checkout' && tabKey === 'cart')) {
+      btn.className = 'px-4 py-2.5 rounded-xl text-xs font-extrabold bg-emerald-700 text-white shadow-xs transition flex items-center gap-1.5';
+    } else {
+      btn.className = 'px-4 py-2.5 rounded-xl text-xs font-extrabold bg-slate-100 hover:bg-emerald-50 text-slate-800 border border-slate-200 transition flex items-center gap-1.5';
+    }
+  });
+
+  if (viewName === 'catalog') renderPesticideCatalog();
+  else if (viewName === 'cart') renderPesticideCartView();
+  else if (viewName === 'checkout') preparePesticideCheckoutView();
+  else if (viewName === 'orders') loadMyPesticideOrders(false);
+}
+
+function filterPesticidesByCategory(cat) {
+  pesticideState.selectedCategory = cat;
+  document.querySelectorAll('.pest-cat-btn').forEach(btn => {
+    btn.className = 'pest-cat-btn px-3 py-1.5 rounded-xl font-bold bg-white text-slate-700 border border-slate-200 hover:bg-emerald-50 transition';
+  });
+  const activeBtn = document.getElementById(`pestCatBtn-${cat}`);
+  if (activeBtn) {
+    activeBtn.className = 'pest-cat-btn px-3 py-1.5 rounded-xl font-extrabold bg-emerald-700 text-white transition';
+  }
+  renderPesticideCatalog();
+}
+
+function renderPesticideCatalog() {
+  const grid = document.getElementById('pesticidesProductsGrid');
+  if (!grid) return;
+
+  const searchInput = document.getElementById('pesticideSearchInput');
+  const query = (searchInput ? searchInput.value : '').trim().toLowerCase();
+  const cat = pesticideState.selectedCategory || 'ALL';
+
+  const filtered = (pesticideState.products || []).filter(p => {
+    const matchCat = cat === 'ALL' || (p.category || '').toLowerCase() === cat.toLowerCase();
+    const matchQuery = !query ||
+      (p.name || '').toLowerCase().includes(query) ||
+      (p.brand || '').toLowerCase().includes(query) ||
+      (p.composition || '').toLowerCase().includes(query) ||
+      (p.target_disease || '').toLowerCase().includes(query) ||
+      (p.suitable_crops || []).some(c => c.toLowerCase().includes(query));
+    return matchCat && matchQuery;
+  });
+
+  grid.innerHTML = '';
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `
+      <div class="col-span-full text-center py-10 bg-slate-50 rounded-2xl border border-slate-200">
+        <p class="text-sm font-bold text-slate-700">No matching pesticide medicines found.</p>
+      </div>
+    `;
+    return;
+  }
+
+  filtered.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'bg-white rounded-3xl border border-slate-200 hover:border-emerald-500/70 shadow-xs hover:shadow-xl transition-all p-5 flex flex-col justify-between space-y-4';
+
+    const packPills = (p.pack_variants || [p.pack_size]).map(sz => {
+      const isDefault = sz === p.pack_size;
+      return `<button type="button" onclick="selectCardPackSize(${p.id}, '${sz}')" id="cardPack-${p.id}-${sz.replace(/\s+/g, '')}" class="card-pack-btn-${p.id} px-3 py-1 rounded-full text-2xs font-bold border transition ${isDefault ? 'border-blue-600 bg-blue-50 text-blue-800 font-extrabold' : 'border-slate-300 bg-white text-slate-700 hover:bg-slate-50'}">${sz}</button>`;
+    }).join('');
+
+    const cropsBadges = (p.suitable_crops || []).slice(0, 5).map(c =>
+      `<span class="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-800 border border-emerald-200 text-3xs font-bold">${c}</span>`
+    ).join('');
+
+    card.innerHTML = `
+      <div class="space-y-3">
+        <!-- Product Image Header -->
+        <div onclick="openPesticideDetailModal(${p.id})" class="relative bg-slate-50 rounded-2xl border border-slate-100 p-4 h-56 flex items-center justify-center cursor-pointer group overflow-hidden">
+          <img src="${p.image_url}" alt="${p.name}" class="max-h-48 object-contain group-hover:scale-105 transition-transform duration-300">
+          <span class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-slate-100/90 text-slate-800 font-bold text-3xs border border-slate-200 flex items-center gap-1">
+            <span>🧴</span> <span>Pesticide • ${p.category}</span>
+          </span>
+          <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-black text-3xs border border-emerald-300">
+            ● ${p.stock_status} (${p.stock})
+          </span>
+        </div>
+
+        <!-- Product Title & Brand -->
+        <div>
+          <div class="flex items-center justify-between text-2xs text-slate-500 font-bold">
+            <span>${p.brand}</span>
+            <span class="text-amber-600 font-extrabold">⭐ ${p.rating} (${p.reviews_count})</span>
+          </div>
+          <h3 onclick="openPesticideDetailModal(${p.id})" class="font-black text-slate-900 text-base leading-snug mt-1 cursor-pointer hover:text-emerald-700 transition">
+            ${p.name}
+          </h3>
+          <p class="text-2xs font-mono font-bold text-emerald-800 bg-emerald-50/70 px-2.5 py-1 rounded-lg border border-emerald-200/70 mt-1.5">
+            🧪 ${p.composition}
+          </p>
+        </div>
+
+        <!-- Price, MRP & Discount Pill (Matches Uploaded Design) -->
+        <div class="pt-1">
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-400 line-through font-mono">₹${Number(p.mrp).toLocaleString('en-IN')}</span>
+            <span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black text-2xs">-${p.discount_pct}%</span>
+          </div>
+          <div class="text-2xl font-black text-slate-900 font-mono mt-0.5">
+            ₹${Number(p.price).toLocaleString('en-IN')}
+          </div>
+        </div>
+
+        <!-- Pack Size Pills -->
+        <div class="space-y-1">
+          <span class="text-3xs uppercase font-bold text-slate-400 block">Pack Size</span>
+          <div class="flex flex-wrap gap-1.5" id="cardPackContainer-${p.id}" data-selected-pack="${p.pack_size}">
+            ${packPills}
+          </div>
+        </div>
+
+        <!-- Short Description & Target Problem -->
+        <p class="text-xs text-slate-600 line-clamp-2">${p.short_description}</p>
+
+        <div class="space-y-1.5 pt-1 border-t border-slate-100 text-2xs">
+          <div><strong class="text-slate-700">🎯 Target Pest/Disease:</strong> <span class="text-slate-600">${p.target_disease}</span></div>
+          <div class="flex flex-wrap gap-1 pt-0.5">${cropsBadges}</div>
+        </div>
+
+        <!-- Sold By Agribegri Bar -->
+        <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50 border border-slate-200/80 text-2xs">
+          <div class="flex items-center gap-2">
+            <span class="w-6 h-6 rounded-full bg-emerald-100 text-emerald-800 font-black flex items-center justify-center text-xs">A</span>
+            <div>
+              <span class="text-slate-400 block text-3xs leading-none">Sold by:</span>
+              <strong class="text-slate-800 font-extrabold">${p.sold_by || 'Agribegri'}</strong>
+            </div>
+          </div>
+          <button onclick="openPesticideDetailModal(${p.id})" class="text-emerald-700 hover:underline font-bold">
+            Details & Safety →
+          </button>
+        </div>
+      </div>
+
+      <!-- Quantity Selector + Add to Cart + Buy Now + Consult Expert -->
+      <div class="space-y-2 pt-2 border-t border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-50">
+            <button type="button" onclick="adjustCardPesticideQty(${p.id}, -1)" class="px-2.5 py-2 font-black text-slate-700 hover:bg-slate-200 rounded-l-xl text-xs">−</button>
+            <input type="number" id="cardQty-${p.id}" value="1" min="1" max="50" class="w-10 text-center font-black text-xs text-slate-900 bg-transparent focus:outline-hidden" readonly>
+            <button type="button" onclick="adjustCardPesticideQty(${p.id}, 1)" class="px-2.5 py-2 font-black text-slate-700 hover:bg-slate-200 rounded-r-xl text-xs">+</button>
+          </div>
+          <button onclick="handleCardAddToCart(${p.id}, false)" class="flex-1 py-2.5 px-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-extrabold rounded-xl text-xs transition flex items-center justify-center gap-1">
+            <span>🛒</span> <span>Add to Cart</span>
+          </button>
+          <button onclick="handleCardAddToCart(${p.id}, true)" class="flex-1 py-2.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1">
+            <span>⚡</span> <span>Buy Now</span>
+          </button>
+        </div>
+        <button onclick="consultExpertAboutPesticide(${p.id})" class="w-full py-2 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-200 rounded-xl text-2xs font-bold transition flex items-center justify-center gap-1.5">
+          <span>👨‍🌾</span> <span>Consult Leaf Disease Expert About This Medicine</span>
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function selectCardPackSize(productId, packSize) {
+  const container = document.getElementById(`cardPackContainer-${productId}`);
+  if (container) container.setAttribute('data-selected-pack', packSize);
+  document.querySelectorAll(`.card-pack-btn-${productId}`).forEach(btn => {
+    btn.className = `card-pack-btn-${productId} px-3 py-1 rounded-full text-2xs font-bold border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 transition`;
+  });
+  const activeBtn = document.getElementById(`cardPack-${productId}-${packSize.replace(/\s+/g, '')}`);
+  if (activeBtn) {
+    activeBtn.className = `card-pack-btn-${productId} px-3 py-1 rounded-full text-2xs font-extrabold border border-blue-600 bg-blue-50 text-blue-800 transition`;
+  }
+}
+
+function adjustCardPesticideQty(productId, delta) {
+  const input = document.getElementById(`cardQty-${productId}`);
+  if (!input) return;
+  const next = Math.max(1, Math.min(50, (parseInt(input.value, 10) || 1) + delta));
+  input.value = String(next);
+}
+
+function handleCardAddToCart(productId, buyNow = false) {
+  const qtyInput = document.getElementById(`cardQty-${productId}`);
+  const packContainer = document.getElementById(`cardPackContainer-${productId}`);
+  const qty = qtyInput ? (parseInt(qtyInput.value, 10) || 1) : 1;
+  const packSize = packContainer ? packContainer.getAttribute('data-selected-pack') : null;
+  addToPesticideCart(productId, qty, packSize, buyNow);
+}
+
+// Product Detail Modal
+function openPesticideDetailModal(productId) {
+  const p = (pesticideState.products || []).find(item => Number(item.id) === Number(productId));
+  if (!p) return;
+
+  pesticideState.activeModalProduct = p;
+  pesticideState.activeModalPackSize = p.pack_size;
+
+  document.getElementById('pestModalCategoryBadge').innerText = `🧴 Pesticide • ${p.category}`;
+  document.getElementById('pestModalName').innerText = p.name;
+  document.getElementById('pestModalBrand').innerText = p.brand;
+  document.getElementById('pestModalImage').src = p.image_url;
+  document.getElementById('pestModalSoldBy').innerText = p.sold_by || 'Agribegri';
+  document.getElementById('pestModalStockRating').innerText = `${p.stock_status} (${p.stock}) • ⭐ ${p.rating}`;
+  document.getElementById('pestModalPrice').innerText = `₹${Number(p.price).toLocaleString('en-IN')}`;
+  document.getElementById('pestModalMrp').innerText = `₹${Number(p.mrp).toLocaleString('en-IN')}`;
+  document.getElementById('pestModalDiscount').innerText = `-${p.discount_pct}%`;
+  document.getElementById('pestModalComposition').innerText = p.composition;
+  document.getElementById('pestModalCrops').innerText = (p.suitable_crops || []).join(', ');
+  document.getElementById('pestModalTargetDisease').innerText = p.target_disease;
+  document.getElementById('pestModalFullDesc').innerText = p.full_description;
+  document.getElementById('pestModalDosage').innerText = p.dosage;
+  document.getElementById('pestModalSafety').innerText = p.safety_info;
+  document.getElementById('pestModalQtyInput').value = '1';
+
+  const packWrap = document.getElementById('pestModalPackVariants');
+  if (packWrap) {
+    packWrap.innerHTML = (p.pack_variants || [p.pack_size]).map(sz => {
+      const active = sz === p.pack_size;
+      return `<button type="button" onclick="selectModalPackSize('${sz}')" class="modal-pack-pill px-3.5 py-1.5 rounded-full text-xs font-bold border ${active ? 'border-blue-600 bg-blue-50 text-blue-800 font-extrabold' : 'border-slate-300 bg-white text-slate-700'}" data-pack="${sz}">${sz}</button>`;
+    }).join('');
+  }
+
+  document.getElementById('pestModalAddToCartBtn').onclick = () => {
+    const q = parseInt(document.getElementById('pestModalQtyInput').value, 10) || 1;
+    addToPesticideCart(p.id, q, pesticideState.activeModalPackSize, false);
+    closePesticideDetailModal();
+  };
+  document.getElementById('pestModalBuyNowBtn').onclick = () => {
+    const q = parseInt(document.getElementById('pestModalQtyInput').value, 10) || 1;
+    closePesticideDetailModal();
+    addToPesticideCart(p.id, q, pesticideState.activeModalPackSize, true);
+  };
+  document.getElementById('pestModalConsultExpertBtn').onclick = () => {
+    closePesticideDetailModal();
+    consultExpertAboutPesticide(p.id);
+  };
+  document.getElementById('pestModalAskAiBtn').onclick = () => {
+    closePesticideDetailModal();
+    askAiAboutPesticide(p.id);
+  };
+
+  document.getElementById('pesticideDetailModal').classList.remove('hidden');
+}
+
+function selectModalPackSize(sz) {
+  pesticideState.activeModalPackSize = sz;
+  document.querySelectorAll('.modal-pack-pill').forEach(btn => {
+    if (btn.getAttribute('data-pack') === sz) {
+      btn.className = 'modal-pack-pill px-3.5 py-1.5 rounded-full text-xs font-extrabold border border-blue-600 bg-blue-50 text-blue-800';
+    } else {
+      btn.className = 'modal-pack-pill px-3.5 py-1.5 rounded-full text-xs font-bold border border-slate-300 bg-white text-slate-700';
+    }
+  });
+}
+
+function adjustModalPesticideQty(delta) {
+  const el = document.getElementById('pestModalQtyInput');
+  if (!el) return;
+  el.value = String(Math.max(1, Math.min(50, (parseInt(el.value, 10) || 1) + delta)));
+}
+
+function closePesticideDetailModal() {
+  const modal = document.getElementById('pesticideDetailModal');
+  if (modal) modal.classList.add('hidden');
+}
+
+function consultExpertAboutPesticide(productId) {
+  const p = (pesticideState.products || []).find(item => Number(item.id) === Number(productId));
+  if (!p) return;
+  switchTab('scanner');
+  setTimeout(() => {
+    const noteInput = document.getElementById('farmerExpertQueryInput');
+    if (noteInput) {
+      noteInput.value = `Namaskar Doctor, I want to check if "${p.name}" (${p.composition}) at dosage ${p.dosage} is suitable and safe for my crop problem (${p.target_disease}). Please advise.`;
+      noteInput.focus();
+      noteInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    showToast(`👨‍🌾 Switched to Leaf Disease Expert Consultation for ${p.name}`, 'info');
+  }, 250);
+}
+
+function askAiAboutPesticide(productId) {
+  const p = (pesticideState.products || []).find(item => Number(item.id) === Number(productId));
+  if (!p) return;
+  switchTab('copilot');
+  setTimeout(() => {
+    const chatInput = document.getElementById('copilotInput');
+    if (chatInput) {
+      chatInput.value = `Tell me about ${p.name} (${p.composition}) for ${p.target_disease} and its safe application.`;
+      if (typeof sendCopilotMessage === 'function') sendCopilotMessage();
+    }
+  }, 250);
+}
+
+// Cart Management
+async function addToPesticideCart(productId, quantity = 1, packSize = null, buyNow = false) {
+  const p = (pesticideState.products || []).find(item => Number(item.id) === Number(productId));
+  if (!p) return;
+
+  const chosenPack = packSize || p.pack_size;
+  const existing = pesticideState.cart.find(it => Number(it.product_id) === Number(productId) && it.pack_size === chosenPack);
+  if (existing) {
+    existing.quantity = Math.min(50, Number(existing.quantity) + Number(quantity));
+  } else {
+    pesticideState.cart.push({
+      product_id: p.id,
+      quantity: Math.min(50, Number(quantity)),
+      pack_size: chosenPack
+    });
+  }
+
+  savePesticideCartToStorage();
+  await syncServerCartPricing();
+
+  if (buyNow) {
+    switchPesticideSubView('checkout');
+  } else {
+    showToast(`🛒 Added ${quantity} × ${p.name} (${chosenPack}) to your cart!`, 'success');
+  }
+}
+
+async function syncServerCartPricing() {
+  if (!pesticideState.cart || pesticideState.cart.length === 0) {
+    pesticideState.serverPricing = null;
+    return null;
+  }
+  try {
+    const res = await apiFetch('/pesticides/cart/calculate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pesticideState.cart)
+    });
+    if (res.ok) {
+      const data = await res.json();
+      pesticideState.serverPricing = data.pricing;
+      return data.pricing;
+    }
+  } catch (e) {
+    console.error('Cart calculation error:', e);
+  }
+  return null;
+}
+
+async function updateCartItemQty(index, delta) {
+  const item = pesticideState.cart[index];
+  if (!item) return;
+  const nextQty = Number(item.quantity) + delta;
+  if (nextQty <= 0) {
+    pesticideState.cart.splice(index, 1);
+  } else {
+    item.quantity = Math.min(50, nextQty);
+  }
+  savePesticideCartToStorage();
+  await renderPesticideCartView();
+}
+
+async function removeCartItem(index) {
+  pesticideState.cart.splice(index, 1);
+  savePesticideCartToStorage();
+  await renderPesticideCartView();
+}
+
+async function renderPesticideCartView() {
+  const emptyState = document.getElementById('pesticideCartEmptyState');
+  const contentGrid = document.getElementById('pesticideCartContentGrid');
+  const listEl = document.getElementById('pesticideCartItemsList');
+
+  if (!pesticideState.cart || pesticideState.cart.length === 0) {
+    if (emptyState) emptyState.classList.remove('hidden');
+    if (contentGrid) contentGrid.classList.add('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.classList.add('hidden');
+  if (contentGrid) contentGrid.classList.remove('hidden');
+
+  const pricing = await syncServerCartPricing();
+  if (!pricing || !listEl) return;
+
+  listEl.innerHTML = '';
+  (pricing.items || []).forEach((it, idx) => {
+    const row = document.createElement('div');
+    row.className = 'p-4 bg-white rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-2xs';
+    row.innerHTML = `
+      <div class="flex items-center gap-3.5">
+        <img src="${it.image_url}" alt="${it.name}" class="w-16 h-16 object-contain rounded-xl bg-slate-50 border border-slate-100 p-1">
+        <div>
+          <span class="text-3xs font-extrabold uppercase px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">${it.category} • Pack: ${it.pack_size}</span>
+          <h4 class="font-extrabold text-slate-900 text-sm mt-1">${it.name}</h4>
+          <p class="text-2xs text-slate-500">${it.brand}</p>
+          <div class="flex items-center gap-2 mt-1">
+            <span class="font-black text-slate-900 font-mono text-sm">₹${Number(it.unit_price).toLocaleString('en-IN')}</span>
+            <span class="text-2xs text-slate-400 line-through font-mono">₹${Number(it.mrp).toLocaleString('en-IN')}</span>
+            <span class="text-3xs font-black text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded">-${it.discount_pct}%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-100">
+        <div class="inline-flex items-center rounded-xl border border-slate-300 bg-slate-50">
+          <button onclick="updateCartItemQty(${idx}, -1)" class="px-3 py-1.5 font-black text-slate-700 hover:bg-slate-200 rounded-l-xl text-xs">−</button>
+          <span class="px-3 font-black text-xs text-slate-900">${it.quantity}</span>
+          <button onclick="updateCartItemQty(${idx}, 1)" class="px-3 py-1.5 font-black text-slate-700 hover:bg-slate-200 rounded-r-xl text-xs">+</button>
+        </div>
+        <div class="text-right min-w-[80px]">
+          <div class="font-black text-emerald-800 font-mono text-sm">₹${Number(it.line_total).toLocaleString('en-IN')}</div>
+          <button onclick="removeCartItem(${idx})" class="text-3xs text-red-600 hover:underline font-bold">Remove</button>
+        </div>
+      </div>
+    `;
+    listEl.appendChild(row);
+  });
+
+  document.getElementById('cartSummaryQty').innerText = String(pricing.total_quantity);
+  document.getElementById('cartSummaryMrp').innerText = `₹${Number(pricing.mrp_total).toLocaleString('en-IN')}`;
+  document.getElementById('cartSummaryDiscount').innerText = `-₹${Number(pricing.discount).toLocaleString('en-IN')}`;
+  document.getElementById('cartSummarySubtotal').innerText = `₹${Number(pricing.subtotal).toLocaleString('en-IN')}`;
+  document.getElementById('cartSummaryShipping').innerText = pricing.shipping_charge === 0 ? 'FREE' : `₹${pricing.shipping_charge}`;
+  document.getElementById('cartSummaryTotal').innerText = `₹${Number(pricing.total_amount).toLocaleString('en-IN')}`;
+}
+
+function proceedToPesticideCheckout() {
+  if (!pesticideState.cart || pesticideState.cart.length === 0) {
+    showToast('Your cart is empty! Please add a medicine first.', 'warning');
+    return;
+  }
+  switchPesticideSubView('checkout');
+}
+
+async function preparePesticideCheckoutView() {
+  if (!pesticideState.cart || pesticideState.cart.length === 0) {
+    switchPesticideSubView('catalog');
+    return;
+  }
+
+  // Prefill Farmer Name & Phone from logged-in session if empty
+  const nameInput = document.getElementById('chkFullName');
+  const phoneInput = document.getElementById('chkPhone');
+  const addrInput = document.getElementById('chkAddress');
+  if (state.user) {
+    if (nameInput && !nameInput.value) nameInput.value = state.user.full_name || '';
+    if (phoneInput && !phoneInput.value) phoneInput.value = (state.user.phone_number || '').replace(/\D/g, '').slice(-10);
+    if (addrInput && !addrInput.value && state.user.farm_name) {
+      addrInput.value = `${state.user.farm_name}, Main Road, Khordha`;
+    }
+  }
+
+  const pricing = await syncServerCartPricing();
+  if (!pricing) return;
+
+  const miniList = document.getElementById('checkoutItemsMiniList');
+  if (miniList) {
+    miniList.innerHTML = (pricing.items || []).map(it => `
+      <div class="flex items-center justify-between gap-2 py-1.5 border-b border-slate-200/60">
+        <div class="flex items-center gap-2">
+          <img src="${it.image_url}" class="w-9 h-9 object-contain rounded-lg bg-white border border-slate-200 p-0.5">
+          <div>
+            <div class="font-bold text-slate-800 leading-tight">${it.name}</div>
+            <div class="text-3xs text-slate-500">Pack: ${it.pack_size} × Qty: ${it.quantity}</div>
+          </div>
+        </div>
+        <strong class="font-mono text-slate-900 font-bold">₹${Number(it.line_total).toLocaleString('en-IN')}</strong>
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('chkSummaryMrp').innerText = `₹${Number(pricing.mrp_total).toLocaleString('en-IN')}`;
+  document.getElementById('chkSummaryDiscount').innerText = `-₹${Number(pricing.discount).toLocaleString('en-IN')}`;
+  document.getElementById('chkSummarySubtotal').innerText = `₹${Number(pricing.subtotal).toLocaleString('en-IN')}`;
+  document.getElementById('chkSummaryShipping').innerText = pricing.shipping_charge === 0 ? 'FREE' : `₹${pricing.shipping_charge}`;
+  document.getElementById('chkSummaryTotal').innerText = `₹${Number(pricing.total_amount).toLocaleString('en-IN')}`;
+
+  selectCheckoutPaymentMethod(pesticideState.paymentMethod || 'RAZORPAY');
+}
+
+function selectCheckoutPaymentMethod(method) {
+  pesticideState.paymentMethod = method;
+  const rzpCard = document.getElementById('payMethodCard-RAZORPAY');
+  const codCard = document.getElementById('payMethodCard-COD');
+  const btnText = document.getElementById('checkoutPrimaryPayBtnText');
+  const totalAmt = pesticideState.serverPricing ? Number(pesticideState.serverPricing.total_amount).toLocaleString('en-IN') : '0';
+
+  if (method === 'RAZORPAY') {
+    if (rzpCard) rzpCard.className = 'block p-4 rounded-2xl border-2 border-emerald-600 bg-emerald-50/50 cursor-pointer transition';
+    if (codCard) codCard.className = 'block p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition';
+    if (btnText) btnText.innerText = `Pay ₹${totalAmt} Securely`;
+  } else {
+    if (codCard) codCard.className = 'block p-4 rounded-2xl border-2 border-emerald-600 bg-emerald-50/50 cursor-pointer transition';
+    if (rzpCard) rzpCard.className = 'block p-4 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer transition';
+    if (btnText) btnText.innerText = `Place COD Order (₹${totalAmt})`;
+  }
+}
+
+async function submitCheckoutAndPay() {
+  const fullName = (document.getElementById('chkFullName')?.value || '').trim();
+  const phone = (document.getElementById('chkPhone')?.value || '').trim();
+  const address = (document.getElementById('chkAddress')?.value || '').trim();
+  const city = (document.getElementById('chkCity')?.value || '').trim();
+  const stateVal = (document.getElementById('chkState')?.value || 'Odisha').trim();
+  const pincode = (document.getElementById('chkPincode')?.value || '').trim();
+
+  if (!fullName) {
+    showToast('Please enter Full Name for delivery', 'warning');
+    document.getElementById('chkFullName')?.focus();
+    return;
+  }
+  if (!phone || phone.length < 10) {
+    showToast('Please enter a valid 10-digit Mobile Number', 'warning');
+    document.getElementById('chkPhone')?.focus();
+    return;
+  }
+  if (!address) {
+    showToast('Please enter your Delivery Address / Village', 'warning');
+    document.getElementById('chkAddress')?.focus();
+    return;
+  }
+  if (!city || !pincode) {
+    showToast('Please enter City and PIN Code', 'warning');
+    return;
+  }
+
+  const addressPayload = {
+    full_name: fullName,
+    phone: phone,
+    email: state.user?.email || '',
+    address: address,
+    city: city,
+    state: stateVal,
+    pincode: pincode
+  };
+
+  const payBtn = document.getElementById('checkoutPrimaryPayBtn');
+  if (payBtn) payBtn.disabled = true;
+
+  try {
+    // CASE A: CASH ON DELIVERY (COD)
+    if (pesticideState.paymentMethod === 'COD') {
+      const codRes = await apiFetch('/orders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: state.user?.id || null,
+          items: pesticideState.cart,
+          address: addressPayload,
+          payment_method: 'COD'
+        })
+      });
+      const codData = await codRes.json();
+      if (!codRes.ok) {
+        showToast(codData.detail || 'Could not place COD order', 'error');
+        return;
+      }
+      pesticideState.cart = [];
+      savePesticideCartToStorage();
+      renderOrderSuccessScreen(codData.order);
+      return;
+    }
+
+    // CASE B: ONLINE PAYMENT VIA RAZORPAY
+    // Step 1: Call backend POST /api/payments/create-order (Backend calculates & verifies amount)
+    const orderRes = await apiFetch('/payments/create-order', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        user_id: state.user?.id || null,
+        items: pesticideState.cart,
+        address: addressPayload,
+        payment_method: 'RAZORPAY'
+      })
+    });
+
+    const orderData = await orderRes.json();
+    if (!orderRes.ok) {
+      showToast(orderData.detail || 'Failed to create Razorpay order on server', 'error');
+      return;
+    }
+
+    pesticideState.lastCreatedOrder = orderData.order;
+
+    // Step 2: Open Official Razorpay Checkout Modal
+    if (typeof window.Razorpay !== 'function') {
+      showToast('Razorpay SDK could not be loaded. Please check your internet connection.', 'error');
+      await recordPaymentFailureOnServer(orderData.order.order_code, orderData.razorpay_order_id, 'Razorpay SDK unavailable');
+      return;
+    }
+
+    const rzpOptions = {
+      key: orderData.razorpay_key_id,
+      amount: orderData.amount_paise,
+      currency: orderData.currency || 'INR',
+      name: 'AI Farm Co-Pilot Store',
+      description: `Pesticide Order ${orderData.order.order_code}`,
+      prefill: {
+        name: fullName,
+        contact: phone,
+        email: state.user?.email || 'farmer@aifarmcopilot.in'
+      },
+      notes: {
+        order_code: orderData.order.order_code,
+        customer_address: `${address}, ${city} - ${pincode}`
+      },
+      theme: {
+        color: '#047857'
+      },
+      handler: async function (response) {
+        // Step 3: Send Razorpay signature to Backend POST /api/payments/verify
+        await verifyRazorpayPaymentOnServer(
+          orderData.order.order_code,
+          response.razorpay_order_id || orderData.razorpay_order_id,
+          response.razorpay_payment_id,
+          response.razorpay_signature
+        );
+      },
+      modal: {
+        ondismiss: async function () {
+          await recordPaymentFailureOnServer(
+            orderData.order.order_code,
+            orderData.razorpay_order_id,
+            'Payment was cancelled by user before completion.'
+          );
+        }
+      }
+    };
+
+    // Pass official Razorpay Order ID when created directly with Razorpay API
+    if (orderData.razorpay_order_id && !orderData.offline_fallback) {
+      rzpOptions.order_id = orderData.razorpay_order_id;
+    }
+
+    const rzpInstance = new window.Razorpay(rzpOptions);
+    rzpInstance.on('payment.failed', async function (failResp) {
+      const errDesc = failResp?.error?.description || 'Payment declined by bank or payment gateway.';
+      await recordPaymentFailureOnServer(
+        orderData.order.order_code,
+        orderData.razorpay_order_id,
+        errDesc
+      );
+    });
+    rzpInstance.open();
+
+  } catch (err) {
+    console.error('Checkout error:', err);
+    showToast('Network error during checkout. Please try again.', 'error');
+  } finally {
+    if (payBtn) payBtn.disabled = false;
+  }
+}
+
+async function verifyRazorpayPaymentOnServer(orderCode, rzpOrderId, rzpPaymentId, rzpSignature) {
+  try {
+    const res = await apiFetch('/payments/verify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_code: orderCode,
+        razorpay_order_id: rzpOrderId,
+        razorpay_payment_id: rzpPaymentId,
+        razorpay_signature: rzpSignature || 'OFFLINE_TEST_VERIFIED_SIG',
+        payment_method_detail: 'RAZORPAY'
+      })
+    });
+    const data = await res.json();
+    if (res.ok && data.verified) {
+      pesticideState.cart = [];
+      savePesticideCartToStorage();
+      renderOrderSuccessScreen(data.order);
+      showToast('🎉 Payment Verified by Server! Order Confirmed.', 'success');
+    } else {
+      await recordPaymentFailureOnServer(orderCode, rzpOrderId, data.detail || 'Signature verification failed');
+    }
+  } catch (err) {
+    await recordPaymentFailureOnServer(orderCode, rzpOrderId, 'Server verification error');
+  }
+}
+
+async function recordPaymentFailureOnServer(orderCode, rzpOrderId, reason) {
+  try {
+    await apiFetch('/payments/failed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        order_code: orderCode,
+        razorpay_order_id: rzpOrderId,
+        reason: reason
+      })
+    });
+  } catch (e) {
+    console.warn('Could not log payment failure:', e);
+  }
+
+  document.getElementById('failOrderId').innerText = orderCode || rzpOrderId || '--';
+  document.getElementById('failPaymentStatus').innerText = 'FAILED';
+  document.getElementById('failReasonText').innerText = reason || 'Payment was not completed.';
+  switchPesticideSubView('failure');
+  showToast('⚠️ Payment was not completed.', 'warning');
+}
+
+function renderOrderSuccessScreen(order) {
+  if (!order) return;
+  const isCod = order.payment_method === 'COD';
+  document.getElementById('successPaymentBadge').innerText = isCod
+    ? 'Cash on Delivery • Order Confirmed'
+    : 'Verified by Razorpay Server Signature';
+  document.getElementById('successHeadingTitle').innerText = isCod
+    ? '🎉 Order Confirmed (Cash on Delivery)'
+    : '🎉 Payment Successful';
+
+  document.getElementById('succOrderId').innerText = order.order_code || '--';
+  document.getElementById('succPaymentId').innerText = order.razorpay_payment_id || (isCod ? 'Pay on Delivery (COD)' : '--');
+  document.getElementById('succAmountPaid').innerText = `₹${Number(order.total_amount).toLocaleString('en-IN')}`;
+  document.getElementById('succPaymentMethod').innerText = isCod
+    ? 'Payment: Cash on Delivery (Status: Pending)'
+    : `Payment: Razorpay (Status: ${order.payment_status})`;
+  document.getElementById('succOrderDate').innerText = order.created_at || new Date().toLocaleString();
+  document.getElementById('succOrderStatus').innerText = order.order_status || 'CONFIRMED';
+
+  const addr = order.shipping_address || {};
+  document.getElementById('succDeliveryAddress').innerText =
+    `${addr.full_name || order.customer_name} (${addr.phone || order.customer_phone}) — ${addr.address || ''}, ${addr.city || ''}, ${addr.state || 'Odisha'} - ${addr.pincode || ''}`;
+
+  const prodWrap = document.getElementById('succOrderedProducts');
+  if (prodWrap) {
+    prodWrap.innerHTML = (order.items || []).map(it => `
+      <div class="flex items-center justify-between py-1.5 border-b border-slate-100">
+        <div class="flex items-center gap-2.5">
+          <img src="${it.image_url}" class="w-10 h-10 object-contain rounded-lg border border-slate-200 p-0.5">
+          <div>
+            <div class="font-extrabold text-slate-900">${it.name}</div>
+            <div class="text-2xs text-slate-500">Pack: ${it.pack_size} • Qty: ${it.quantity} × ₹${it.unit_price}</div>
+          </div>
+        </div>
+        <strong class="font-mono text-emerald-800 font-black">₹${Number(it.line_total).toLocaleString('en-IN')}</strong>
+      </div>
+    `).join('');
+  }
+
+  switchPesticideSubView('success');
+  loadMyPesticideOrders(true);
+}
+
+async function loadMyPesticideOrders(silent = false) {
+  try {
+    const params = new URLSearchParams();
+    if (state.user?.id) params.set('user_id', String(state.user.id));
+    if (state.user?.phone_number) params.set('phone', state.user.phone_number);
+
+    const res = await apiFetch(`/orders?${params.toString()}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    pesticideState.orders = data.orders || [];
+
+    const countBadge = document.getElementById('pestHeaderOrdersCount');
+    if (countBadge) countBadge.innerText = String(pesticideState.orders.length);
+
+    if (!silent) {
+      renderMyPesticideOrdersList();
+    }
+  } catch (e) {
+    console.error('Error loading pesticide orders:', e);
+  }
+}
+
+function renderMyPesticideOrdersList() {
+  const container = document.getElementById('pesticideOrdersContainer');
+  if (!container) return;
+
+  if (!pesticideState.orders || pesticideState.orders.length === 0) {
+    container.innerHTML = `
+      <div class="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-300 space-y-3">
+        <div class="text-4xl">📦</div>
+        <h4 class="text-base font-extrabold text-slate-800">No Pesticide Orders Yet</h4>
+        <p class="text-xs text-slate-500">When you order crop medicines via Razorpay or Cash on Delivery, they will appear here with live order tracking.</p>
+      </div>
+    `;
+    return;
+  }
+
+  const steps = ['PLACED', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'OUT_FOR_DELIVERY', 'DELIVERED'];
+
+  container.innerHTML = pesticideState.orders.map(o => {
+    const isOnline = o.payment_method !== 'COD';
+    const payStatusColor = o.payment_status === 'PAID'
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+      : (o.payment_status === 'FAILED' ? 'bg-red-100 text-red-800 border-red-300' : 'bg-amber-100 text-amber-800 border-amber-300');
+
+    const payLabel = isOnline
+      ? `Payment: Razorpay • Status: ${o.payment_status === 'PAID' ? 'Paid' : o.payment_status}`
+      : `Payment: Cash on Delivery • Status: ${o.payment_status === 'PAID' ? 'Paid' : 'Pending'}`;
+
+    const currentStepIdx = Math.max(0, steps.indexOf(o.order_status || 'CONFIRMED'));
+    const stepperHtml = steps.map((st, idx) => {
+      const done = idx <= currentStepIdx && o.payment_status !== 'FAILED';
+      return `
+        <div class="flex items-center gap-1 text-3xs font-extrabold ${done ? 'text-emerald-700' : 'text-slate-400'}">
+          <span class="w-4 h-4 rounded-full flex items-center justify-center text-[9px] ${done ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-500'}">${done ? '✓' : idx + 1}</span>
+          <span>${st.replace(/_/g, ' ')}</span>
+          ${idx < steps.length - 1 ? '<span class="text-slate-300 mx-1">→</span>' : ''}
+        </div>
+      `;
+    }).join('');
+
+    const itemsHtml = (o.items || []).map(it => `
+      <div class="flex items-center justify-between text-xs py-1.5 border-b border-slate-100 last:border-none">
+        <div class="flex items-center gap-2.5">
+          <img src="${it.image_url}" class="w-10 h-10 object-contain rounded-lg bg-slate-50 border border-slate-200 p-0.5">
+          <div>
+            <strong class="text-slate-900 font-bold block">${it.name}</strong>
+            <span class="text-2xs text-slate-500">Pack: ${it.pack_size} × Qty: ${it.quantity}</span>
+          </div>
+        </div>
+        <span class="font-mono font-bold text-slate-800">₹${Number(it.line_total).toLocaleString('en-IN')}</span>
+      </div>
+    `).join('');
+
+    const addr = o.shipping_address || {};
+
+    return `
+      <div class="p-5 bg-white rounded-2xl border border-slate-200 shadow-xs space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+          <div>
+            <div class="flex items-center gap-2">
+              <strong class="font-mono text-sm font-black text-slate-900">${o.order_code}</strong>
+              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black border ${payStatusColor}">${payLabel}</span>
+              <span class="px-2.5 py-0.5 rounded-full text-3xs font-black bg-blue-50 text-blue-800 border border-blue-200">Order: ${o.order_status}</span>
+            </div>
+            <div class="text-2xs text-slate-500 mt-1">
+              Ordered on ${o.created_at || '--'}
+              ${o.razorpay_payment_id ? ` • Razorpay Payment ID: <strong class="font-mono text-emerald-700">${o.razorpay_payment_id}</strong>` : ''}
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-3xs uppercase font-bold text-slate-400 block">Total Amount</span>
+            <strong class="font-mono text-lg font-black text-emerald-800">₹${Number(o.total_amount).toLocaleString('en-IN')}</strong>
+          </div>
+        </div>
+
+        <div class="space-y-1">${itemsHtml}</div>
+
+        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-1">${stepperHtml}</div>
+          <div class="text-2xs text-slate-500">
+            📍 Deliver to: <strong>${addr.full_name || o.customer_name}</strong> (${addr.city || 'Odisha'} - ${addr.pincode || ''})
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =========================================================================
+// 💳 ADMIN PAYMENT MANAGEMENT PORTAL FUNCTIONS
+// =========================================================================
+async function loadAdminPayments(statusFilter = 'ALL') {
+  document.querySelectorAll('.adm-pay-filter').forEach(btn => {
+    btn.classList.remove('ring-2', 'ring-slate-900');
+  });
+  const activeBtn = document.getElementById(`admPayFilter-${statusFilter}`);
+  if (activeBtn) activeBtn.classList.add('ring-2', 'ring-slate-900');
+
+  const tbody = document.getElementById('adminPaymentsTableBody');
+  if (!tbody) return;
+
+  try {
+    const res = await apiFetch(`/admin/payments?status=${encodeURIComponent(statusFilter)}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const orders = data.orders || [];
+
+    if (orders.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="11" class="p-6 text-center text-slate-400 font-semibold">No payment transactions found for filter: ${statusFilter}</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = orders.map(o => {
+      const prods = (o.items || []).map(i => `${i.name} (×${i.quantity})`).join(', ');
+      const statusBadge = o.payment_status === 'PAID'
+        ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-black text-3xs">PAID</span>'
+        : (o.payment_status === 'FAILED'
+          ? '<span class="px-2 py-0.5 rounded-full bg-red-100 text-red-800 font-black text-3xs">FAILED</span>'
+          : (o.payment_status === 'REFUNDED'
+            ? '<span class="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 font-black text-3xs">REFUNDED</span>'
+            : `<span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 font-black text-3xs">${o.payment_status}</span>`));
+
+      const canRefund = o.payment_status === 'PAID' && o.payment && o.payment.id && o.razorpay_payment_id;
+      return `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3 font-mono font-black text-slate-900">${o.order_code}</td>
+          <td class="p-3 font-bold text-slate-800">${o.customer_name}<br><span class="text-3xs font-mono text-slate-500">${o.customer_phone}</span></td>
+          <td class="p-3 text-slate-600 max-w-[180px] truncate" title="${prods}">${prods}</td>
+          <td class="p-3 font-mono font-black text-emerald-800">₹${Number(o.total_amount).toLocaleString('en-IN')}</td>
+          <td class="p-3 font-mono text-2xs text-slate-600">${o.razorpay_order_id || '--'}</td>
+          <td class="p-3 font-mono text-2xs text-emerald-700 font-bold">${o.razorpay_payment_id || '--'}</td>
+          <td class="p-3 font-bold text-2xs">${o.payment_method}</td>
+          <td class="p-3">${statusBadge}</td>
+          <td class="p-3 font-bold text-2xs text-blue-800">${o.order_status}</td>
+          <td class="p-3 text-2xs text-slate-500">${o.created_at || '--'}</td>
+          <td class="p-3">
+            ${canRefund ? `<button onclick="adminInitiateRefund(${o.payment.id}, ${o.total_amount})" class="px-2.5 py-1 bg-purple-100 hover:bg-purple-200 text-purple-900 rounded-lg font-bold text-3xs">Refund</button>` : '<span class="text-3xs text-slate-400">--</span>'}
+          </td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Error loading admin payments:', err);
+  }
+}
+
+async function adminInitiateRefund(paymentId, amount) {
+  const res = await apiFetch(`/payments/${paymentId}/refund`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ amount: amount, reason: 'Admin initiated refund via portal' })
+  });
+  const data = await res.json();
+  if (res.ok) {
+    showToast(data.message || 'Refund processed via Razorpay', 'success');
+    loadAdminPayments('ALL');
+  } else {
+    showToast(data.detail || 'Refund could not be completed via Razorpay API', 'error');
+  }
 }
 
 // =========================================================================
@@ -4067,6 +5078,308 @@ function setupEventListeners() {
       db.active_model_version = body.version || 'v2.4.0-prod';
       saveDB(db);
       return jsonResponse({ status: 'success', active_version: db.active_model_version });
+    }
+
+    // 11. PESTICIDES E-COMMERCE & RAZORPAY ONLINE PAYMENT (STANDALONE NETLIFY ENGINE)
+    const STANDALONE_PESTICIDES = [
+      {
+        id: 1,
+        name: 'Adama Tapuz Insecticide',
+        brand: 'ADAMA India Private Limited',
+        category: 'Insecticide',
+        composition: 'Buprofezin 15% + Acephate 35% w/w WP',
+        pack_size: '1 kg',
+        pack_variants: ['1 kg'],
+        price: 1121,
+        mrp: 1450,
+        discount_pct: 22,
+        stock: 85,
+        stock_status: 'In Stock',
+        rating: 4.8,
+        reviews_count: 342,
+        sold_by: 'Agribegri',
+        image_url: '/static/images/pesticides/adama_tapuz.jpg',
+        suitable_crops: ['Rice', 'Cotton', 'Chili', 'Tomato', 'Okra'],
+        target_disease: 'Brown Plant Hopper (BPH), White Backed Plant Hopper, Jassids, Thrips & Whitefly',
+        short_description: 'Dual-mode systemic & contact insecticide (Buprofezin 15% + Acephate 35% WP) for superior hopper and sucking pest control.',
+        full_description: 'Adama Tapuz is a premix wettable powder insecticide combining Buprofezin (chitin synthesis inhibitor) and Acephate (systemic organophosphate). Controls both nymphs and adult stages of Brown Plant Hopper (BPH) in Rice and sucking pests in Cotton & Vegetables.',
+        dosage: '500 g per Acre in 200 Litres of water (2.5 g / Litre foliar spray)',
+        safety_info: 'Wear protective gloves, face mask, and eye protection during mixing and spraying. Observe a 15-day Pre-Harvest Interval (PHI).'
+      },
+      {
+        id: 2,
+        name: "Anand Dr.Bacto's Ampelo Bio Fungicide - Ampelomyces Quisqualis 2.0 A.S.",
+        brand: 'Anand Agro Care Nashik',
+        category: 'Bio Fungicide',
+        composition: 'Ampelomyces Quisqualis 2.0% A.S. (CFU min 2×10⁶/ml)',
+        pack_size: '500 ml',
+        pack_variants: ['500 ml', '1 l', '2 l', '4 l', '10 l'],
+        price: 416,
+        mrp: 540,
+        discount_pct: 22,
+        stock: 120,
+        stock_status: 'In Stock',
+        rating: 4.7,
+        reviews_count: 218,
+        sold_by: 'Agribegri',
+        image_url: '/static/images/pesticides/anand_ampelo.jpg',
+        suitable_crops: ['Tomato', 'Chili', 'Grapes', 'Mango', 'Cucurbits', 'Peas', 'Okra'],
+        target_disease: 'Powdery Mildew (Erysiphales) & Foliar Fungal Pathogens',
+        short_description: '100% organic residue-free bio-fungicide based on hyperparasitic fungus Ampelomyces quisqualis 2.0% A.S.',
+        full_description: "Anand Dr.Bacto's Ampelo is an eco-friendly biological fungicide containing the beneficial hyperparasite Ampelomyces quisqualis. It actively parasitizes and destroys Powdery Mildew fungi across vegetables, pulses, and fruit crops.",
+        dosage: '2 to 2.5 ml per Litre of water (400–500 ml per Acre) sprayed during early morning or evening',
+        safety_info: 'Do not tank-mix with chemical fungicides or bactericides (maintain a 7-day gap). Store in a cool shaded place.'
+      },
+      {
+        id: 3,
+        name: 'Best Agro Promos Fungicide - Metiram 55% + Pyraclostrobin 5% WG',
+        brand: 'Best Agrolife Limited',
+        category: 'Fungicide',
+        composition: 'Metiram 55% + Pyraclostrobin 5% w/w WG',
+        pack_size: '600 g',
+        pack_variants: ['600 g', '1.2 kg', '3 kg', '6 kg'],
+        price: 1418,
+        mrp: 2106,
+        discount_pct: 32,
+        stock: 64,
+        stock_status: 'In Stock',
+        rating: 4.9,
+        reviews_count: 419,
+        sold_by: 'Agribegri',
+        image_url: '/static/images/pesticides/best_agro_promos.jpg',
+        suitable_crops: ['Potato', 'Tomato', 'Grapes', 'Chili', 'Onion', 'Cotton', 'Groundnut'],
+        target_disease: 'Early Blight, Late Blight, Downy Mildew, Anthracnose & Tikka Leaf Spot',
+        short_description: 'Broad-spectrum systemic & contact WG fungicide (Metiram 55% + Pyraclostrobin 5%) for Early & Late Blight control.',
+        full_description: 'Best Agro Promos is a water-dispersible granule (WG) fungicide combining multi-site contact protection of Metiram 55% with translaminar & systemic Pyraclostrobin 5%. Halts spore germination and enhances leaf greenness.',
+        dosage: '600 g per Acre in 200 Litres of water (3 g / Litre foliar spray)',
+        safety_info: 'Do not drift into water bodies or aquaculture ponds. Wear full protective gear while spraying. Pre-Harvest Interval: 10 days.'
+      },
+      {
+        id: 4,
+        name: 'IIL Milquat Herbicide',
+        brand: 'Insecticides India Ltd',
+        category: 'Herbicide',
+        composition: 'Paraquat Dichloride 24% SL (Non-Selective Contact Herbicide)',
+        pack_size: '4 l',
+        pack_variants: ['4 l'],
+        price: 1935,
+        mrp: 2200,
+        discount_pct: 12,
+        stock: 48,
+        stock_status: 'In Stock',
+        rating: 4.6,
+        reviews_count: 189,
+        sold_by: 'Agribegri',
+        image_url: '/static/images/pesticides/iil_milquat.jpg',
+        suitable_crops: ['Potato', 'Rice (Pre-Plant)', 'Cotton', 'Sugarcane', 'Tea', 'Maize', 'Orchards'],
+        target_disease: 'Broadleaf Weeds, Annual Grasses, Cyperus Sedges & Inter-Row Weed Control',
+        short_description: 'Fast-acting non-selective contact herbicide (Paraquat Dichloride 24% SL) for rapid weed burn-down and inter-row weeding.',
+        full_description: 'IIL Milquat is a non-selective post-emergent contact herbicide that disrupts cell membranes of green weed tissue within hours of sunlight exposure. Inactivated on soil contact.',
+        dosage: '800 ml to 1 Litre per Acre in 150–200 Litres of water using a Hooded / FloodJet nozzle',
+        safety_info: 'STRICT CAUTION: Non-selective contact herbicide — always use a spray hood/shield during inter-row application.'
+      },
+      {
+        id: 5,
+        name: 'JU Jupiter 505 Insecticide',
+        brand: 'JU AGRI SCIENCE PVT LTD',
+        category: 'Insecticide',
+        composition: 'Chlorpyriphos 50% + Cypermethrin 5% EC (Dual Action Insecticide)',
+        pack_size: '500 ml',
+        pack_variants: ['500 ml', '1 l', '2 l', '5 l', '10 l'],
+        price: 578,
+        mrp: 678,
+        discount_pct: 14,
+        stock: 95,
+        stock_status: 'In Stock',
+        rating: 4.8,
+        reviews_count: 276,
+        sold_by: 'Agribegri',
+        image_url: '/static/images/pesticides/ju_jupiter_505.jpg',
+        suitable_crops: ['Rice', 'Cotton', 'Soybean', 'Chili', 'Cabbage', 'Brinjal', 'Maize'],
+        target_disease: 'Stem Borer, Leaf Folder, Bollworms, Shoot & Fruit Borer, Aphids, Jassids & Thrips',
+        short_description: 'Synergistic dual-action insecticide (Chlorpyriphos 50% + Cypermethrin 5% EC) for borers, caterpillars & sucking pests.',
+        full_description: 'JU Jupiter 505 combines Chlorpyriphos 50% (contact, stomach, and vapor action) and Cypermethrin 5% EC (rapid knockdown) for complete control of borers and sucking insects.',
+        dosage: '350 to 400 ml per Acre in 200 Litres of water (2 ml / Litre foliar spray)',
+        safety_info: 'Do not apply during active bee foraging hours. Wear protective clothing, mask, and gloves. Pre-Harvest Interval: 14 days.'
+      }
+    ];
+
+    function calcStandaloneCart(cartArr) {
+      let subtotal = 0, mrpTotal = 0, totalQty = 0;
+      const items = [];
+      (cartArr || []).forEach(c => {
+        const prod = STANDALONE_PESTICIDES.find(p => Number(p.id) === Number(c.product_id));
+        if (!prod) return;
+        const qty = Math.max(1, Math.min(50, Number(c.quantity || 1)));
+        const lineTotal = prod.price * qty;
+        const lineMrp = prod.mrp * qty;
+        subtotal += lineTotal;
+        mrpTotal += lineMrp;
+        totalQty += qty;
+        items.push({
+          product_id: prod.id,
+          name: prod.name,
+          brand: prod.brand,
+          category: prod.category,
+          pack_size: c.pack_size || prod.pack_size,
+          quantity: qty,
+          unit_price: prod.price,
+          mrp: prod.mrp,
+          discount_pct: prod.discount_pct,
+          line_total: lineTotal,
+          line_mrp: lineMrp,
+          image_url: prod.image_url
+        });
+      });
+      const discount = Math.max(0, mrpTotal - subtotal);
+      const shipping = subtotal >= 499 ? 0 : 49;
+      return {
+        items,
+        total_quantity: totalQty,
+        mrp_total: mrpTotal,
+        subtotal,
+        discount,
+        shipping_charge: shipping,
+        tax_amount: 0,
+        total_amount: subtotal + shipping
+      };
+    }
+
+    if (path === '/api/pesticides/products' && method === 'GET') {
+      return jsonResponse({
+        status: 'success',
+        total: STANDALONE_PESTICIDES.length,
+        razorpay_key_id: 'rzp_test_TlUAn8sJqkxr1h',
+        razorpay_mode: 'TEST',
+        products: STANDALONE_PESTICIDES
+      });
+    }
+
+    if (path === '/api/pesticides/cart/calculate' && method === 'POST') {
+      const body = await parseBody(options);
+      const pricing = calcStandaloneCart(Array.isArray(body) ? body : (body.items || []));
+      return jsonResponse({ status: 'success', pricing, razorpay_mode: 'TEST' });
+    }
+
+    if (path === '/api/payments/create-order' && method === 'POST') {
+      const body = await parseBody(options);
+      const pricing = calcStandaloneCart(body.items || []);
+      const orderCode = 'ORD-AGRI-' + Math.floor(100000 + Math.random() * 900000);
+      const rzpOrderId = 'order_test_' + Date.now();
+      if (!db.pesticide_orders) db.pesticide_orders = [];
+      const newOrder = {
+        id: Date.now(),
+        order_code: orderCode,
+        user_id: body.user_id || 9,
+        customer_name: body.address?.full_name || 'Farmer',
+        customer_phone: body.address?.phone || '',
+        customer_email: body.address?.email || '',
+        shipping_address: body.address || {},
+        items: pricing.items,
+        total_quantity: pricing.total_quantity,
+        subtotal: pricing.subtotal,
+        discount: pricing.discount,
+        shipping_charge: pricing.shipping_charge,
+        tax_amount: 0,
+        total_amount: pricing.total_amount,
+        payment_method: 'RAZORPAY',
+        payment_status: 'PENDING',
+        order_status: 'PLACED',
+        razorpay_order_id: rzpOrderId,
+        razorpay_payment_id: null,
+        created_at: new Date().toLocaleString()
+      };
+      db.pesticide_orders.unshift(newOrder);
+      saveDB(db);
+      return jsonResponse({
+        status: 'success',
+        razorpay_key_id: 'rzp_test_TlUAn8sJqkxr1h',
+        razorpay_mode: 'TEST',
+        razorpay_order_id: rzpOrderId,
+        offline_fallback: true,
+        amount: pricing.total_amount,
+        amount_paise: Math.round(pricing.total_amount * 100),
+        currency: 'INR',
+        order: newOrder,
+        pricing
+      });
+    }
+
+    if (path === '/api/payments/verify' && method === 'POST') {
+      const body = await parseBody(options);
+      if (!db.pesticide_orders) db.pesticide_orders = [];
+      const ord = db.pesticide_orders.find(o => o.order_code === body.order_code || o.razorpay_order_id === body.razorpay_order_id);
+      if (ord) {
+        ord.payment_status = 'PAID';
+        ord.order_status = 'CONFIRMED';
+        ord.razorpay_payment_id = body.razorpay_payment_id;
+        saveDB(db);
+      }
+      return jsonResponse({ status: 'success', verified: true, order: ord || {} });
+    }
+
+    if (path === '/api/payments/failed' && method === 'POST') {
+      const body = await parseBody(options);
+      if (!db.pesticide_orders) db.pesticide_orders = [];
+      const ord = db.pesticide_orders.find(o => o.order_code === body.order_code || o.razorpay_order_id === body.razorpay_order_id);
+      if (ord && ord.payment_status !== 'PAID') {
+        ord.payment_status = 'FAILED';
+        saveDB(db);
+      }
+      return jsonResponse({ status: 'failed', order: ord || {} });
+    }
+
+    if (path === '/api/orders' && method === 'POST') {
+      const body = await parseBody(options);
+      const pricing = calcStandaloneCart(body.items || []);
+      const orderCode = 'ORD-AGRI-' + Math.floor(100000 + Math.random() * 900000);
+      if (!db.pesticide_orders) db.pesticide_orders = [];
+      const newOrder = {
+        id: Date.now(),
+        order_code: orderCode,
+        user_id: body.user_id || 9,
+        customer_name: body.address?.full_name || 'Farmer',
+        customer_phone: body.address?.phone || '',
+        customer_email: body.address?.email || '',
+        shipping_address: body.address || {},
+        items: pricing.items,
+        total_quantity: pricing.total_quantity,
+        subtotal: pricing.subtotal,
+        discount: pricing.discount,
+        shipping_charge: pricing.shipping_charge,
+        tax_amount: 0,
+        total_amount: pricing.total_amount,
+        payment_method: 'COD',
+        payment_status: 'PENDING',
+        order_status: 'CONFIRMED',
+        razorpay_order_id: null,
+        razorpay_payment_id: null,
+        created_at: new Date().toLocaleString()
+      };
+      db.pesticide_orders.unshift(newOrder);
+      saveDB(db);
+      return jsonResponse({ status: 'success', order: newOrder });
+    }
+
+    if (path === '/api/orders' && method === 'GET') {
+      return jsonResponse({
+        status: 'success',
+        total: (db.pesticide_orders || []).length,
+        orders: db.pesticide_orders || []
+      });
+    }
+
+    if (path === '/api/admin/payments' && method === 'GET') {
+      const st = (urlObj.searchParams.get('status') || 'ALL').toUpperCase();
+      let list = db.pesticide_orders || [];
+      if (st !== 'ALL') {
+        list = list.filter(o => o.payment_status === st);
+      }
+      return jsonResponse({
+        status: 'success',
+        razorpay_mode: 'TEST',
+        orders: list
+      });
     }
 
     // Default fallback for any other /api/* route

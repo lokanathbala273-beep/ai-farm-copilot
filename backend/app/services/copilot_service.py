@@ -142,6 +142,28 @@ class CopilotService:
                 )
             action = "Clear drainage outlets and prepare copper spray."
 
+        # 7. Order Status, Payment Status & Pesticides Store Inquiry
+        elif any(w in q for w in ["order", "payment", "paid", "pesticide", "medicine", "tapuz", "ampelo", "promos", "milquat", "jupiter", "ऑर्डर", "पेमेंट", "अॉर्डर"]):
+            intent = "order_payment_status"
+            recent_orders = ctx.get("recent_orders") or []
+            if recent_orders:
+                latest = recent_orders[0]
+                pay_id_str = f" (Payment ID: {latest['razorpay_payment_id']})" if latest.get("razorpay_payment_id") else ""
+                reply = (
+                    f"📦 Your latest Pesticide Order is **{latest['order_code']}** for **{latest['products']}** "
+                    f"(Total: ₹{latest['total_amount']:,.0f}).\n"
+                    f"• **Payment Method**: {latest['payment_method']}\n"
+                    f"• **Payment Status**: {latest['payment_status']}{pay_id_str}\n"
+                    f"• **Order Status**: {latest['order_status']}"
+                )
+                action = "Open Pesticides -> My Orders to track delivery."
+            else:
+                reply = (
+                    "No pesticide order or payment record is currently available for your account. "
+                    "You can browse our 5 verified medicines (Adama Tapuz, Dr.Bacto's Ampelo, Best Agro Promos, IIL Milquat, and JU Jupiter 505) in the **Pesticides** tab!"
+                )
+                action = "Open Pesticides Store tab."
+
         # Default fallback
         else:
             intent = "general_advisory"

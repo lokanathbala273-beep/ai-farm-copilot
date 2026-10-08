@@ -481,3 +481,53 @@ class PhoneOtp(Base):
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
+
+class PesticideOrder(Base):
+    __tablename__ = "pesticide_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_code = Column(String(64), unique=True, index=True, nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    customer_name = Column(String(255), nullable=False)
+    customer_phone = Column(String(50), nullable=False)
+    customer_email = Column(String(255), nullable=True)
+    shipping_address = Column(JSON, default=dict)
+    items = Column(JSON, default=list)
+    total_quantity = Column(Integer, default=1)
+    subtotal = Column(Float, nullable=False)
+    discount = Column(Float, default=0.0)
+    shipping_charge = Column(Float, default=0.0)
+    tax_amount = Column(Float, default=0.0)
+    total_amount = Column(Float, nullable=False)
+    payment_method = Column(String(50), default="RAZORPAY")  # RAZORPAY, COD
+    payment_status = Column(String(50), default="PENDING")   # CREATED, PENDING, PAID, FAILED, REFUNDED, PARTIALLY_REFUNDED
+    order_status = Column(String(50), default="PLACED")      # PLACED, CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+    razorpay_order_id = Column(String(120), index=True, nullable=True)
+    razorpay_payment_id = Column(String(120), index=True, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class PaymentRecord(Base):
+    __tablename__ = "payments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("pesticide_orders.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    razorpay_order_id = Column(String(120), index=True, nullable=True)
+    razorpay_payment_id = Column(String(120), index=True, nullable=True)
+    razorpay_signature = Column(String(255), nullable=True)
+    amount = Column(Float, nullable=False)
+    currency = Column(String(16), default="INR")
+    status = Column(String(50), default="CREATED")  # CREATED, PENDING, PAID, FAILED, REFUNDED, PARTIALLY_REFUNDED
+    method = Column(String(50), default="RAZORPAY")
+    failure_reason = Column(Text, nullable=True)
+    refund_id = Column(String(120), nullable=True)
+    refund_amount = Column(Float, nullable=True)
+    refund_status = Column(String(50), nullable=True)
+    refund_created_at = Column(DateTime, nullable=True)
+    webhook_events_processed = Column(JSON, default=list)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+

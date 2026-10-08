@@ -13,12 +13,13 @@ from backend.app.config import settings
 from backend.app.models.database import engine, Base, SessionLocal
 from backend.app.models.tables import (
     User, FarmerProfile, ExpertProfile, SellerProfile, BuyerProfile,
-    Farm, Field, ExpertConsultation, DiseasePrediction, BuyerListing, BuyerOrder, Notification
+    Farm, Field, ExpertConsultation, DiseasePrediction, BuyerListing, BuyerOrder, Notification,
+    PesticideOrder, PaymentRecord
 )
 from backend.app.api import (
     auth, farms, fields, crops, disease, predictions,
     copilot, weather, soil, business, expenses, income,
-    markets, buyers, experts, sellers, admin, notifications
+    markets, buyers, experts, sellers, admin, notifications, pesticides
 )
 
 from sqlalchemy import text
@@ -163,6 +164,8 @@ app.include_router(experts.router, prefix=api_v1)
 app.include_router(sellers.router, prefix=api_v1)
 app.include_router(admin.router, prefix=api_v1)
 app.include_router(notifications.router, prefix=api_v1)
+app.include_router(pesticides.router, prefix=api_v1)
+app.include_router(pesticides.router)
 
 # Mount static and upload directories
 STATIC_DIR = PROJECT_ROOT / "frontend" / "static"
