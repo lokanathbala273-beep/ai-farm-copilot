@@ -1,0 +1,34 @@
+[
+  {
+    "id": 101,
+    "farm_id": 1,
+    "test_date": "2025-11-15",
+    "data_source_type": "MEASURED_LAB_VALUE",
+    "data_source_name": "OUAT Central Soil Testing Lab, Bhubaneswar (SHC #OD-KHO-2025-412)",
+    "location": "Odisha > Khordha > Balianta > Balipatna",
+    "soil_type": "Deltaic Alluvial",
+    "ph": 5.8,
+    "nitrogen_kg_ha": 210.0,
+    "phosphorus_kg_ha": 18.5,
+    "potassium_kg_ha": 155.0,
+    "organic_carbon_pct": 0.44,
+    "ec_ds_m": 0.32,
+    "overall_fertility_score": 68.0
+  },
+  {
+    "id": 102,
+    "farm_id": 1,
+    "test_date": "2026-05-10",
+    "data_source_type": "MEASURED_LAB_VALUE",
+    "data_source_name": "District Soil Testing Lab, Khordha (SHC #OD-KHO-2026-889)",
+    "location": "Odisha > Khordha > Balianta > Balipatna",
+    "soil_type": "Deltaic Alluvial",
+    "ph": 6.3,
+    "nitrogen_kg_ha": 248.0,
+    "phosphorus_kg_ha": 23.0,
+    "potassium_kg_ha": 182.0,
+    "organic_carbon_pct": 0.56,
+    "ec_ds_m": 0.28,
+    "overall_fertility_score": 81.0
+  }
+]

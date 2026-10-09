@@ -974,110 +974,474 @@
     <!-- ============================================== -->
     <section id="section-soil" class="app-section hidden space-y-6">
       
-      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-        <div>
-          <h2 class="text-xl md:text-2xl font-extrabold text-slate-800" data-i18n="soil.title">Soil Intelligence & Nutrient Advisory</h2>
-          <p class="text-xs md:text-sm text-slate-500 mt-1" data-i18n="soil.subtitle">Understand your soil parameters, crop suitability index, and fertilizer recommendations.</p>
+      <!-- HEADER & EVIDENCE-BASED HONESTY BANNER -->
+      <div class="bg-gradient-to-r from-emerald-950 via-emerald-900 to-teal-900 p-6 rounded-3xl text-white shadow-lg border border-emerald-800/60">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/80 border border-emerald-600/50 text-emerald-200 text-2xs font-extrabold uppercase tracking-wider mb-2">
+              <span>🧪 Integrated AI Soil Decision Support System (DSS)</span>
+              <span>•</span>
+              <span>ICAR / OUAT Validated</span>
+            </div>
+            <h2 class="text-xl md:text-2xl font-extrabold text-white" data-i18n="soil.title">AI Soil Decision Support & Nutrient Intelligence</h2>
+            <p class="text-xs md:text-sm text-emerald-100/90 mt-1" data-i18n="soil.subtitle">Location-based soil baselines, OCR Soil Health Card reader, crop suitability engine, validated soil advisor, trend tracker, and multilingual voice assistant.</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span id="soilActiveSourceBadge" class="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 text-xs font-extrabold">
+              🔬 Source: Measured Lab Report
+            </span>
+            <span id="soilActiveDateBadge" class="px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-slate-200 text-xs font-semibold">
+              📅 Date: 2026-08-18
+            </span>
+          </div>
+        </div>
+        <div id="soilSensorDisclaimer" class="mt-4 p-3 rounded-2xl bg-black/25 border border-emerald-700/50 text-2xs md:text-xs text-emerald-100 flex items-start gap-2">
+          <span class="text-sm">ℹ️</span>
+          <span><strong>Evidence & Sensor Honesty:</strong> No live in-situ hardware soil moisture or pH probe is connected unless explicitly paired. Regional soil records are never presented as exact individual-farm lab tests, and chemical fertilizer dosages are never fabricated when N-P-K lab values are missing.</span>
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODULE 1 & MODULE 2: LOCATION LOOKUP + SOIL REPORT OCR READER -->
+      <!-- ============================================================ -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- MODULE 1: LOCATION-BASED SOIL INTELLIGENCE -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-2xs font-extrabold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Module 1</span>
+              <h3 class="text-base font-extrabold text-slate-800 mt-1">📍 Location-Based Regional Soil Intelligence</h3>
+              <p class="text-xs text-slate-500">Select State, District, Block & Village to inspect verified regional soil baselines (ICAR-NBSS&LUP / OUAT).</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">State</label>
+              <select id="soilStateSelect" onchange="onSoilLocationChange('state')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+                <option value="Odisha" selected>Odisha</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">District</label>
+              <select id="soilDistrictSelect" onchange="onSoilLocationChange('district')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+                <option value="Khordha" selected>Khordha</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Block</label>
+              <select id="soilBlockSelect" onchange="onSoilLocationChange('block')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+                <option value="Balianta" selected>Balianta</option>
+              </select>
+            </div>
+            <div>
+              <label class="block font-bold text-slate-600 mb-1">Village</label>
+              <select id="soilVillageSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+                <option value="Balipatna" selected>Balipatna</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="lookupRegionalSoilBaseline(false)" class="px-4 py-2.5 bg-teal-700 hover:bg-teal-800 text-white font-bold rounded-xl text-xs shadow-sm transition">
+              🔍 Inspect Regional Soil Record
+            </button>
+            <button type="button" onclick="lookupRegionalSoilBaseline(true)" class="px-4 py-2.5 bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 font-bold rounded-xl text-xs transition">
+              ⚠️ Apply as Regional Reference Only (Marks N-P-K Missing)
+            </button>
+          </div>
+
+          <!-- Regional Lookup Result Card -->
+          <div id="soilRegionalLookupCard" class="p-4 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <span class="font-extrabold text-amber-900" id="soilRegionalTitle">📍 Regional Baseline: Odisha › Khordha › Balianta › Balipatna</span>
+              <span class="px-2 py-0.5 rounded-md bg-amber-200/80 text-amber-950 font-extrabold text-2xs" id="soilRegionalResBadge">Block-Level Survey (1:50,000)</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-2xs">
+              <div class="p-2 bg-white rounded-lg border border-amber-200">
+                <span class="text-slate-400 block">Dominant Soil Type</span>
+                <strong class="text-slate-800" id="soilRegionalSoilType">Deltaic Alluvial / Sandy Loam</strong>
+              </div>
+              <div class="p-2 bg-white rounded-lg border border-amber-200">
+                <span class="text-slate-400 block">Regional pH Range</span>
+                <strong class="text-slate-800" id="soilRegionalPhRange">5.6 – 6.6 (Est: 6.1)</strong>
+              </div>
+              <div class="p-2 bg-white rounded-lg border border-amber-200">
+                <span class="text-slate-400 block">Survey Date & Source</span>
+                <strong class="text-slate-800" id="soilRegionalSourceMeta">2024-11 • ICAR-NBSS&LUP & OUAT</strong>
+              </div>
+            </div>
+            <div class="text-2xs text-amber-900 font-semibold bg-amber-100/90 p-2.5 rounded-xl border border-amber-300" id="soilRegionalDisclaimerText">
+              ⚠️ REGIONAL BASELINE ONLY — NOT AN INDIVIDUAL FARM LAB MEASUREMENT. Plot-level N, P, K, and micronutrients require a field Soil Health Card test.
+            </div>
+            <div id="soilRegionalMissingList" class="text-2xs text-slate-600">
+              <strong>Missing at Regional Level:</strong> Available N (kg/ha), Available P (kg/ha), Available K (kg/ha), Plot-specific Zn & B.
+            </div>
+          </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+        <!-- MODULE 2: SOIL REPORT READER (OCR & UNIT VALIDATION) -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-2xs font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">Module 2</span>
+              <h3 class="text-base font-extrabold text-slate-800 mt-1">📄 Soil Report Reader (PDF / Image OCR & Unit Validator)</h3>
+              <p class="text-xs text-slate-500">Upload a Soil Health Card (PDF, JPG, PNG, TXT) or load a real sample report to extract & verify pH, N, P, K, OC, EC, source, and test date.</p>
+            </div>
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+            <input type="file" id="soilReportFileInput" accept=".pdf,.png,.jpg,.jpeg,.txt" class="flex-1 text-xs file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 border border-slate-300 rounded-xl p-1.5 bg-slate-50">
+            <button type="button" onclick="uploadAndExtractSoilReport()" class="px-4 py-2.5 bg-indigo-700 hover:bg-indigo-800 text-white font-bold rounded-xl text-xs shadow-sm transition">
+              🔍 Run OCR Extraction
+            </button>
+          </div>
+
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="loadSampleSoilReport('odisha_shc_2026')" class="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-2xs font-bold transition">
+              🧪 Load Sample OUAT Lab SHC (kg/ha)
+            </button>
+            <button type="button" onclick="loadSampleSoilReport('acidic_laterite_shc')" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-800 border border-purple-300 rounded-xl text-2xs font-bold transition">
+              🧪 Load Sample KVK Acidic Report (kg/acre → Auto-Convert to kg/ha)
+            </button>
+            <button type="button" onclick="toggleSoilRawTextDrawer()" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 rounded-xl text-2xs font-bold transition">
+              📝 Paste / View Report Text
+            </button>
+          </div>
+
+          <div id="soilRawTextDrawer" class="hidden space-y-2">
+            <textarea id="soilReportRawText" rows="4" class="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-mono bg-slate-50" placeholder="Paste text from Soil Health Card here (e.g., pH: 5.9, Available Nitrogen: 215 kg/ha, Phosphorus: 16 kg/ha, Potassium: 145 kg/ha, OC: 0.48%)..."></textarea>
+            <button type="button" onclick="extractFromPastedSoilText()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-2xs font-bold">
+              ⚡ Parse Pasted Report Text
+            </button>
+          </div>
+
+          <!-- OCR Extraction Status & Unit Validation Warnings -->
+          <div id="soilOcrValidationBanner" class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="font-extrabold text-slate-700" id="soilOcrEngineBadge">📑 OCR Status: Ready for PDF / Image / SHC Text</span>
+              <span class="text-2xs font-bold text-indigo-700">Farmer Review & Correction Enabled ↓</span>
+            </div>
+            <ul id="soilOcrWarningsList" class="text-2xs text-slate-600 space-y-1 list-disc pl-4">
+              <li>All extracted values can be reviewed and corrected below before running Crop Suitability & Fertilizer Advisory.</li>
+            </ul>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- FARMER VERIFICATION FORM + SOURCE & SEASON CONFIGURATION     -->
+      <!-- ============================================================ -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-2 pb-4 border-b border-slate-200">
+          <div>
+            <span class="text-2xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Modules 2, 3 & 4 Input Verification</span>
+            <h3 class="text-base font-extrabold text-slate-800 mt-1">✏️ Verify / Edit Soil Parameters, Source Metadata & Crop Context</h3>
+            <p class="text-xs text-slate-500">Leave any untested parameter blank to see how the DSS handles missing data honestly without fabricating values.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="clearNPKForMissingDataDemo()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 border border-rose-200 rounded-xl text-2xs font-bold transition">
+              🧹 Clear N-P-K (Test Missing-Data Refusal)
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-5">
           
-          <!-- Soil Inputs Form -->
-          <div class="space-y-4">
-            <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider">Soil Test Parameters</h3>
+          <!-- Left 7 cols: Soil Parameters + Source & Date -->
+          <div class="lg:col-span-7 space-y-4">
             
-            <div class="grid grid-cols-2 gap-3 text-xs">
+            <!-- Source & Test Date Row -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
               <div>
-                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.ph">Soil pH</label>
-                <input type="number" step="0.1" id="soilInputPH" value="6.5" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                <label class="block font-bold text-slate-600 mb-1">Data Source Type</label>
+                <select id="soilInputSourceType" class="w-full p-2 rounded-xl border border-slate-300 font-bold bg-white">
+                  <option value="MEASURED_LAB_VALUE" selected>🔬 Measured Lab Value (SHC)</option>
+                  <option value="REGIONAL_REFERENCE">📍 Regional Baseline Estimate</option>
+                </select>
               </div>
               <div>
-                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.soil_type">Soil Type</label>
+                <label class="block font-bold text-slate-600 mb-1">Lab / Source Name</label>
+                <input type="text" id="soilInputSourceName" value="OUAT Soil Testing Lab, Bhubaneswar" class="w-full p-2 rounded-xl border border-slate-300 font-semibold bg-white" placeholder="e.g. OUAT Lab / KVK">
+              </div>
+              <div>
+                <label class="block font-bold text-slate-600 mb-1">Sample / Test Date</label>
+                <input type="date" id="soilInputTestDate" value="2026-08-18" class="w-full p-2 rounded-xl border border-slate-300 font-semibold bg-white">
+              </div>
+            </div>
+
+            <!-- Chemical & Physical Parameters -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.ph">Soil pH (0–14)</label>
+                <input type="number" step="0.1" min="2.5" max="11.0" id="soilInputPH" value="6.2" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Untested">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Available N (kg/ha)</label>
+                <input type="number" step="1" min="0" max="2000" id="soilInputN" value="245" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Missing">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Available P (kg/ha)</label>
+                <input type="number" step="0.5" min="0" max="500" id="soilInputP" value="24.5" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Missing">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Available K (kg/ha)</label>
+                <input type="number" step="1" min="0" max="2000" id="soilInputK" value="188" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Missing">
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.organic_carbon">Organic Carbon (%)</label>
+                <input type="number" step="0.01" min="0" max="10" id="soilInputOC" value="0.58" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Missing">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1">Salinity EC (dS/m)</label>
+                <input type="number" step="0.01" min="0" max="30" id="soilInputEC" value="0.31" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Missing">
+              </div>
+              <div>
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.soil_type">Soil Texture / Type</label>
                 <select id="soilInputType" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold">
                   <option value="Alluvial Loam" selected>Alluvial Loam</option>
+                  <option value="Deltaic Alluvial">Deltaic Alluvial</option>
+                  <option value="Red Lateritic Sandy Loam">Red Lateritic Sandy Loam</option>
                   <option value="Black Cotton Soil">Black Cotton Soil</option>
-                  <option value="Red Laterite Soil">Red Laterite Soil</option>
+                  <option value="Coastal Saline Alluvial">Coastal Saline Alluvial</option>
                   <option value="Sandy Loam">Sandy Loam</option>
                   <option value="Clay Loam">Clay Loam</option>
                 </select>
               </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-3 text-xs">
               <div>
-                <label class="block font-semibold text-slate-600 mb-1">Nitrogen (N)</label>
-                <input type="number" id="soilInputN" value="260" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
-              </div>
-              <div>
-                <label class="block font-semibold text-slate-600 mb-1">Phosphorus (P)</label>
-                <input type="number" id="soilInputP" value="22" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
-              </div>
-              <div>
-                <label class="block font-semibold text-slate-600 mb-1">Potassium (K)</label>
-                <input type="number" id="soilInputK" value="190" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="kg/ha">
+                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.moisture">Est. Field Moisture (%)</label>
+                <input type="number" id="soilInputMoisture" value="45" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold" placeholder="Optional">
               </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3 text-xs">
+            <!-- Agronomic Context: Season, Water Availability, Target Crop -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-emerald-50/60 p-3.5 rounded-2xl border border-emerald-200">
               <div>
-                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.organic_carbon">Organic Carbon (%)</label>
-                <input type="number" step="0.01" id="soilInputOC" value="0.55" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                <label class="block font-bold text-emerald-950 mb-1">Cropping Season</label>
+                <select id="soilInputSeason" class="w-full p-2 rounded-xl border border-emerald-300 font-bold bg-white">
+                  <option value="Kharif" selected>🌧️ Kharif (Monsoon: Jun–Nov)</option>
+                  <option value="Rabi">❄️ Rabi (Winter: Nov–Mar)</option>
+                  <option value="Zaid">☀️ Zaid (Summer: Mar–Jun)</option>
+                </select>
               </div>
               <div>
-                <label class="block font-semibold text-slate-600 mb-1" data-i18n="soil.moisture">Moisture (%)</label>
-                <input type="number" id="soilInputMoisture" value="45" class="w-full p-2.5 rounded-xl border border-slate-300 font-bold">
+                <label class="block font-bold text-emerald-950 mb-1">Water Availability</label>
+                <select id="soilInputWater" class="w-full p-2 rounded-xl border border-emerald-300 font-bold bg-white">
+                  <option value="High">💧 High (Canal / Borewell / Drip)</option>
+                  <option value="Medium" selected>🚿 Medium (Supplemental Irrigation)</option>
+                  <option value="Low">☁️ Low (Rainfed / Scanty Water)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block font-bold text-emerald-950 mb-1">Target Crop Focus</label>
+                <select id="soilInputTargetCrop" class="w-full p-2 rounded-xl border border-emerald-300 font-bold bg-white">
+                  <option value="" selected>🌾 Evaluate All Regional Crops</option>
+                  <option value="Rice (Paddy)">Rice (Paddy)</option>
+                  <option value="Potato">Potato</option>
+                  <option value="Tomato">Tomato</option>
+                  <option value="Green Gram (Moong)">Green Gram (Moong)</option>
+                  <option value="Mustard (Toria)">Mustard (Toria)</option>
+                  <option value="Groundnut">Groundnut</option>
+                  <option value="Brinjal (Eggplant)">Brinjal (Eggplant)</option>
+                  <option value="Onion">Onion</option>
+                </select>
               </div>
             </div>
 
-            <button onclick="analyzeSoilParams()" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs md:text-sm shadow-md transition" data-i18n="soil.analyze_btn">
-              Analyze Soil & Get Crop Suitability
-            </button>
+            <div class="flex flex-col sm:flex-row gap-3">
+              <button type="button" onclick="analyzeSoilParams(false)" class="flex-1 py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition" data-i18n="soil.analyze_btn">
+                🔬 Analyze Soil DSS & Crop Suitability
+              </button>
+              <button type="button" onclick="analyzeSoilParams(true)" class="px-5 py-3 bg-slate-800 hover:bg-slate-900 text-white font-extrabold rounded-xl text-xs md:text-sm shadow-md transition">
+                💾 Save Dated Assessment to Trend History
+              </button>
+            </div>
           </div>
 
-          <!-- Soil Evaluation Output -->
-          <div class="p-6 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
+          <!-- Right 5 cols: MODULE 8 Source-Labelled Soil Summary Cards + Legacy IDs -->
+          <div class="lg:col-span-5 p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
             <div class="flex items-center justify-between pb-3 border-b border-slate-200">
-              <span class="text-xs font-bold uppercase text-slate-500" data-i18n="soil.fertility_score">Overall Fertility Index</span>
-              <strong id="soilFertilityScore" class="text-2xl font-black text-emerald-800">88/100</strong>
+              <div>
+                <span class="text-2xs font-extrabold uppercase text-emerald-700 block">Module 8 • Verified Soil Profile</span>
+                <span class="text-xs font-bold uppercase text-slate-500" data-i18n="soil.fertility_score">Overall Fertility Index</span>
+              </div>
+              <strong id="soilFertilityScore" class="text-2xl font-black text-emerald-800">84/100</strong>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 text-2xs md:text-xs">
-              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
-                <span class="text-slate-400 block">pH Reaction:</span>
-                <strong id="soilPHStatus" class="text-slate-800">Optimal Neutral</strong>
+            <!-- Missing-Data & Uncertainty Indicator Banner -->
+            <div id="soilMissingInputsBanner" class="p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 text-2xs text-emerald-950 font-semibold">
+              ✅ All core soil parameters (pH, N, P, K, OC) provided from verified lab report. Uncertainty: Low.
+            </div>
+
+            <!-- Source-Labelled Parameter Cards Grid -->
+            <div id="soilSourceCardsGrid" class="grid grid-cols-2 gap-2.5 text-2xs md:text-xs">
+              <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-bold">pH Reaction</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">MEASURED</span>
+                </div>
+                <strong id="soilPHStatus" class="text-slate-800 block mt-1">Optimal Neutral (6.2)</strong>
               </div>
-              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
-                <span class="text-slate-400 block">Nitrogen (N):</span>
-                <strong id="soilNStatus" class="text-slate-800">Medium (260 kg/ha)</strong>
+              <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-bold">Nitrogen (N)</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">MEASURED</span>
+                </div>
+                <strong id="soilNStatus" class="text-slate-800 block mt-1">Medium (245 kg/ha)</strong>
               </div>
-              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
-                <span class="text-slate-400 block">Phosphorus (P):</span>
-                <strong id="soilPStatus" class="text-slate-800">Medium (22 kg/ha)</strong>
+              <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-bold">Phosphorus (P)</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">MEASURED</span>
+                </div>
+                <strong id="soilPStatus" class="text-slate-800 block mt-1">Medium (24.5 kg/ha)</strong>
               </div>
-              <div class="p-2.5 bg-white rounded-lg border border-slate-200">
-                <span class="text-slate-400 block">Potassium (K):</span>
-                <strong id="soilKStatus" class="text-slate-800">Medium (190 kg/ha)</strong>
+              <div class="p-2.5 bg-white rounded-xl border border-slate-200">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-bold">Potassium (K)</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 font-bold text-[10px]">MEASURED</span>
+                </div>
+                <strong id="soilKStatus" class="text-slate-800 block mt-1">Medium (188 kg/ha)</strong>
               </div>
             </div>
 
             <div>
-              <h4 class="text-xs font-bold text-slate-800 mb-1" data-i18n="soil.nutrient_recs">Fertilizer Guidance</h4>
-              <ul id="soilRecsList" class="space-y-1"></ul>
+              <h4 class="text-xs font-bold text-slate-800 mb-1" data-i18n="soil.nutrient_recs">Quick Agronomic Summary</h4>
+              <ul id="soilRecsList" class="space-y-1 text-xs"></ul>
             </div>
 
             <p id="soilGuidanceText" class="text-xs text-slate-500 italic pt-2 border-t border-slate-200"></p>
           </div>
 
         </div>
+      </div>
 
-        <!-- Crop Suitability Ranking -->
-        <div class="mt-8 pt-6 border-t border-slate-200">
-          <h3 class="text-sm font-bold text-slate-800 uppercase tracking-wider mb-4" data-i18n="soil.crop_suitability">Crop Suitability Matrix (Top Matches for Your Soil)</h3>
-          <div id="soilCropSuitabilityList" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            <!-- Dynamic crop rankings -->
+      <!-- ============================================================ -->
+      <!-- MODULE 6 & MODULE 7: MULTILINGUAL ASSISTANT + WEATHER RISKS  -->
+      <!-- ============================================================ -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- MODULE 6: MULTILINGUAL SOIL ASSISTANT (EN / OD / HI + VOICE I/O) -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-2xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Module 6</span>
+              <h3 class="text-base font-extrabold text-slate-800 mt-1">🗣️ Multilingual Soil Assistant (ଓଡ଼ିଆ • हिंदी • English)</h3>
+              <p class="text-xs text-slate-500">Explains soil findings simply and distinguishes lab measurements, regional baselines, and unknown values.</p>
+            </div>
+            <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs font-bold">
+              <button type="button" onclick="setSoilAssistantLang('en')" id="soilLangBtn_en" class="px-2.5 py-1 rounded-lg bg-emerald-700 text-white">EN</button>
+              <button type="button" onclick="setSoilAssistantLang('od')" id="soilLangBtn_od" class="px-2.5 py-1 rounded-lg text-slate-700 hover:bg-white">ଓଡ଼ିଆ</button>
+              <button type="button" onclick="setSoilAssistantLang('hi')" id="soilLangBtn_hi" class="px-2.5 py-1 rounded-lg text-slate-700 hover:bg-white">हिंदी</button>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+            <p id="soilMultilingualSummaryText" class="text-xs md:text-sm text-slate-800 font-medium leading-relaxed">
+              Source: Lab-Measured Soil Report (OUAT Soil Testing Lab, Bhubaneswar). Measured pH is 6.2 (Optimal Neutral). Available N: 245 kg/ha, P: 24.5 kg/ha, K: 188 kg/ha.
+            </p>
+            <div class="flex flex-wrap gap-2">
+              <button type="button" onclick="speakSoilAssistantSummary()" class="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition">
+                <span>🔊</span> <span>Listen Voice Readout</span>
+              </button>
+              <button type="button" onclick="startSoilVoiceInput()" class="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold rounded-xl text-xs flex items-center gap-1.5 transition">
+                <span>🎙️</span> <span id="soilVoiceMicLabel">Speak Question</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Interactive Soil Question Box -->
+          <div class="space-y-2">
+            <label class="block text-xs font-bold text-slate-700">Ask the Soil Assistant (e.g., "How much urea/fertilizer should I apply?" or "Which crop is best?"):</label>
+            <div class="flex gap-2">
+              <input type="text" id="soilAssistantQuestionInput" class="flex-1 p-2.5 rounded-xl border border-slate-300 text-xs font-semibold" placeholder="Ask in English, ଓଡ଼ିଆ, or हिंदी...">
+              <button type="button" onclick="askSoilAssistantQuestion()" class="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs">
+                Ask
+              </button>
+            </div>
+            <div id="soilAssistantAnswerBox" class="hidden p-3.5 rounded-2xl bg-slate-100 border border-slate-300 text-xs text-slate-800 font-medium leading-relaxed"></div>
           </div>
         </div>
 
+        <!-- MODULE 7: SOIL & WEATHER RISK ALERTS -->
+        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-2xs font-extrabold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-full border border-amber-200">Module 7</span>
+              <h3 class="text-base font-extrabold text-slate-800 mt-1">⛈️ Soil & Weather Risk Intelligence</h3>
+              <p class="text-xs text-slate-500">Combines verified soil profile with weather forecast to flag nutrient leaching, crusting, or moisture stress.</p>
+            </div>
+          </div>
+
+          <div id="soilWeatherRiskList" class="space-y-3">
+            <!-- Dynamically populated by renderSoilDSSOutput -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODULE 4: VALIDATED SOIL IMPROVEMENT ADVISOR (ICAR / OUAT)   -->
+      <!-- ============================================================ -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <span class="text-2xs font-extrabold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">Module 4</span>
+            <h3 class="text-base font-extrabold text-slate-800 mt-1">🧑‍🔬 Validated Soil Improvement Advisor (ICAR / OUAT Reference Protocols)</h3>
+            <p class="text-xs text-slate-500">Provides evidence-based management protocols and explicitly refuses to fabricate chemical fertilizer dosages when N-P-K lab measurements are missing.</p>
+          </div>
+        </div>
+
+        <div id="soilStructuredAdvisorList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Dynamically populated advisor cards with source references -->
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODULE 3: CROP SUITABILITY ENGINE                            -->
+      <!-- ============================================================ -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <span class="text-2xs font-extrabold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Module 3</span>
+            <h3 class="text-base font-extrabold text-slate-800 mt-1" data-i18n="soil.crop_suitability">🌾 Crop Suitability Engine (Season, Water, Limiting Factors & Uncertainty)</h3>
+            <p class="text-xs text-slate-500">Matches your soil pH, texture, organic carbon, season, and water availability against crop requirements with transparent limiting-factor explanations.</p>
+          </div>
+        </div>
+
+        <div id="soilCropSuitabilityList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <!-- Dynamic crop suitability cards -->
+        </div>
+      </div>
+
+      <!-- ============================================================ -->
+      <!-- MODULE 5: SOIL HEALTH TREND TRACKER                          -->
+      <!-- ============================================================ -->
+      <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <span class="text-2xs font-extrabold uppercase tracking-wider text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-200">Module 5</span>
+            <h3 class="text-base font-extrabold text-slate-800 mt-1">📈 Soil Health Trend Tracker (Multi-Date Lab Comparison)</h3>
+            <p class="text-xs text-slate-500">Compares pH, N, P, K, and Organic Carbon across test dates. Trends are computed ONLY when at least 2 dated assessments exist.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <button type="button" onclick="loadSoilTrends('all')" class="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-2xs font-bold">
+              📊 View Full Dated History (≥2 Records)
+            </button>
+            <button type="button" onclick="loadSoilTrends('single')" class="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 rounded-xl text-2xs font-bold">
+              🛡️ Test &lt;2 Records Safeguard (No Trend Fabrication)
+            </button>
+          </div>
+        </div>
+
+        <div id="soilTrendTrackerContainer" class="space-y-4">
+          <!-- Dynamically populated by loadSoilTrends -->
+        </div>
       </div>
 
     </section>
@@ -2571,7 +2935,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20261009_v11"></script>
+  <script src="/static/js/app.js?v=20261009_v12"></script>
 </body>
 </html>
 

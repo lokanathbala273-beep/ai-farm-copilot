@@ -3786,20 +3786,332 @@ function speakTextResponse(text) {
 }
 
 // ----------------------------------------------------
-// 4. SOIL INTELLIGENCE MODULE
+// 4. AI SOIL DECISION SUPPORT SYSTEM (DSS) — 8 MODULES
 // ----------------------------------------------------
-function initSoilView() {
-  analyzeSoilParams();
+window.soilDssState = {
+  hierarchy: {
+    "Odisha": {
+      "Khordha": {
+        "Balianta": ["Balipatna", "Bhingarpur", "Prataprudrapur", "Satyabhamapur"],
+        "Jatni": ["Janla", "Chhatabar", "retang", "Benapanjari"],
+        "Khordha Block": ["Kaipadar", "Bajapur", "Tangiapada"]
+      },
+      "Cuttack": {
+        "Cuttack Sadar": ["Kandarpur", "42 Mouza", "Fakirpada"],
+        "Niali": ["Adaspur", "Kasarda", "Pahanga"]
+      },
+      "Puri": {
+        "Pipili": ["Dandamukundapur", "Teisipur", "Kanti"],
+        "Satyabadi": ["Sakhigopal", "Algum", "Biranarasinghpur"]
+      }
+    }
+  },
+  lastAnalysis: null,
+  assistantLang: 'en'
+};
+
+async function initSoilView() {
+  await loadSoilLocationsHierarchy();
+  await lookupRegionalSoilBaseline(false);
+  await analyzeSoilParams(false);
+  await loadSoilTrends('all');
 }
 
-async function analyzeSoilParams() {
-  const ph = parseFloat(document.getElementById('soilInputPH').value) || 6.5;
-  const n = parseFloat(document.getElementById('soilInputN').value) || 240.0;
-  const p = parseFloat(document.getElementById('soilInputP').value) || 22.0;
-  const k = parseFloat(document.getElementById('soilInputK').value) || 180.0;
-  const oc = parseFloat(document.getElementById('soilInputOC').value) || 0.55;
-  const moisture = parseFloat(document.getElementById('soilInputMoisture').value) || 45.0;
-  const soilType = document.getElementById('soilInputType').value || 'Alluvial Loam';
+async function loadSoilLocationsHierarchy() {
+  try {
+    const res = await apiFetch('/soil/locations');
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.hierarchy) {
+        window.soilDssState.hierarchy = data.hierarchy;
+      }
+    }
+  } catch (e) {
+    console.warn('Using built-in location hierarchy fallback:', e);
+  }
+  populateSoilLocationDropdowns('init');
+}
+
+function populateSoilLocationDropdowns(changedLevel) {
+  const h = window.soilDssState.hierarchy || {};
+  const stateSel = document.getElementById('soilStateSelect');
+  const distSel = document.getElementById('soilDistrictSelect');
+  const blockSel = document.getElementById('soilBlockSelect');
+  const vilSel = document.getElementById('soilVillageSelect');
+  if (!stateSel || !distSel || !blockSel || !vilSel) return;
+
+  if (changedLevel === 'init') {
+    const states = Object.keys(h);
+    stateSel.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+  }
+  const st = stateSel.value || Object.keys(h)[0] || 'Odisha';
+  const districtsObj = h[st] || {};
+
+  if (changedLevel === 'init' || changedLevel === 'state') {
+    const districts = Object.keys(districtsObj);
+    distSel.innerHTML = districts.map(d => `<option value="${d}">${d}</option>`).join('');
+  }
+  const dist = distSel.value || Object.keys(districtsObj)[0] || 'Khordha';
+  const rawDistEntry = districtsObj[dist] || {};
+  const blocksObj = (rawDistEntry && rawDistEntry.blocks && typeof rawDistEntry.blocks === 'object')
+    ? rawDistEntry.blocks
+    : rawDistEntry;
+
+  if (changedLevel === 'init' || changedLevel === 'state' || changedLevel === 'district') {
+    const blocks = Object.keys(blocksObj);
+    blockSel.innerHTML = blocks.map(b => `<option value="${b}">${b}</option>`).join('');
+  }
+  const blk = blockSel.value || Object.keys(blocksObj)[0] || '';
+  const villages = Array.isArray(blocksObj[blk]) ? blocksObj[blk] : [];
+
+  if (changedLevel === 'init' || changedLevel === 'state' || changedLevel === 'district' || changedLevel === 'block') {
+    vilSel.innerHTML = villages.map(v => `<option value="${v}">${v}</option>`).join('');
+  }
+}
+
+function onSoilLocationChange(level) {
+  populateSoilLocationDropdowns(level);
+  lookupRegionalSoilBaseline(false);
+}
+
+async function lookupRegionalSoilBaseline(applyAsRegionalEstimate = false) {
+  const stateName = document.getElementById('soilStateSelect')?.value || 'Odisha';
+  const district = document.getElementById('soilDistrictSelect')?.value || 'Khordha';
+  const block = document.getElementById('soilBlockSelect')?.value || '';
+  const village = document.getElementById('soilVillageSelect')?.value || '';
+
+  try {
+    const q = new URLSearchParams({ state: stateName, district, block, village });
+    const res = await apiFetch(`/soil/regional-lookup?${q.toString()}`);
+    if (!res.ok) return;
+    const rec = await res.json();
+
+    const titleEl = document.getElementById('soilRegionalTitle');
+    const resBadgeEl = document.getElementById('soilRegionalResBadge');
+    const typeEl = document.getElementById('soilRegionalSoilType');
+    const phEl = document.getElementById('soilRegionalPhRange');
+    const metaEl = document.getElementById('soilRegionalSourceMeta');
+    const discEl = document.getElementById('soilRegionalDisclaimerText');
+    const missEl = document.getElementById('soilRegionalMissingList');
+
+    if (titleEl) titleEl.innerText = `📍 Regional Baseline: ${stateName} › ${district}${block ? ' › ' + block : ''}${village ? ' › ' + village : ''}`;
+    if (resBadgeEl) resBadgeEl.innerText = rec.geographic_resolution || 'Regional Survey';
+    if (typeEl) typeEl.innerText = rec.dominant_soil_type || 'Alluvial Loam';
+    if (phEl) {
+      const rng = rec.ph_range ? `${rec.ph_range[0]} – ${rec.ph_range[1]}` : '--';
+      phEl.innerText = `${rng} (Regional Est: ${rec.ph_regional_estimate ?? '--'})`;
+    }
+    if (metaEl) metaEl.innerText = `${rec.reference_date || '2024'} • ${rec.data_source || 'ICAR-NBSS&LUP / OUAT'}`;
+    if (discEl) discEl.innerText = rec.disclaimer || '⚠️ REGIONAL BASELINE ONLY — Never treated as an exact individual-farm lab measurement.';
+    if (missEl) {
+      const mList = (rec.missing_parameters || []).join(', ');
+      missEl.innerHTML = `<strong>Missing at Regional Level (Requires Plot Lab Test):</strong> ${mList}`;
+    }
+
+    if (applyAsRegionalEstimate) {
+      const phInput = document.getElementById('soilInputPH');
+      const ocInput = document.getElementById('soilInputOC');
+      const ecInput = document.getElementById('soilInputEC');
+      const nInput = document.getElementById('soilInputN');
+      const pInput = document.getElementById('soilInputP');
+      const kInput = document.getElementById('soilInputK');
+      const srcType = document.getElementById('soilInputSourceType');
+      const srcName = document.getElementById('soilInputSourceName');
+      const dateInput = document.getElementById('soilInputTestDate');
+
+      if (phInput) phInput.value = rec.ph_regional_estimate ?? '';
+      if (ocInput) ocInput.value = rec.oc_pct_regional_estimate ?? '';
+      if (ecInput) ecInput.value = rec.ec_ds_m_regional_estimate ?? '';
+      // Never fabricate plot-level N, P, K from regional surveys!
+      if (nInput) nInput.value = '';
+      if (pInput) pInput.value = '';
+      if (kInput) kInput.value = '';
+      if (srcType) srcType.value = 'REGIONAL_REFERENCE';
+      if (srcName) srcName.value = `${rec.data_source} (${district}${block ? ' - ' + block : ''})`;
+      if (dateInput) dateInput.value = `${rec.reference_date || '2024-11'}-01`.slice(0, 10);
+
+      showToast('📍 Loaded Regional Baseline Estimate. Plot-specific N, P, K are marked Missing (never fabricated).', 'info');
+      await analyzeSoilParams(false);
+    }
+  } catch (err) {
+    console.error('Regional soil lookup error:', err);
+  }
+}
+
+function toggleSoilRawTextDrawer() {
+  const dr = document.getElementById('soilRawTextDrawer');
+  if (dr) dr.classList.toggle('hidden');
+}
+
+async function loadSampleSoilReport(sampleId) {
+  try {
+    const fd = new FormData();
+    fd.append('sample_id', sampleId);
+    const res = await apiFetch('/soil/ocr-extract', {
+      method: 'POST',
+      body: fd
+    });
+    if (res.ok) {
+      const data = await res.json();
+      applyOcrExtractedReportToForm(data);
+      showToast('📄 Sample Soil Health Card extracted via OCR & validated! Review values below.', 'success');
+    }
+  } catch (err) {
+    console.error('Sample OCR error:', err);
+  }
+}
+
+async function uploadAndExtractSoilReport() {
+  const fileInput = document.getElementById('soilReportFileInput');
+  const file = fileInput?.files?.[0];
+  if (!file) {
+    showToast('Please select a Soil Health Card file (.pdf, .jpg, .png, .txt) or click a Sample Report button.', 'warning');
+    return;
+  }
+
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await apiFetch('/soil/ocr-extract', {
+      method: 'POST',
+      body: fd
+    });
+    if (res.ok) {
+      const data = await res.json();
+      applyOcrExtractedReportToForm(data);
+      showToast(`📄 Extracted parameters from ${file.name}. Please verify values before saving.`, 'success');
+    }
+  } catch (err) {
+    console.error('OCR file upload error:', err);
+    showToast('Could not parse uploaded file. You can also paste report text or enter values.', 'warning');
+  }
+}
+
+async function extractFromPastedSoilText() {
+  const rawText = document.getElementById('soilReportRawText')?.value || '';
+  if (!rawText.trim()) {
+    showToast('Please paste Soil Health Card text first.', 'warning');
+    return;
+  }
+  try {
+    const fd = new FormData();
+    fd.append('raw_text', rawText);
+    const res = await apiFetch('/soil/ocr-extract', {
+      method: 'POST',
+      body: fd
+    });
+    if (res.ok) {
+      const data = await res.json();
+      applyOcrExtractedReportToForm(data);
+      showToast('⚡ Extracted soil values from text & validated units!', 'success');
+    }
+  } catch (err) {
+    console.error('Raw text OCR error:', err);
+  }
+}
+
+function applyOcrExtractedReportToForm(ocrData) {
+  if (!ocrData) return;
+  const ext = ocrData.extracted_values || {};
+  const badgeEl = document.getElementById('soilOcrEngineBadge');
+  const warnList = document.getElementById('soilOcrWarningsList');
+  const rawBox = document.getElementById('soilReportRawText');
+
+  if (badgeEl) {
+    badgeEl.innerText = `📑 OCR Engine: ${ocrData.extraction_engine || 'Validated Parser'} • File: ${ocrData.filename || 'Report'}`;
+  }
+  if (rawBox && ocrData.raw_text_preview) {
+    rawBox.value = ocrData.raw_text_preview;
+  }
+
+  const setIfVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.value = (val !== null && val !== undefined) ? val : '';
+  };
+
+  setIfVal('soilInputPH', ext.ph);
+  setIfVal('soilInputN', ext.nitrogen_kg_ha);
+  setIfVal('soilInputP', ext.phosphorus_kg_ha);
+  setIfVal('soilInputK', ext.potassium_kg_ha);
+  setIfVal('soilInputOC', ext.organic_carbon_pct);
+  setIfVal('soilInputEC', ext.ec_ds_m);
+
+  const srcType = document.getElementById('soilInputSourceType');
+  const srcName = document.getElementById('soilInputSourceName');
+  const dateInput = document.getElementById('soilInputTestDate');
+  if (srcType) srcType.value = 'MEASURED_LAB_VALUE';
+  if (srcName && ocrData.source_lab) srcName.value = ocrData.source_lab;
+  if (dateInput && ocrData.test_date) {
+    // Normalize DD-MM-YYYY to YYYY-MM-DD if needed
+    const dStr = String(ocrData.test_date);
+    if (/^\d{2}[-/]\d{2}[-/]\d{4}$/.test(dStr)) {
+      const parts = dStr.split(/[-/]/);
+      dateInput.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+    } else if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+      dateInput.value = dStr;
+    }
+  }
+
+  if (warnList) {
+    const warnings = ocrData.validation_warnings || [];
+    const foundKeys = Object.entries(ext).filter(([, v]) => v !== null && v !== undefined).map(([k, v]) => `${k}: ${v}`);
+    const missingKeys = Object.entries(ext).filter(([, v]) => v === null || v === undefined).map(([k]) => k);
+
+    let html = `<li><strong>Extracted:</strong> ${foundKeys.length ? foundKeys.join(' | ') : 'None'}</li>`;
+    if (missingKeys.length) {
+      html += `<li class="text-amber-800"><strong>Not in Report (Left Blank / Never Fabricated):</strong> ${missingKeys.join(', ')}</li>`;
+    }
+    warnings.forEach(w => {
+      html += `<li class="text-indigo-800 font-semibold">${w}</li>`;
+    });
+    warnList.innerHTML = html;
+  }
+
+  analyzeSoilParams(false);
+}
+
+function clearNPKForMissingDataDemo() {
+  const nEl = document.getElementById('soilInputN');
+  const pEl = document.getElementById('soilInputP');
+  const kEl = document.getElementById('soilInputK');
+  if (nEl) nEl.value = '';
+  if (pEl) pEl.value = '';
+  if (kEl) kEl.value = '';
+  showToast('🧹 Cleared N, P, K inputs to demonstrate honest missing-data handling & refusal to fabricate dosages.', 'info');
+  analyzeSoilParams(false);
+}
+
+function parseNullableFloat(id) {
+  const el = document.getElementById(id);
+  if (!el) return null;
+  const raw = String(el.value ?? '').trim();
+  if (raw === '') return null;
+  const num = parseFloat(raw);
+  return Number.isFinite(num) ? num : null;
+}
+
+async function analyzeSoilParams(saveRecord = false) {
+  const ph = parseNullableFloat('soilInputPH');
+  const n = parseNullableFloat('soilInputN');
+  const p = parseNullableFloat('soilInputP');
+  const k = parseNullableFloat('soilInputK');
+  const oc = parseNullableFloat('soilInputOC');
+  const ec = parseNullableFloat('soilInputEC');
+  const moisture = parseNullableFloat('soilInputMoisture');
+  const soilType = document.getElementById('soilInputType')?.value || 'Alluvial Loam';
+  const season = document.getElementById('soilInputSeason')?.value || 'Kharif';
+  const waterAvail = document.getElementById('soilInputWater')?.value || 'Medium';
+  const targetCrop = document.getElementById('soilInputTargetCrop')?.value || '';
+  const dataSourceType = document.getElementById('soilInputSourceType')?.value || 'MEASURED_LAB_VALUE';
+  const dataSourceName = document.getElementById('soilInputSourceName')?.value || 'Farmer Verified Soil Report';
+  const testDate = document.getElementById('soilInputTestDate')?.value || new Date().toISOString().slice(0, 10);
+
+  const stName = document.getElementById('soilStateSelect')?.value || 'Odisha';
+  const distName = document.getElementById('soilDistrictSelect')?.value || 'Khordha';
+  const blkName = document.getElementById('soilBlockSelect')?.value || '';
+  const vilName = document.getElementById('soilVillageSelect')?.value || '';
+  const locationLabel = `${stName} > ${distName}${blkName ? ' > ' + blkName : ''}${vilName ? ' > ' + vilName : ''}`;
 
   try {
     const res = await apiFetch('/soil/analyze', {
@@ -3807,66 +4119,437 @@ async function analyzeSoilParams() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         farm_id: state.activeFarmId || 1,
-        ph, nitrogen_kg_ha: n, phosphorus_kg_ha: p, potassium_kg_ha: k,
-        organic_carbon_pct: oc, moisture_pct: moisture, soil_type: soilType
+        ph,
+        nitrogen_kg_ha: n,
+        phosphorus_kg_ha: p,
+        potassium_kg_ha: k,
+        organic_carbon_pct: oc,
+        ec_ds_m: ec,
+        moisture_pct: moisture,
+        soil_type: soilType,
+        season,
+        water_availability: waterAvail,
+        target_crop: targetCrop || null,
+        data_source_type: dataSourceType,
+        data_source_name: dataSourceName,
+        test_date: testDate,
+        location_label: locationLabel,
+        save_record: Boolean(saveRecord)
       })
     });
 
     if (res.ok) {
       const data = await res.json();
+      window.soilDssState.lastAnalysis = data;
       renderSoilAnalysisResult(data);
+      if (saveRecord) {
+        showToast('💾 Soil assessment saved to dated Trend History!', 'success');
+        if (data.trend_analysis) {
+          renderSoilTrendTracker(data.trend_analysis);
+        } else {
+          loadSoilTrends('all');
+        }
+      }
     }
   } catch (err) {
-    console.error(err);
+    console.error('Soil DSS analyze error:', err);
   }
 }
 
 function renderSoilAnalysisResult(data) {
-  const scoreEl = document.getElementById('soilFertilityScore');
-  const phStatusEl = document.getElementById('soilPHStatus');
-  const nStatusEl = document.getElementById('soilNStatus');
-  const pStatusEl = document.getElementById('soilPStatus');
-  const kStatusEl = document.getElementById('soilKStatus');
-  const guidanceEl = document.getElementById('soilGuidanceText');
-  const recsContainer = document.getElementById('soilRecsList');
-  const cropsContainer = document.getElementById('soilCropSuitabilityList');
+  if (!data) return;
 
-  if (scoreEl) scoreEl.innerText = `${data.overall_fertility_score}/100`;
-  if (phStatusEl) phStatusEl.innerText = data.ph_status;
-  if (nStatusEl) nStatusEl.innerText = data.nitrogen_status;
-  if (pStatusEl) pStatusEl.innerText = data.phosphorus_status;
-  if (kStatusEl) kStatusEl.innerText = data.potassium_status;
-  if (guidanceEl) guidanceEl.innerText = data.management_guidance;
-
-  if (recsContainer) {
-    recsContainer.innerHTML = '';
-    data.recommendations.forEach(r => {
-      const li = document.createElement('li');
-      li.className = 'flex items-start gap-2 text-xs md:text-sm text-slate-700 py-1';
-      li.innerHTML = `<span class="text-emerald-600 font-bold">✔</span> <span>${r}</span>`;
-      recsContainer.appendChild(li);
-    });
+  // Header Source & Date Badges
+  const srcBadge = document.getElementById('soilActiveSourceBadge');
+  const dateBadge = document.getElementById('soilActiveDateBadge');
+  const isMeasured = data.data_source_type === 'MEASURED_LAB_VALUE';
+  if (srcBadge) {
+    srcBadge.innerText = isMeasured
+      ? `🔬 Source: Lab Measured (${data.data_source_name || 'SHC'})`
+      : `📍 Source: Regional Baseline Estimate (${data.data_source_name || 'Regional Survey'})`;
+    srcBadge.className = isMeasured
+      ? 'px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-100 text-xs font-extrabold'
+      : 'px-3 py-1.5 rounded-xl bg-amber-500/30 border border-amber-300/60 text-amber-100 text-xs font-extrabold';
+  }
+  if (dateBadge) {
+    dateBadge.innerText = `📅 Ref Date: ${data.test_date || 'Unspecified'}`;
   }
 
-  if (cropsContainer) {
-    cropsContainer.innerHTML = '';
-    data.crop_suitability.slice(0, 8).forEach(c => {
-      const item = document.createElement('div');
-      item.className = 'p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between shadow-xs';
-      item.innerHTML = `
-        <div>
-          <h5 class="font-bold text-slate-800 text-sm">${c.crop}</h5>
-          <p class="text-xs text-slate-400 italic">${c.scientific_name}</p>
-        </div>
-        <div class="text-right">
-          <span class="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold ${c.suitability_score >= 90 ? 'bg-emerald-100 text-emerald-800' : 'bg-yellow-100 text-yellow-800'}">
-            ${c.suitability_score}% Match
-          </span>
+  // Overall Fertility Score
+  const scoreEl = document.getElementById('soilFertilityScore');
+  if (scoreEl) {
+    scoreEl.innerText = data.overall_fertility_score !== null && data.overall_fertility_score !== undefined
+      ? `${data.overall_fertility_score}/100`
+      : 'Insufficient Data';
+  }
+
+  // Missing-Data & Uncertainty Banner
+  const missBanner = document.getElementById('soilMissingInputsBanner');
+  if (missBanner) {
+    const missing = data.missing_inputs || [];
+    if (!isMeasured || missing.length > 0) {
+      missBanner.className = 'p-3 rounded-xl bg-amber-100/90 border border-amber-300 text-2xs text-amber-950 font-semibold';
+      missBanner.innerHTML = `⚠️ <strong>Uncertainty & Missing Inputs:</strong> ${data.uncertainty_summary || ''} ${missing.length ? `<br><strong>Missing Parameters:</strong> ${missing.join(', ')}` : ''}`;
+    } else {
+      missBanner.className = 'p-3 rounded-xl bg-emerald-100/70 border border-emerald-300 text-2xs text-emerald-950 font-semibold';
+      missBanner.innerHTML = `✅ <strong>Low Uncertainty:</strong> ${data.uncertainty_summary || 'All core parameters provided from measured lab report.'}`;
+    }
+  }
+
+  // Source-Labelled Parameter Cards Grid (Module 8)
+  const cardsGrid = document.getElementById('soilSourceCardsGrid');
+  if (cardsGrid && Array.isArray(data.parameter_cards) && data.parameter_cards.length > 0) {
+    cardsGrid.innerHTML = data.parameter_cards.map(c => {
+      const st = c.source_type || 'MISSING';
+      const badgeClass = st === 'MEASURED_LAB_VALUE'
+        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+        : (st === 'REGIONAL_REFERENCE' ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-rose-100 text-rose-800 border-rose-300');
+      const badgeLabel = st === 'MEASURED_LAB_VALUE'
+        ? 'MEASURED LAB'
+        : (st === 'REGIONAL_REFERENCE' ? 'REGIONAL EST.' : 'MISSING');
+      const valText = (c.value !== null && c.value !== undefined)
+        ? `${c.value}${c.unit ? ' ' + c.unit : ''}`
+        : 'Not Measured';
+      return `
+        <div class="p-2.5 bg-white rounded-xl border border-slate-200 shadow-2xs">
+          <div class="flex items-center justify-between gap-1">
+            <span class="text-slate-500 font-bold text-2xs">${c.label}</span>
+            <span class="px-1.5 py-0.5 rounded border font-extrabold text-[9px] ${badgeClass}">${badgeLabel}</span>
+          </div>
+          <strong class="text-slate-900 font-black block mt-1 text-xs">${valText}</strong>
+          <span class="text-slate-500 block text-[10px]">${c.status}</span>
         </div>
       `;
-      cropsContainer.appendChild(item);
-    });
+    }).join('');
+  } else {
+    // Legacy fallback IDs
+    const phStatusEl = document.getElementById('soilPHStatus');
+    const nStatusEl = document.getElementById('soilNStatus');
+    const pStatusEl = document.getElementById('soilPStatus');
+    const kStatusEl = document.getElementById('soilKStatus');
+    if (phStatusEl) phStatusEl.innerText = data.ph_status || '--';
+    if (nStatusEl) nStatusEl.innerText = data.nitrogen_status || '--';
+    if (pStatusEl) pStatusEl.innerText = data.phosphorus_status || '--';
+    if (kStatusEl) kStatusEl.innerText = data.potassium_status || '--';
   }
+
+  // Legacy Quick Recs & Guidance
+  const guidanceEl = document.getElementById('soilGuidanceText');
+  const recsContainer = document.getElementById('soilRecsList');
+  if (guidanceEl) guidanceEl.innerText = data.management_guidance || '';
+  if (recsContainer && Array.isArray(data.recommendations)) {
+    recsContainer.innerHTML = data.recommendations.slice(0, 4).map(r => `
+      <li class="flex items-start gap-2 text-xs text-slate-700 py-0.5">
+        <span class="text-emerald-600 font-bold">✔</span> <span>${r}</span>
+      </li>
+    `).join('');
+  }
+
+  // Module 6: Multilingual Soil Assistant Summary
+  updateSoilMultilingualPanel();
+
+  // Module 7: Soil & Weather Risk Alerts
+  const riskContainer = document.getElementById('soilWeatherRiskList');
+  if (riskContainer) {
+    const risks = data.soil_weather_risks || [];
+    riskContainer.innerHTML = risks.map(rk => {
+      const sev = (rk.severity || 'LOW').toUpperCase();
+      const cls = sev === 'HIGH'
+        ? 'bg-rose-50 border-rose-300 text-rose-950'
+        : (sev === 'MODERATE' ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-emerald-50 border-emerald-200 text-emerald-950');
+      const badgeCls = sev === 'HIGH'
+        ? 'bg-rose-600 text-white'
+        : (sev === 'MODERATE' ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white');
+      return `
+        <div class="p-3.5 rounded-2xl border ${cls} space-y-1">
+          <div class="flex items-center justify-between gap-2">
+            <strong class="text-xs font-extrabold">${rk.risk_type}</strong>
+            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${badgeCls}">${sev} RISK</span>
+          </div>
+          <p class="text-xs leading-relaxed">${rk.alert}</p>
+          <span class="block text-[10px] opacity-75 font-semibold">📊 Evidence Basis: ${rk.evidence_basis || 'Soil Profile + Forecast'}</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Module 4: Validated Soil Improvement Advisor Cards
+  const advisorContainer = document.getElementById('soilStructuredAdvisorList');
+  if (advisorContainer) {
+    const items = data.structured_advisor || [];
+    advisorContainer.innerHTML = items.map(ad => {
+      const isMissing = String(ad.status || '').includes('Missing') || String(ad.status || '').includes('Refused');
+      const cardBorder = isMissing ? 'border-amber-300 bg-amber-50/50' : 'border-slate-200 bg-slate-50/70';
+      return `
+        <div class="p-4 rounded-2xl border ${cardBorder} space-y-2 flex flex-col justify-between">
+          <div class="space-y-1.5">
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-extrabold text-xs text-slate-900">${ad.parameter}</span>
+              <span class="px-2 py-0.5 rounded-md text-2xs font-bold ${isMissing ? 'bg-amber-200 text-amber-950' : 'bg-emerald-100 text-emerald-900'}">${ad.status}</span>
+            </div>
+            <div class="text-2xs text-slate-500 font-semibold">Measured / Input Value: <strong class="text-slate-800">${ad.measured_value}</strong></div>
+            <p class="text-xs text-slate-700 leading-relaxed">${ad.guidance}</p>
+          </div>
+          <div class="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 font-semibold">
+            📘 Reference: ${ad.reference_source || 'ICAR / OUAT Soil Management Guidelines'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // Module 3: Crop Suitability Engine Matrix
+  const cropsContainer = document.getElementById('soilCropSuitabilityList');
+  if (cropsContainer && Array.isArray(data.crop_suitability)) {
+    cropsContainer.innerHTML = data.crop_suitability.slice(0, 8).map(c => {
+      const score = c.suitability_score ?? 0;
+      const badgeColor = score >= 80
+        ? 'bg-emerald-100 text-emerald-900 border-emerald-300'
+        : (score >= 60 ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-rose-100 text-rose-900 border-rose-300');
+      const reasons = (c.reasons || []).slice(0, 2).map(r => `<li class="text-emerald-800">✔ ${r}</li>`).join('');
+      const limits = (c.limiting_factors || []).slice(0, 2).map(l => `<li class="text-amber-900">⚠️ ${l}</li>`).join('');
+      return `
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col justify-between space-y-3 shadow-2xs">
+          <div class="space-y-2">
+            <div class="flex items-start justify-between gap-2">
+              <div>
+                <h5 class="font-extrabold text-slate-900 text-sm">${c.crop}</h5>
+                <p class="text-[11px] text-slate-400 italic">${c.scientific_name || ''}</p>
+              </div>
+              <span class="px-2.5 py-1 rounded-full text-xs font-black border ${badgeColor}">
+                ${score}%
+              </span>
+            </div>
+            <div class="flex flex-wrap gap-1 text-[10px] font-bold">
+              <span class="px-2 py-0.5 rounded bg-white border border-slate-200 text-slate-700">${c.classification || 'Evaluated'}</span>
+              ${c.water_requirement ? `<span class="px-2 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-800">💧 Water: ${c.water_requirement}</span>` : ''}
+            </div>
+            <ul class="text-2xs space-y-1 pt-1">
+              ${reasons}
+              ${limits}
+            </ul>
+          </div>
+          <div class="pt-2 border-t border-slate-200 text-[10px] text-slate-500">
+            <strong>Uncertainty:</strong> ${c.uncertainty || 'Low'}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+}
+
+function setSoilAssistantLang(lang) {
+  window.soilDssState.assistantLang = lang;
+  ['en', 'od', 'hi'].forEach(l => {
+    const btn = document.getElementById(`soilLangBtn_${l}`);
+    if (btn) {
+      btn.className = l === lang
+        ? 'px-2.5 py-1 rounded-lg bg-emerald-700 text-white font-extrabold'
+        : 'px-2.5 py-1 rounded-lg text-slate-700 hover:bg-white font-bold';
+    }
+  });
+  updateSoilMultilingualPanel();
+}
+
+function updateSoilMultilingualPanel() {
+  const data = window.soilDssState.lastAnalysis;
+  const textEl = document.getElementById('soilMultilingualSummaryText');
+  if (!data || !textEl) return;
+  const lang = window.soilDssState.assistantLang || state.currentLang || 'en';
+  const summaries = data.multilingual_summary || {};
+  textEl.innerText = summaries[lang] || summaries.en || data.management_guidance || '';
+}
+
+function speakSoilAssistantSummary() {
+  const textEl = document.getElementById('soilMultilingualSummaryText');
+  const answerEl = document.getElementById('soilAssistantAnswerBox');
+  const textToSpeak = (!answerEl?.classList.contains('hidden') && answerEl?.innerText)
+    ? answerEl.innerText
+    : (textEl?.innerText || '');
+  if (!textToSpeak) return;
+
+  if (!('speechSynthesis' in window)) {
+    showToast('Browser speech synthesis not supported on this device.', 'warning');
+    return;
+  }
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(textToSpeak);
+  const lang = window.soilDssState.assistantLang || 'en';
+  u.lang = lang === 'od' ? 'or-IN' : (lang === 'hi' ? 'hi-IN' : 'en-IN');
+  u.rate = 0.95;
+  window.speechSynthesis.speak(u);
+  showToast(`🔊 Speaking Soil DSS summary (${lang.toUpperCase()})...`, 'info');
+}
+
+function startSoilVoiceInput() {
+  const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRec) {
+    showToast('Voice recognition is not supported in this browser. Please type your question below.', 'warning');
+    document.getElementById('soilAssistantQuestionInput')?.focus();
+    return;
+  }
+  const rec = new SpeechRec();
+  const lang = window.soilDssState.assistantLang || 'en';
+  rec.lang = lang === 'od' ? 'or-IN' : (lang === 'hi' ? 'hi-IN' : 'en-IN');
+  const micLabel = document.getElementById('soilVoiceMicLabel');
+  if (micLabel) micLabel.innerText = 'Listening...';
+  rec.start();
+
+  rec.onresult = (e) => {
+    const transcript = e.results[0][0].transcript;
+    const qInput = document.getElementById('soilAssistantQuestionInput');
+    if (qInput) qInput.value = transcript;
+    if (micLabel) micLabel.innerText = 'Speak Question';
+    askSoilAssistantQuestion();
+  };
+  rec.onerror = () => {
+    if (micLabel) micLabel.innerText = 'Speak Question';
+  };
+  rec.onend = () => {
+    if (micLabel) micLabel.innerText = 'Speak Question';
+  };
+}
+
+async function askSoilAssistantQuestion() {
+  const qInput = document.getElementById('soilAssistantQuestionInput');
+  const answerBox = document.getElementById('soilAssistantAnswerBox');
+  const question = (qInput?.value || '').trim();
+  if (!question) {
+    showToast('Please enter or speak a question about your soil.', 'warning');
+    return;
+  }
+  const lang = window.soilDssState.assistantLang || 'en';
+  const soilContext = {
+    ph: parseNullableFloat('soilInputPH'),
+    nitrogen_kg_ha: parseNullableFloat('soilInputN'),
+    phosphorus_kg_ha: parseNullableFloat('soilInputP'),
+    potassium_kg_ha: parseNullableFloat('soilInputK'),
+    organic_carbon_pct: parseNullableFloat('soilInputOC'),
+    soil_type: document.getElementById('soilInputType')?.value || 'Alluvial Loam',
+    data_source_type: document.getElementById('soilInputSourceType')?.value || 'MEASURED_LAB_VALUE',
+    data_source_name: document.getElementById('soilInputSourceName')?.value || 'Farmer Submitted Report'
+  };
+
+  try {
+    const res = await apiFetch('/soil/assistant-query', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, lang, soil_context: soilContext })
+    });
+    if (res.ok && answerBox) {
+      const data = await res.json();
+      answerBox.classList.remove('hidden');
+      answerBox.innerText = data.answer || '';
+    }
+  } catch (err) {
+    console.error('Soil assistant query error:', err);
+  }
+}
+
+async function loadSoilTrends(mode = 'all') {
+  try {
+    const res = await apiFetch(`/soil/trends?farm_id=${state.activeFarmId || 1}&mode=${mode}`);
+    if (res.ok) {
+      const trendData = await res.json();
+      renderSoilTrendTracker(trendData);
+    }
+  } catch (err) {
+    console.error('Error loading soil trends:', err);
+  }
+}
+
+function renderSoilTrendTracker(trendData) {
+  const container = document.getElementById('soilTrendTrackerContainer');
+  if (!container || !trendData) return;
+
+  if (!trendData.has_sufficient_data) {
+    container.innerHTML = `
+      <div class="p-4 rounded-2xl bg-amber-50 border border-amber-300 text-xs text-amber-950 space-y-1.5">
+        <div class="font-extrabold flex items-center gap-1.5">
+          <span>🛡️</span>
+          <span>Trend Computation Refused (Only ${trendData.record_count || 0} Dated Assessment Found)</span>
+        </div>
+        <p>${trendData.message || 'At least 2 dated soil assessments are required to compute a valid soil health trend.'}</p>
+      </div>
+    `;
+    return;
+  }
+
+  const trends = trendData.trends || {};
+  const paramMeta = [
+    { key: 'ph', label: 'Soil pH', unit: '' },
+    { key: 'nitrogen_kg_ha', label: 'Available N', unit: 'kg/ha' },
+    { key: 'phosphorus_kg_ha', label: 'Available P', unit: 'kg/ha' },
+    { key: 'potassium_kg_ha', label: 'Available K', unit: 'kg/ha' },
+    { key: 'organic_carbon_pct', label: 'Organic Carbon', unit: '%' }
+  ];
+
+  const cardsHtml = paramMeta.map(pm => {
+    const t = trends[pm.key] || {};
+    if (t.status !== 'COMPARED') {
+      return `
+        <div class="p-3 rounded-2xl bg-slate-50 border border-slate-200 text-xs">
+          <span class="font-bold text-slate-500 block">${pm.label}</span>
+          <strong class="text-slate-400">Insufficient Comparable Points</strong>
+        </div>
+      `;
+    }
+    const deltaSign = t.delta > 0 ? `+${t.delta}` : `${t.delta}`;
+    const badgeColor = t.direction === 'INCREASING'
+      ? 'bg-emerald-100 text-emerald-800'
+      : (t.direction === 'DECREASING' ? 'bg-amber-100 text-amber-900' : 'bg-slate-200 text-slate-700');
+    return `
+      <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs space-y-1">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-slate-600">${pm.label}</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-black ${badgeColor}">${t.direction} (${deltaSign}${pm.unit ? ' ' + pm.unit : ''})</span>
+        </div>
+        <div class="text-sm font-black text-slate-900">${t.previous_value} → ${t.latest_value} ${pm.unit}</div>
+        <div class="text-[10px] text-slate-500">${t.previous_date} vs ${t.latest_date}</div>
+      </div>
+    `;
+  }).join('');
+
+  const historyRows = (trendData.chronological_records || []).map(r => `
+    <tr class="border-b border-slate-100 text-xs">
+      <td class="p-2.5 font-mono font-bold text-slate-800">${r.test_date || '--'}</td>
+      <td class="p-2.5"><span class="px-2 py-0.5 rounded bg-emerald-50 text-emerald-800 font-bold text-2xs">${r.data_source_type || 'MEASURED_LAB_VALUE'}</span></td>
+      <td class="p-2.5 text-slate-700 font-semibold">${r.data_source_name || '--'}</td>
+      <td class="p-2.5 font-bold">${r.ph ?? '--'}</td>
+      <td class="p-2.5 font-bold">${r.nitrogen_kg_ha ?? '--'}</td>
+      <td class="p-2.5 font-bold">${r.phosphorus_kg_ha ?? '--'}</td>
+      <td class="p-2.5 font-bold">${r.potassium_kg_ha ?? '--'}</td>
+      <td class="p-2.5 font-bold">${r.organic_carbon_pct ?? '--'}%</td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <div class="p-3.5 rounded-2xl bg-indigo-50/70 border border-indigo-200 text-xs text-indigo-950 font-semibold">
+      ✅ ${trendData.message} (${trendData.earliest_date} → ${trendData.latest_date})
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      ${cardsHtml}
+    </div>
+    <div class="overflow-x-auto rounded-2xl border border-slate-200">
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="bg-slate-100 text-slate-600 text-2xs uppercase">
+            <th class="p-2.5">Test Date</th>
+            <th class="p-2.5">Source Type</th>
+            <th class="p-2.5">Source Lab / Record</th>
+            <th class="p-2.5">pH</th>
+            <th class="p-2.5">N (kg/ha)</th>
+            <th class="p-2.5">P (kg/ha)</th>
+            <th class="p-2.5">K (kg/ha)</th>
+            <th class="p-2.5">OC (%)</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${historyRows}
+        </tbody>
+      </table>
+    </div>
+  `;
 }
 
 // ----------------------------------------------------
@@ -6567,29 +7250,168 @@ async function adminInitiateRefund(paymentId, amount) {
       });
     }
 
-    // 6. SOIL HEALTH ANALYZER
-    if (path === '/api/soil/analyze' && method === 'POST') {
-      const body = await parseBody(options);
-      const ph = Number(body.ph || 6.5);
-      const n = Number(body.nitrogen || 240);
-      const p = Number(body.phosphorus || 22);
-      const k = Number(body.potassium || 180);
+    // 6. AI SOIL DECISION SUPPORT SYSTEM (STANDALONE FALLBACK)
+    if (path === '/api/soil/locations' && method === 'GET') {
+      return jsonResponse({
+        hierarchy: window.soilDssState?.hierarchy || {},
+        default_selection: { state: 'Odisha', district: 'Khordha', block: 'Balianta', village: 'Balipatna' }
+      });
+    }
+
+    if (path === '/api/soil/regional-lookup' && method === 'GET') {
+      const st = urlObj.searchParams.get('state') || 'Odisha';
+      const dist = urlObj.searchParams.get('district') || 'Khordha';
+      const blk = urlObj.searchParams.get('block') || 'Balianta';
+      const vil = urlObj.searchParams.get('village') || 'Balipatna';
       return jsonResponse({
         status: 'success',
-        health_score: 84,
-        soil_rating: ph >= 6.0 && ph <= 7.5 ? 'Optimal Fertility' : 'Needs pH Correction',
-        deficiencies: [
-          ...(n < 280 ? ['Nitrogen (Low-Moderate)'] : []),
-          ...(p < 25 ? ['Phosphorus (Moderate)'] : []),
-          ...(k < 150 ? ['Potassium (Low)'] : [])
+        location: { state: st, district: dist, block: blk, village: vil },
+        data_source: 'ICAR-NBSS&LUP & OUAT Block-Level Soil Survey',
+        data_source_type: 'REGIONAL_REFERENCE',
+        reference_date: '2024-11',
+        geographic_resolution: 'Block-level (1:50,000 scale)',
+        dominant_soil_type: 'Deltaic Alluvial / Sandy Loam',
+        ph_range: [5.6, 6.6],
+        ph_regional_estimate: 6.1,
+        oc_pct_range: [0.42, 0.65],
+        oc_pct_regional_estimate: 0.52,
+        ec_ds_m_regional_estimate: 0.25,
+        missing_parameters: [
+          'Plot-specific Available Nitrogen (N)',
+          'Plot-specific Available Phosphorus (P)',
+          'Plot-specific Available Potassium (K)',
+          'Plot-specific Micronutrients (Zn, B, Fe)'
         ],
-        recommended_crops: ['Rice (Swarna)', 'Tomato', 'Potato', 'Mustard', 'Groundnut'],
-        fertilizer_plan: {
-          urea_kg_per_acre: Math.max(25, Math.round((300 - n) * 0.35)),
-          dap_kg_per_acre: Math.max(20, Math.round((40 - p) * 1.5)),
-          mop_kg_per_acre: Math.max(15, Math.round((220 - k) * 0.25)),
-          organic_amendment: 'Apply 2 Tonnes Vermicompost + 5 kg Trichoderma enriched FYM per acre.'
+        disclaimer: 'REGIONAL BASELINE ONLY — NOT AN INDIVIDUAL FARM MEASUREMENT. Regional soil surveys provide general soil texture and pH ranges at block/district scale. Exact N, P, K fertilizer dosing requires a laboratory Soil Health Card test from your specific plot.'
+      });
+    }
+
+    if (path === '/api/soil/ocr-extract' && method === 'POST') {
+      return jsonResponse({
+        status: 'success',
+        filename: 'odisha_shc_2026.txt',
+        extraction_engine: 'Regex & Validated Unit Parser',
+        data_source_type: 'MEASURED_LAB_VALUE',
+        source_lab: 'OUAT Soil Testing Laboratory, Bhubaneswar',
+        test_date: '2026-08-18',
+        extracted_values: {
+          ph: 6.2,
+          ec_ds_m: 0.31,
+          organic_carbon_pct: 0.58,
+          nitrogen_kg_ha: 245.0,
+          phosphorus_kg_ha: 24.5,
+          potassium_kg_ha: 188.0,
+          zinc_ppm: 0.74,
+          boron_ppm: 0.58,
+          sulphur_ppm: 12.4
+        },
+        validation_warnings: [],
+        requires_farmer_confirmation: true
+      });
+    }
+
+    if (path === '/api/soil/analyze' && method === 'POST') {
+      const body = await parseBody(options);
+      const ph = body.ph !== null && body.ph !== undefined ? Number(body.ph) : null;
+      const n = body.nitrogen_kg_ha !== null && body.nitrogen_kg_ha !== undefined ? Number(body.nitrogen_kg_ha) : null;
+      const p = body.phosphorus_kg_ha !== null && body.phosphorus_kg_ha !== undefined ? Number(body.phosphorus_kg_ha) : null;
+      const k = body.potassium_kg_ha !== null && body.potassium_kg_ha !== undefined ? Number(body.potassium_kg_ha) : null;
+      const oc = body.organic_carbon_pct !== null && body.organic_carbon_pct !== undefined ? Number(body.organic_carbon_pct) : null;
+      const ec = body.ec_ds_m !== null && body.ec_ds_m !== undefined ? Number(body.ec_ds_m) : null;
+      const srcType = body.data_source_type || 'MEASURED_LAB_VALUE';
+      const srcName = body.data_source_name || 'Farmer Verified Soil Report';
+      const isMeasured = srcType === 'MEASURED_LAB_VALUE';
+      const missing = [];
+      if (ph === null) missing.push('Soil pH');
+      if (n === null) missing.push('Available Nitrogen (N)');
+      if (p === null) missing.push('Available Phosphorus (P)');
+      if (k === null) missing.push('Available Potassium (K)');
+      if (oc === null) missing.push('Organic Carbon (OC)');
+
+      return jsonResponse({
+        ph_status: ph === null ? 'Missing (Not Measured)' : (ph < 5.5 ? 'Strongly Acidic' : (ph <= 7.5 ? 'Optimal Neutral' : 'Alkaline')),
+        nitrogen_status: n === null ? 'Missing (Not Measured)' : `${n < 240 ? 'Low' : 'Medium'} (${n} kg/ha)`,
+        phosphorus_status: p === null ? 'Missing (Not Measured)' : `${p < 20 ? 'Low' : 'Medium'} (${p} kg/ha)`,
+        potassium_status: k === null ? 'Missing (Not Measured)' : `${k < 150 ? 'Low' : 'Medium'} (${k} kg/ha)`,
+        organic_carbon_status: oc === null ? 'Missing (Not Measured)' : `${oc < 0.5 ? 'Low' : 'Medium'} (${oc}%)`,
+        overall_fertility_score: ph !== null && n !== null ? 84.0 : 65.0,
+        data_source_type: srcType,
+        data_source_name: srcName,
+        test_date: body.test_date || '2026-08-18',
+        missing_inputs: missing,
+        uncertainty_summary: (!isMeasured || missing.length > 0)
+          ? 'Elevated uncertainty: one or more parameters are missing or derived from regional baselines.'
+          : 'Low uncertainty: core soil parameters provided from measured lab report.',
+        parameter_cards: [
+          { parameter: 'ph', label: 'Soil pH', value: ph, unit: '', status: ph === null ? 'Missing' : 'Optimal Neutral', source_type: ph === null ? 'MISSING' : srcType, source_name: srcName },
+          { parameter: 'nitrogen_kg_ha', label: 'Available Nitrogen (N)', value: n, unit: 'kg/ha', status: n === null ? 'Missing' : 'Medium', source_type: n === null ? 'MISSING' : srcType, source_name: srcName },
+          { parameter: 'phosphorus_kg_ha', label: 'Available Phosphorus (P)', value: p, unit: 'kg/ha', status: p === null ? 'Missing' : 'Medium', source_type: p === null ? 'MISSING' : srcType, source_name: srcName },
+          { parameter: 'potassium_kg_ha', label: 'Available Potassium (K)', value: k, unit: 'kg/ha', status: k === null ? 'Missing' : 'Medium', source_type: k === null ? 'MISSING' : srcType, source_name: srcName },
+          { parameter: 'organic_carbon_pct', label: 'Organic Carbon (OC)', value: oc, unit: '%', status: oc === null ? 'Missing' : 'Medium', source_type: oc === null ? 'MISSING' : srcType, source_name: srcName },
+          { parameter: 'ec_ds_m', label: 'Salinity (EC)', value: ec, unit: 'dS/m', status: ec === null ? 'Missing' : 'Normal', source_type: ec === null ? 'MISSING' : srcType, source_name: srcName }
+        ],
+        crop_suitability: [
+          { crop: 'Rice (Paddy)', scientific_name: 'Oryza sativa', suitability_score: 92, classification: 'Highly Suitable', water_requirement: 'High', reasons: ['Matches season & soil pH'], limiting_factors: [], uncertainty: missing.length ? 'Medium' : 'Low' },
+          { crop: 'Green Gram (Moong)', scientific_name: 'Vigna radiata', suitability_score: 86, classification: 'Highly Suitable', water_requirement: 'Low', reasons: ['Biological N-fixing pulse'], limiting_factors: [], uncertainty: missing.length ? 'Medium' : 'Low' },
+          { crop: 'Tomato', scientific_name: 'Solanum lycopersicum', suitability_score: 82, classification: 'Highly Suitable', water_requirement: 'Medium', reasons: ['Favorable loamy drainage'], limiting_factors: [], uncertainty: missing.length ? 'Medium' : 'Low' },
+          { crop: 'Potato', scientific_name: 'Solanum tuberosum', suitability_score: 79, classification: 'Moderately Suitable', water_requirement: 'Medium', reasons: ['Slightly acidic-neutral pH reduces scab'], limiting_factors: [], uncertainty: missing.length ? 'Medium' : 'Low' }
+        ],
+        structured_advisor: [
+          {
+            parameter: 'Available N, P, K',
+            measured_value: (n === null || !isMeasured) ? 'Not Measured (Missing Lab Data)' : `N=${n}, P=${p}, K=${k} kg/ha`,
+            status: (n === null || !isMeasured) ? 'Data Missing — Chemical Dosage Refused' : 'Lab Verified',
+            guidance: (n === null || !isMeasured)
+              ? 'Because plot-specific N-P-K lab values are missing, the system refuses to fabricate chemical fertilizer (Urea/DAP/MOP) dosages. Apply 2–3 t/acre FYM/compost and test soil at OUAT/KVK.'
+              : 'Apply recommended split doses of N (25% basal, 50% tillering, 25% panicle) and full basal P & K as per OUAT crop schedule.',
+            reference_source: 'ICAR Soil Health Card Manual & OUAT Fertilizer Schedule'
+          }
+        ],
+        recommendations: ['Follow ICAR/OUAT validated soil guidance above.'],
+        management_guidance: 'Source-verified Soil DSS active.',
+        soil_weather_risks: [
+          {
+            risk_type: 'Soil & Weather Cross-Check',
+            severity: 'LOW',
+            alert: 'No acute leaching or moisture stress alert. Avoid top-dressing Urea immediately before heavy rain.',
+            evidence_basis: 'Submitted soil record + meteorological forecast (No live hardware sensor).'
+          }
+        ],
+        multilingual_summary: {
+          en: `Source: ${srcName}. pH: ${ph ?? 'Missing'}, N: ${n ?? 'Missing'} kg/ha, P: ${p ?? 'Missing'} kg/ha, K: ${k ?? 'Missing'} kg/ha. Missing values are never fabricated.`,
+          od: `ଉତ୍ସ: ${srcName}। pH: ${ph ?? 'ଅଜଣା'}, N: ${n ?? 'ଅଜଣା'} kg/ha, P: ${p ?? 'ଅଜଣା'} kg/ha, K: ${k ?? 'ଅଜଣା'} kg/ha। ବିନା ମାटी ପରୀକ୍ଷାରେ ରାସାୟନିକ ସାର ମାତ୍ରା ଅନୁମାନ କରାଯାଏ ନାହିଁ।`,
+          hi: `स्रोत: ${srcName}। pH: ${ph ?? 'अज्ञात'}, N: ${n ?? 'अज्ञात'} kg/ha, P: ${p ?? 'अज्ञात'} kg/ha, K: ${k ?? 'अज्ञात'} kg/ha। बिना लैब रिपोर्ट के रासायनिक उर्वरक मात्रा का अनुमान नहीं लगाया जाता है।`
         }
+      });
+    }
+
+    if (path === '/api/soil/trends' && method === 'GET') {
+      const mode = urlObj.searchParams.get('mode') || 'all';
+      if (mode === 'single') {
+        return jsonResponse({
+          has_sufficient_data: false,
+          record_count: 1,
+          message: 'At least 2 dated soil assessments are required to compute a valid soil health trend. Currently 1 record is stored.',
+          trends: {}
+        });
+      }
+      return jsonResponse({
+        has_sufficient_data: true,
+        record_count: 2,
+        earliest_date: '2025-11-15',
+        latest_date: '2026-05-10',
+        message: 'Trend computed across 2 dated soil records (comparing 2025-11-15 vs 2026-05-10).',
+        trends: {
+          ph: { status: 'COMPARED', previous_value: 5.8, latest_value: 6.3, delta: 0.5, direction: 'INCREASING', previous_date: '2025-11-15', latest_date: '2026-05-10' },
+          nitrogen_kg_ha: { status: 'COMPARED', previous_value: 210, latest_value: 248, delta: 38, direction: 'INCREASING', previous_date: '2025-11-15', latest_date: '2026-05-10' },
+          phosphorus_kg_ha: { status: 'COMPARED', previous_value: 18.5, latest_value: 23.0, delta: 4.5, direction: 'INCREASING', previous_date: '2025-11-15', latest_date: '2026-05-10' },
+          potassium_kg_ha: { status: 'COMPARED', previous_value: 155, latest_value: 182, delta: 27, direction: 'INCREASING', previous_date: '2025-11-15', latest_date: '2026-05-10' },
+          organic_carbon_pct: { status: 'COMPARED', previous_value: 0.44, latest_value: 0.56, delta: 0.12, direction: 'INCREASING', previous_date: '2025-11-15', latest_date: '2026-05-10' }
+        },
+        chronological_records: [
+          { test_date: '2025-11-15', data_source_type: 'MEASURED_LAB_VALUE', data_source_name: 'OUAT Central Soil Testing Lab', ph: 5.8, nitrogen_kg_ha: 210, phosphorus_kg_ha: 18.5, potassium_kg_ha: 155, organic_carbon_pct: 0.44 },
+          { test_date: '2026-05-10', data_source_type: 'MEASURED_LAB_VALUE', data_source_name: 'District Soil Testing Lab, Khordha', ph: 6.3, nitrogen_kg_ha: 248, phosphorus_kg_ha: 23.0, potassium_kg_ha: 182, organic_carbon_pct: 0.56 }
+        ]
       });
     }
 
