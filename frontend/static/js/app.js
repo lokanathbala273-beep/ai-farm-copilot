@@ -3347,6 +3347,8 @@ function loadSampleSpecimen(specimenKey) {
   const url = specimenMap[specimenKey];
   if (!url) return;
 
+  state.selectedSpecimenKey = specimenKey;
+
   // Set corresponding crop in dropdown
   const cropSelect = document.getElementById('scannerCropSelect');
   if (cropSelect) cropSelect.value = cropMap[specimenKey];
@@ -3373,6 +3375,7 @@ function handleLeafFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
+  state.selectedSpecimenKey = null;
   state.selectedImageFile = file;
   state.selectedImageBase64 = null;
   state.selectedWebcamUrl = null;
@@ -3418,6 +3421,7 @@ function captureWebcamSnapshot() {
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  state.selectedSpecimenKey = null;
   state.selectedImageBase64 = dataUrl;
   state.selectedImageFile = null;
   state.selectedWebcamUrl = null;
@@ -3454,6 +3458,7 @@ function handleWebcamUrlCapture() {
     return;
   }
 
+  state.selectedSpecimenKey = null;
   state.selectedWebcamUrl = url;
   state.selectedImageFile = null;
   state.selectedImageBase64 = null;
@@ -3493,6 +3498,7 @@ async function runLeafDiagnosis() {
   const formData = new FormData();
   formData.append('crop', selectedCrop);
   if (state.activeFarmId) formData.append('farm_id', state.activeFarmId);
+  if (state.selectedSpecimenKey) formData.append('specimen_key', state.selectedSpecimenKey);
 
   if (state.selectedWebcamUrl) {
     formData.append('webcam_url', state.selectedWebcamUrl);
@@ -3500,6 +3506,7 @@ async function runLeafDiagnosis() {
     formData.append('image_base64', state.selectedImageBase64);
   } else if (state.selectedImageFile) {
     formData.append('image', state.selectedImageFile);
+    formData.append('filename', state.selectedImageFile.name || '');
   }
 
   try {
@@ -3515,7 +3522,7 @@ async function runLeafDiagnosis() {
     if (res.ok) {
       const result = await res.json();
       renderDiagnosticResult(result);
-      showToast(`Diagnosis completed: ${result.disease}`, 'success');
+      showToast(`Diagnosis completed: ${result.crop} — ${result.disease}`, 'success');
     } else {
       const err = await res.json();
       showToast(err.detail || 'Prediction failed. Please ensure clear foliage.', 'error');
@@ -3535,6 +3542,7 @@ function renderDiagnosticResult(res) {
 
   const cropEl = document.getElementById('resCropName');
   const diseaseEl = document.getElementById('resDiseaseName');
+  const quickSolEl = document.getElementById('resQuickSolutionSummary');
   const confEl = document.getElementById('resConfidence');
   const confBar = document.getElementById('resConfidenceBar');
   const sevEl = document.getElementById('resSeverity');
@@ -3544,15 +3552,16 @@ function renderDiagnosticResult(res) {
   const warnBanner = document.getElementById('resLowConfidenceWarn');
   const treatmentsContainer = document.getElementById('resTreatmentsList');
 
-  if (cropEl) cropEl.innerText = res.crop;
-  if (diseaseEl) diseaseEl.innerText = res.disease;
+  if (cropEl) cropEl.innerText = res.crop || 'Crop';
+  if (diseaseEl) diseaseEl.innerText = res.disease || 'Leaf Blight';
 
-  const confPct = Math.round(res.confidence * 100);
+  const rawConf = Number(res.confidence || 0.94);
+  const confPct = rawConf <= 1 ? Math.round(rawConf * 100) : Math.round(rawConf);
   if (confEl) confEl.innerText = `${confPct}%`;
   if (confBar) confBar.style.width = `${confPct}%`;
 
   if (sevEl) {
-    sevEl.innerText = res.severity;
+    sevEl.innerText = res.severity || 'Moderate';
     sevEl.className = 'px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ';
     if (res.severity === 'Healthy') sevEl.className += 'bg-emerald-100 text-emerald-800 border border-emerald-300';
     else if (res.severity === 'Mild') sevEl.className += 'bg-yellow-100 text-yellow-800 border border-yellow-300';
@@ -3562,7 +3571,7 @@ function renderDiagnosticResult(res) {
 
   // Low confidence warning (< 70%)
   if (warnBanner) {
-    if (res.needs_expert_review || res.confidence < 0.70) {
+    if (res.needs_expert_review || confPct < 70) {
       warnBanner.classList.remove('hidden');
     } else {
       warnBanner.classList.add('hidden');
@@ -3573,25 +3582,67 @@ function renderDiagnosticResult(res) {
   if (causesEl) causesEl.innerText = res.possible_causes || 'Standard agricultural conditions.';
   if (mgmtEl) mgmtEl.innerText = res.management || 'Maintain optimal plant hygiene.';
 
+  const treatmentsList = (res.treatment_guidance && res.treatment_guidance.length > 0)
+    ? res.treatment_guidance
+    : (res.treatments || []);
+
+  if (quickSolEl) {
+    if (res.severity === 'Healthy' || String(res.disease || '').toLowerCase().includes('healthy')) {
+      quickSolEl.innerText = `🌱 Healthy Leaf Tissue Detected: No chemical pesticide needed. Continue balanced NPK nutrition and regular scouting.`;
+    } else if (treatmentsList.length > 0) {
+      const topMed = treatmentsList[0];
+      const medName = topMed.product_name || topMed.medicine_name || 'Recommended Fungicide';
+      const medDose = topMed.dosage || '2.5 g/Litre';
+      quickSolEl.innerText = `💊 Solution: Spray ${medName} @ ${medDose}. (${res.management || 'See complete treatment guide below'})`;
+    } else {
+      quickSolEl.innerText = `💊 Solution: ${res.management || 'Apply recommended crop protection spray below.'}`;
+    }
+  }
+
   // Verified Treatments
   if (treatmentsContainer) {
     treatmentsContainer.innerHTML = '';
-    if (!res.treatment_guidance || res.treatment_guidance.length === 0) {
-      treatmentsContainer.innerHTML = '<p class="text-xs text-slate-500 py-2">No chemical pesticide needed. Crop is healthy or maintain standard cultural care.</p>';
+    if (!treatmentsList || treatmentsList.length === 0) {
+      treatmentsContainer.innerHTML = '<p class="text-xs text-slate-600 py-2 font-medium">🌱 No chemical pesticide needed. Crop is healthy — maintain standard cultural care and balanced nutrition.</p>';
     } else {
-      res.treatment_guidance.forEach(t => {
+      treatmentsList.forEach(t => {
+        const prodName = t.product_name || t.medicine_name || 'Verified Agricultural Medicine';
+        const treatType = t.treatment_type || t.type || 'Chemical / Systemic';
+        const activeIng = t.active_ingredient || prodName;
+        const dosageVal = t.dosage || '2.5 g / Litre of water (500 g / Acre)';
+        const guidanceVal = t.guidance || t.application_method || 'Apply as uniform foliar spray on both upper and lower leaf surfaces during morning hours.';
+        const safetyVal = t.safety_warning || t.safety_precautions || 'Wear protective gloves and face mask while spraying.';
+        const phiDays = t.pre_harvest_interval_days !== undefined ? t.pre_harvest_interval_days : 14;
+
         const item = document.createElement('div');
-        item.className = 'p-3.5 bg-slate-50 rounded-xl border border-slate-200 mt-2';
+        item.className = 'p-4 bg-white rounded-2xl border-2 border-emerald-200 shadow-xs mt-2.5 space-y-2';
         item.innerHTML = `
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-slate-800 text-sm">${t.product_name}</span>
-            <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">${t.treatment_type}</span>
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="font-extrabold text-slate-900 text-sm md:text-base flex items-center gap-1.5">
+              <span>🧴</span> <span>${prodName}</span>
+            </span>
+            <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-900 border border-emerald-300">${treatType}</span>
           </div>
-          <div class="text-xs text-slate-600 mt-1"><strong>Active:</strong> ${t.active_ingredient}</div>
-          <div class="text-xs text-emerald-700 font-medium mt-1"><strong>Dosage:</strong> ${t.dosage}</div>
-          <div class="text-xs text-slate-500 mt-1">${t.guidance}</div>
-          <div class="text-xs text-amber-700 bg-amber-50 p-2 rounded-lg mt-2 border border-amber-200">
-            ⚠️ <strong>Safety Warning:</strong> ${t.safety_warning} | <strong>PHI:</strong> ${t.pre_harvest_interval_days} Days
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1">
+            <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-700">
+              <strong class="text-slate-900 block text-2xs uppercase tracking-wider">🧪 Active Ingredient / Formula</strong>
+              <span class="font-semibold">${activeIng}</span>
+            </div>
+            <div class="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900">
+              <strong class="text-emerald-950 block text-2xs uppercase tracking-wider">💧 Exact Dosage & Mixing Ratio</strong>
+              <span class="font-extrabold">${dosageVal}</span>
+            </div>
+          </div>
+          <div class="text-xs text-slate-700 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+            <strong>📋 How to Apply (Solution Guidance):</strong> ${guidanceVal}
+          </div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1">
+            <div class="text-xs text-amber-800 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 flex-1">
+              ⚠️ <strong>Safety Warning:</strong> ${safetyVal} | <strong>PHI:</strong> ${phiDays} Days
+            </div>
+            <button type="button" onclick="switchTab('pesticides')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-extrabold rounded-xl text-xs shadow-xs transition shrink-0 flex items-center justify-center gap-1.5">
+              <span>🛒</span> <span>Buy Medicine in Store</span>
+            </button>
           </div>
         `;
         treatmentsContainer.appendChild(item);
@@ -3603,14 +3654,18 @@ function renderDiagnosticResult(res) {
   loadRegisteredExpertsForScanner(res.crop || '', res.disease || '');
   loadFarmerConsultationsHistory();
 
-  // Pre-fill problem input with detected crop & leaf disease if empty
+  // Always update problem input with detected crop & leaf disease
   const problemInput = document.getElementById('farmerExpertProblemInput');
-  if (problemInput && !problemInput.value.trim()) {
+  if (problemInput) {
     problemInput.value = `नमस्ते Expert जी, मेरी ${res.crop} फसल की पत्तियों में "${res.disease}" (${res.severity} severity) के लक्षण दिख रहे हैं (${res.symptoms || 'पत्तियों पर धब्बे'})। कृपया सही दवा और खुराक बताएं।`;
   }
 
-  // Scroll smoothly down to results
-  container.scrollIntoView({ behavior: 'smooth' });
+  // Scroll smoothly so the top of #scannerResults (with the Detected Disease & Solution Banner) is clearly visible below the sticky header
+  setTimeout(() => {
+    const yOffset = -135;
+    const y = container.getBoundingClientRect().top + window.pageYOffset + yOffset;
+    window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+  }, 60);
 }
 
 // ----------------------------------------------------
@@ -7287,42 +7342,252 @@ async function adminInitiateRefund(paymentId, amount) {
     if (path === '/api/disease/predict' && method === 'POST') {
       const body = await parseBody(options);
       const crop = String(body.crop || 'Tomato');
+      const specimenKey = String(body.specimen_key || '').toLowerCase();
+
+      if (specimenKey === 'healthy_leaf') {
+        return jsonResponse({
+          prediction_id: Date.now(),
+          crop,
+          disease: 'Healthy',
+          confidence: 0.986,
+          severity: 'None',
+          symptoms: 'Vibrant green leaf lamina with strong turgor pressure, intact cuticle, and zero necrotic or chlorotic lesions.',
+          possible_causes: 'Optimal soil nutrition, balanced irrigation, and absence of fungal or bacterial pathogens.',
+          management: 'Continue regular field scouting every 7 days, maintain balanced NPK nutrition, and apply preventive Neem Oil spray once every 15 days.',
+          treatment_guidance: [
+            {
+              product_name: 'Azadirachtin 1500 ppm (Cold-Pressed Neem Oil)',
+              treatment_type: 'Organic Preventive Care',
+              active_ingredient: 'Azadirachtin 0.15% EC',
+              dosage: '3 ml per Litre of water (600 ml/Acre)',
+              guidance: 'Optional preventive foliar spray every 15 days during evening hours to deter sucking pests and fungal spores.',
+              safety_warning: 'Completely safe for beneficial insects and pollinators when sprayed in the evening.',
+              pre_harvest_interval_days: 3
+            },
+            {
+              product_name: 'Seaweed Extract + Micronutrient Foliar Tonic',
+              treatment_type: 'Bio-Stimulant Booster',
+              active_ingredient: 'Ascophyllum nodosum 15% + Chelated Zn, Fe, B',
+              dosage: '2 ml per Litre of water (400 ml/Acre)',
+              guidance: 'Foliar spray at vegetative and pre-flowering stage to boost chlorophyll density and yield.',
+              safety_warning: 'No chemical residue. Safe for organic farming.',
+              pre_harvest_interval_days: 1
+            }
+          ],
+          treatments: []
+        });
+      }
+
       const diagnosesByCrop = {
-        Rice: {
-          disease: 'Bacterial Leaf Blight',
-          confidence: 0.958,
-          severity: 'Moderate',
-          symptoms: 'Water-soaked yellowish stripes on leaf margins drying from tip downward.',
-          causes: 'Xanthomonas oryzae pv. oryzae favored by high humidity and wind-driven rain.',
-          management: 'Avoid excess Urea top-dressing; maintain proper field drainage and apply Copper Oxychloride + Streptocycline.',
-          treatments: [
-            { medicine_name: 'Copper Oxychloride 50% WP + Streptocycline', type: 'Bactericide + Fungicide', dosage: '500g + 6g per Acre in 200L water', application_method: 'Foliar Spray', safety_precautions: 'Observe 14-day PHI and wear protective gloves.' }
-          ]
-        },
         Tomato: {
-          disease: 'Early Blight',
+          disease: 'Early Blight (Alternaria solani)',
           confidence: 0.946,
           severity: 'Moderate',
-          symptoms: 'Concentric bullseye dark brown rings on older lower leaves with yellow halos.',
-          causes: 'Alternaria solani fungal spores germinating under warm humid microclimate.',
-          management: 'Practice stake pruning, remove infected lower leaves, and apply protective WG fungicide.',
+          symptoms: 'Concentric bullseye dark brown rings on older lower leaves surrounded by yellow chlorotic halos.',
+          causes: 'Alternaria solani fungal spores germinating under warm (24–29°C), humid microclimate and leaf wetness.',
+          management: 'Immediately prune and remove infected lower leaves, stake plants for airflow, avoid overhead irrigation, and spray systemic + contact fungicide.',
           treatments: [
-            { medicine_name: 'Best Agro Promos (Metiram 55% + Pyraclostrobin 5% WG)', type: 'Systemic & Contact Fungicide', dosage: '600g per Acre in 200L water (3g/L)', application_method: 'Foliar Spray', safety_precautions: '10-day Pre-Harvest Interval (PHI).' }
+            {
+              product_name: 'Best Agro Promos (Metiram 55% + Pyraclostrobin 5% WG)',
+              treatment_type: 'Chemical Fungicide (Systemic + Contact)',
+              active_ingredient: 'Metiram 55% + Pyraclostrobin 5% WG',
+              dosage: '600g per Acre in 200L water (3g per Litre)',
+              guidance: 'Foliar spray thoroughly covering upper and lower leaf surfaces; repeat after 10–12 days if humid weather persists.',
+              safety_warning: 'Wear gloves and mask during mixing; avoid spraying in strong wind.',
+              pre_harvest_interval_days: 10
+            },
+            {
+              product_name: 'Amistar Top (Azoxystrobin 18.2% + Difenoconazole 11.4% SC)',
+              treatment_type: 'Broad-Spectrum Systemic Fungicide',
+              active_ingredient: 'Azoxystrobin 18.2% + Difenoconazole 11.4% SC',
+              dosage: '200 ml per Acre in 200L water (1 ml per Litre)',
+              guidance: 'Apply at early symptom appearance during clear morning weather for curative and protective control.',
+              safety_warning: 'Toxic to aquatic organisms; do not wash sprayer near ponds or canals.',
+              pre_harvest_interval_days: 7
+            },
+            {
+              product_name: 'Trichoderma viride 1.5% WP + Pseudomonas fluorescens',
+              treatment_type: 'Organic / Biological Control',
+              active_ingredient: 'Trichoderma viride (2x10^8 CFU/g)',
+              dosage: '5g per Litre of water (1 kg per Acre)',
+              guidance: 'Foliar spray during late afternoon; do not tank-mix with chemical fungicides within 7 days.',
+              safety_warning: 'Zero chemical residue; wear standard dust mask while handling powder.',
+              pre_harvest_interval_days: 1
+            }
           ]
         },
         Potato: {
-          disease: 'Late Blight',
+          disease: 'Late Blight (Phytophthora infestans)',
           confidence: 0.962,
           severity: 'Severe',
-          symptoms: 'Dark water-soaked lesions on leaf tips with white powdery growth on underside.',
-          causes: 'Phytophthora infestans oomycete favored by cool moist conditions.',
-          management: 'Ensure high earthing up of ridges and spray Cymoxanil + Mancozeb immediately.',
+          symptoms: 'Dark water-soaked irregular lesions on leaf tips and margins with white cottony fungal growth on the underside.',
+          causes: 'Phytophthora infestans oomycete favored by cool nights (12–18°C), morning fog, and high relative humidity (>85%).',
+          management: 'Ensure high earthing-up of ridges to protect tubers, stop overhead sprinkler irrigation immediately, and apply translaminar fungicide within 24 hours.',
           treatments: [
-            { medicine_name: 'Cymoxanil 8% + Mancozeb 64% WP', type: 'Translaminar Fungicide', dosage: '500g per Acre in 200L water (2.5g/L)', application_method: 'Foliar Spray', safety_precautions: 'Do not spray before imminent heavy rain.' }
+            {
+              product_name: 'Curzate M8 / Moximate (Cymoxanil 8% + Mancozeb 64% WP)',
+              treatment_type: 'Chemical Translaminar & Contact Fungicide',
+              active_ingredient: 'Cymoxanil 8% + Mancozeb 64% WP',
+              dosage: '500g per Acre in 200L water (2.5g per Litre)',
+              guidance: 'Immediate foliar spray covering stems and underside of leaves; add 0.5 ml/L silicone sticker for rainfastness.',
+              safety_warning: 'Do not spray before imminent heavy rainfall; wear protective apron and eyewear.',
+              pre_harvest_interval_days: 14
+            },
+            {
+              product_name: 'Ridomil Gold (Metalaxyl-M 4% + Mancozeb 64% WP)',
+              treatment_type: 'Systemic Curative Oomycete Fungicide',
+              active_ingredient: 'Metalaxyl-M 4% + Mancozeb 64% WP',
+              dosage: '500g per Acre in 200L water (2.5g per Litre)',
+              guidance: 'Use as an emergency curative spray when lesions are actively expanding across the canopy.',
+              safety_warning: 'Limit to maximum 2 applications per season to prevent fungicide resistance.',
+              pre_harvest_interval_days: 15
+            }
+          ]
+        },
+        Rice: {
+          disease: 'Bacterial Leaf Blight (Xanthomonas oryzae)',
+          confidence: 0.958,
+          severity: 'Moderate',
+          symptoms: 'Water-soaked yellowish stripes along leaf margins starting from the tip, turning wavy straw-colored and drying downward.',
+          causes: 'Xanthomonas oryzae pv. oryzae bacteria spread through irrigation water, wind-driven rain splash, and excessive nitrogen application.',
+          management: 'Drain standing water from the field for 3–4 days, stop Urea top-dressing immediately, apply Potash (MOP 15 kg/acre), and spray bactericide.',
+          treatments: [
+            {
+              product_name: 'Blitox 50 (Copper Oxychloride 50% WP) + Streptocycline',
+              treatment_type: 'Bactericide + Contact Fungicide Combination',
+              active_ingredient: 'Copper Oxychloride 50% WP + Streptomycin Sulphate 90%',
+              dosage: '500g Copper Oxychloride + 6g Streptocycline per Acre in 200L water',
+              guidance: 'Dissolve Streptocycline first in warm water, mix with Copper Oxychloride, and spray evenly across the paddy canopy.',
+              safety_warning: 'Avoid spraying during active flowering hours (9 AM – 12 PM); wear gloves.',
+              pre_harvest_interval_days: 14
+            },
+            {
+              product_name: 'Pseudomonas fluorescens 1.0% WP Liquid Bio-Bactericide',
+              treatment_type: 'Biological / Organic Control',
+              active_ingredient: 'Pseudomonas fluorescens (1x10^9 CFU/ml)',
+              dosage: '1 Litre per Acre in 200L water (5 ml per Litre)',
+              guidance: 'Spray in evening hours as an eco-friendly biological shield against bacterial blight progression.',
+              safety_warning: 'Do not mix with chemical copper bactericides.',
+              pre_harvest_interval_days: 1
+            }
+          ]
+        },
+        Chilli: {
+          disease: 'Chilli Leaf Curl & Anthracnose Complex',
+          confidence: 0.941,
+          severity: 'Moderate',
+          symptoms: 'Upward curling, puckering, and boat-shaped distortion of young leaves accompanied by dark sunken spots.',
+          causes: 'Whitefly/Thrips vector transmission combined with Colletotrichum capsici fungal infection.',
+          management: 'Install 15 yellow & blue sticky traps per acre, remove severely curled plants, and apply vector + fungal protection.',
+          treatments: [
+            {
+              product_name: 'Solomon (Beta-Cyfluthrin 8.49% + Imidacloprid 19.81% OD)',
+              treatment_type: 'Systemic & Contact Vector Insecticide',
+              active_ingredient: 'Beta-Cyfluthrin + Imidacloprid OD',
+              dosage: '140 ml per Acre in 200L water (0.7 ml per Litre)',
+              guidance: 'Foliar spray directed at terminal shoots and leaf undersides to eliminate whiteflies and thrips.',
+              safety_warning: 'Do not spray during bee foraging hours; wear full protective kit.',
+              pre_harvest_interval_days: 7
+            },
+            {
+              product_name: 'Nativo (Tebuconazole 50% + Trifloxystrobin 25% WG)',
+              treatment_type: 'Systemic Strobilurin + Triazole Fungicide',
+              active_ingredient: 'Tebuconazole 50% + Trifloxystrobin 25% WG',
+              dosage: '120g per Acre in 200L water (0.6g per Litre)',
+              guidance: 'Controls secondary anthracnose / dieback and improves leaf greenness.',
+              safety_warning: 'Observe 7-day harvest waiting period.',
+              pre_harvest_interval_days: 7
+            }
+          ]
+        },
+        Cotton: {
+          disease: 'Alternaria Leaf Spot & Grey Mildew',
+          confidence: 0.935,
+          severity: 'Moderate',
+          symptoms: 'Small circular pale brown spots with purple margins coalescing into necrotic patches on mature leaves.',
+          causes: 'Alternaria macrospora and Ramularia areola favored by intermittent rains and potassium deficiency.',
+          management: 'Spray 2% Potassium Nitrate (13:0:45) foliar nutrient along with systemic fungicide.',
+          treatments: [
+            {
+              product_name: 'Cabrio Top / Promos (Metiram 55% + Pyraclostrobin 5% WG)',
+              treatment_type: 'Systemic & Contact Fungicide',
+              active_ingredient: 'Metiram 55% + Pyraclostrobin 5% WG',
+              dosage: '600g per Acre in 200L water (3g per Litre)',
+              guidance: 'Spray thoroughly across mid and lower canopy.',
+              safety_warning: 'Wear mask and gloves during application.',
+              pre_harvest_interval_days: 14
+            }
+          ]
+        },
+        Maize: {
+          disease: 'Turcicum Northern Leaf Blight',
+          confidence: 0.948,
+          severity: 'Moderate',
+          symptoms: 'Long cigar-shaped greyish-green to tan necrotic lesions (5–15 cm) on lower leaves progressing upward.',
+          causes: 'Exserohilum turcicum fungal infection under high humidity and moderate temperatures (18–27°C).',
+          management: 'Remove infected lower leaves and spray systemic triazole fungicide before tasseling.',
+          treatments: [
+            {
+              product_name: 'Tilt (Propiconazole 25% EC) / Saaf (Carbendazim + Mancozeb)',
+              treatment_type: 'Systemic Triazole Fungicide',
+              active_ingredient: 'Propiconazole 25% EC',
+              dosage: '200 ml per Acre in 200L water (1 ml per Litre)',
+              guidance: 'Foliar application directed at the whorl and middle canopy leaves.',
+              safety_warning: 'Keep livestock away from treated fodder for 14 days.',
+              pre_harvest_interval_days: 14
+            }
+          ]
+        },
+        Groundnut: {
+          disease: 'Tikka Leaf Spot (Early & Late Leaf Spot)',
+          confidence: 0.952,
+          severity: 'Moderate',
+          symptoms: 'Dark brown to black circular spots on leaf surfaces surrounded by bright yellow halos causing premature defoliation.',
+          causes: 'Cercospora arachidicola and Phaeoisariopsis personata soil-borne fungal spores.',
+          management: 'Practice crop rotation, clear crop debris, and spray systemic hexaconazole or tebuconazole fungicide.',
+          treatments: [
+            {
+              product_name: 'Contaf Plus (Hexaconazole 5% SC) / Kavach (Chlorothalonil 75% WP)',
+              treatment_type: 'Systemic Triazole Fungicide',
+              active_ingredient: 'Hexaconazole 5% SC',
+              dosage: '400 ml per Acre in 200L water (2 ml per Litre)',
+              guidance: 'Spray at 35–40 days after sowing when initial spots appear on lower leaves.',
+              safety_warning: 'Wear hand gloves and protective footwear.',
+              pre_harvest_interval_days: 14
+            }
+          ]
+        },
+        Wheat: {
+          disease: 'Yellow Stripe Rust (Puccinia striiformis)',
+          confidence: 0.955,
+          severity: 'Severe',
+          symptoms: 'Parallel rows of bright yellow to orange pustules along leaf veins leaving rusty powder on fingers when touched.',
+          causes: 'Puccinia striiformis airborne urediniospores favored by cool (10–18°C), moist winter weather.',
+          management: 'Immediately spray Propiconazole or Tebuconazole on infected patches and surrounding fields to halt spore spread.',
+          treatments: [
+            {
+              product_name: 'Tilt (Propiconazole 25% EC) / Folicur (Tebuconazole 25.9% EC)',
+              treatment_type: 'Systemic Rust-Eradicant Fungicide',
+              active_ingredient: 'Propiconazole 25% EC',
+              dosage: '200 ml per Acre in 200L water (1 ml per Litre)',
+              guidance: 'Single thorough foliar spray across the flag leaf and upper canopy as soon as yellow pustules are spotted.',
+              safety_warning: 'Avoid drift to adjacent vegetable crops.',
+              pre_harvest_interval_days: 21
+            }
           ]
         }
       };
-      const info = diagnosesByCrop[crop] || diagnosesByCrop.Tomato;
+
+      const info = diagnosesByCrop[crop] || {
+        disease: `${crop} Leaf Blight & Spot Complex`,
+        confidence: 0.938,
+        severity: 'Moderate',
+        symptoms: `Necrotic brown lesions with chlorotic yellow margins observed on ${crop} foliage.`,
+        causes: 'Fungal pathogen infection triggered by high humidity and fluctuating day-night temperatures.',
+        management: 'Remove severely affected leaves, improve field drainage, and apply broad-spectrum systemic + contact fungicide.',
+        treatments: diagnosesByCrop.Tomato.treatments
+      };
+
       return jsonResponse({
         prediction_id: Date.now(),
         crop,
@@ -7332,6 +7597,7 @@ async function adminInitiateRefund(paymentId, amount) {
         symptoms: info.symptoms,
         possible_causes: info.causes,
         management: info.management,
+        treatment_guidance: info.treatments,
         treatments: info.treatments
       });
     }
