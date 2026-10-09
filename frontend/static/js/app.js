@@ -1996,14 +1996,18 @@ async function submitPhoneOtp() {
 
     const data = await res.json();
     if (res.ok) {
-      state.token = data.access_token;
+      const resolvedRole = String(data.role || data.user?.role || role || 'FARMER').toUpperCase();
+      const resolvedName = data.full_name || data.user?.full_name || data.user?.name || fullName || 'Verified Farmer';
+      const resolvedToken = data.access_token || data.token || ('netlify-jwt-' + Date.now());
+      const resolvedId = data.user_id || data.user?.id || Date.now();
+      state.token = resolvedToken;
       state.user = {
-        id: data.user_id,
-        email: data.email,
-        phone_number: data.phone_number,
-        role: data.role,
-        full_name: data.full_name,
-        preferred_language: data.preferred_language
+        id: resolvedId,
+        email: data.email || data.user?.email || `${cleanDigits}@aifarm.org`,
+        phone_number: data.phone_number || data.user?.phone || normalizedPhone,
+        role: resolvedRole,
+        full_name: resolvedName,
+        preferred_language: data.preferred_language || data.user?.language || 'en'
       };
       localStorage.setItem('token', state.token);
       localStorage.setItem('user', JSON.stringify(state.user));
@@ -2015,13 +2019,13 @@ async function submitPhoneOtp() {
       applyFarmerGateState();
 
       // Route to view based on authenticated role
-      const targetTab = getRoleDefaultTab(data.role);
+      const targetTab = getRoleDefaultTab(resolvedRole);
       switchTab(targetTab);
-      if (data.role === 'FARMER') {
+      if (resolvedRole === 'FARMER') {
         loadDashboardData();
       }
 
-      showToast(`Verified! Welcome ${data.full_name} (${data.role})`, 'success');
+      showToast(`Verified! Welcome ${resolvedName} (${resolvedRole})`, 'success');
     } else {
       showToast(data.detail || 'Invalid or expired OTP code', 'error');
     }
@@ -2080,7 +2084,7 @@ async function requestGateOtp() {
       if (s2) s2.classList.remove('hidden');
 
       const phoneDisp = document.getElementById('gateOtpPhoneDisplay');
-      if (phoneDisp) phoneDisp.innerText = data.phone_number;
+      if (phoneDisp) phoneDisp.innerText = data.phone_number || normalizedPhone;
 
       const otpInput = document.getElementById('gateInputOtpCode');
       if (otpInput) {
@@ -2357,16 +2361,21 @@ async function submitRegistrationWithPassword() {
 
     const data = await res.json();
     if (res.ok) {
-      state.token = data.access_token;
+      const resolvedRole = String(data.role || data.user?.role || role || 'FARMER').toUpperCase();
+      const resolvedName = data.full_name || data.user?.full_name || data.user?.name || fullName || email.split('@')[0];
+      const resolvedToken = data.access_token || data.token || ('netlify-jwt-' + Date.now());
+      const resolvedId = data.user_id || data.user?.id || Date.now();
+
+      state.token = resolvedToken;
       state.user = {
-        id: data.user_id,
-        email: data.email,
-        phone_number: data.phone_number || phone,
-        role: data.role,
-        full_name: data.full_name || fullName,
-        preferred_language: data.preferred_language || 'en',
+        id: resolvedId,
+        email: data.email || data.user?.email || email,
+        phone_number: data.phone_number || data.user?.phone || phone,
+        role: resolvedRole,
+        full_name: resolvedName,
+        preferred_language: data.preferred_language || data.user?.language || 'en',
         specialization: data.specialization || leafExpertOrEst || 'Crop Leaf Disease Specialist',
-        farm_name: data.farm_name || leafExpertOrEst || `${fullName}'s Farm`,
+        farm_name: data.farm_name || data.user?.farm_name || leafExpertOrEst || `${resolvedName}'s Farm`,
         location: location
       };
       localStorage.setItem('token', state.token);
@@ -2382,13 +2391,13 @@ async function submitRegistrationWithPassword() {
 
       updateUserUI();
       applyFarmerGateState();
-      const targetTab = getRoleDefaultTab(data.role);
+      const targetTab = getRoleDefaultTab(resolvedRole);
       switchTab(targetTab);
-      if (data.role === 'FARMER') {
+      if (resolvedRole === 'FARMER') {
         loadDashboardData();
       }
 
-      showToast(`🎉 Account Created! Welcome ${data.full_name} (${data.role}).`, 'success');
+      showToast(`🎉 Account Created! Welcome ${resolvedName} (${resolvedRole}).`, 'success');
     } else {
       showToast(data.detail || 'Registration failed. Please verify credentials.', 'error');
     }
@@ -2479,17 +2488,22 @@ async function submitSignInWithPassword() {
 
     const data = await res.json();
     if (res.ok) {
-      const effectiveRole = selectedRole || data.role || 'FARMER';
-      state.token = data.access_token;
+      const effectiveRole = String(selectedRole || data.role || data.user?.role || 'FARMER').toUpperCase();
+      const fallbackNameFromEmail = email.split('@')[0].replace(/[._0-9]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() || 'Lokanath Bala';
+      const resolvedName = enteredName || data.full_name || data.user?.full_name || data.user?.name || fallbackNameFromEmail;
+      const resolvedToken = data.access_token || data.token || ('netlify-jwt-' + Date.now());
+      const resolvedId = data.user_id || data.user?.id || Date.now();
+
+      state.token = resolvedToken;
       state.user = {
-        id: data.user_id,
-        email: data.email,
-        phone_number: data.phone_number,
+        id: resolvedId,
+        email: data.email || data.user?.email || email,
+        phone_number: data.phone_number || data.user?.phone || '+917855068089',
         role: effectiveRole,
-        full_name: data.full_name,
-        preferred_language: data.preferred_language || 'en',
+        full_name: resolvedName,
+        preferred_language: data.preferred_language || data.user?.language || 'en',
         specialization: data.specialization || enteredLeafExpert || 'Crop Leaf Disease Specialist',
-        farm_name: data.farm_name || enteredLeafExpert || `${data.full_name}'s Farm`
+        farm_name: data.farm_name || data.user?.farm_name || enteredLeafExpert || `${resolvedName}'s Farm`
       };
       localStorage.setItem('token', state.token);
       localStorage.setItem('user', JSON.stringify(state.user));
@@ -2505,7 +2519,7 @@ async function submitSignInWithPassword() {
         loadDashboardData();
       }
 
-      showToast(`🔓 Sign In Successful! Welcome ${data.full_name} (${effectiveRole}).`, 'success');
+      showToast(`🔓 Sign In Successful! Welcome ${resolvedName} (${effectiveRole}).`, 'success');
     } else {
       const errorMsg = data.detail || 'Incorrect password or Gmail ID. Access denied.';
       showToast(`🚫 Unauthorized Access Blocked: ${errorMsg}`, 'error');
@@ -6966,77 +6980,163 @@ async function adminInitiateRefund(paymentId, amount) {
     // 1. AUTHENTICATION & REGISTRATION
     if (path === '/api/auth/register' && method === 'POST') {
       const body = await parseBody(options);
-      const phone = String(body.phone || '').trim();
-      const role = String(body.role || 'farmer').trim().toLowerCase();
-      let user = db.users.find(u => u.phone === phone);
+      const email = String(body.email || '').trim().toLowerCase();
+      const rawPhone = String(body.phone || body.phone_number || '').trim();
+      const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+      const roleUpper = String(body.role || 'FARMER').trim().toUpperCase();
+      const roleLower = roleUpper === 'AGRICULTURAL_EXPERT' ? 'expert' : roleUpper.toLowerCase();
+      const fullName = String(body.full_name || body.name || (email ? email.split('@')[0].replace(/[._0-9]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() : '') || 'Lokanath Bala').trim();
+      const specOrEst = String(body.leaf_disease_expert || body.farm_name || '').trim();
+
+      let user = db.users.find(u => (email && u.email === email) || (cleanPhone && u.phone === cleanPhone));
       if (user) {
-        user.name = body.name || user.name;
-        user.role = role || user.role;
-        user.state = body.state || user.state;
-        user.district = body.district || user.district;
-        user.farm_name = body.farm_name !== undefined ? body.farm_name : user.farm_name;
-        user.land_acres = body.land_acres !== undefined ? Number(body.land_acres) : user.land_acres;
-        user.crops = body.crops !== undefined ? body.crops : user.crops;
+        user.name = fullName || user.name;
+        user.full_name = fullName || user.full_name || user.name;
+        if (email) user.email = email;
+        if (cleanPhone) user.phone = cleanPhone;
+        user.role = roleLower;
+        user.role_upper = roleUpper;
+        user.state = body.state || user.state || 'Odisha';
+        user.district = body.district || user.district || 'Khordha';
+        user.farm_name = specOrEst || user.farm_name || `${user.full_name}'s Farm`;
       } else {
         user = {
           id: Date.now(),
-          name: body.name || 'User',
-          phone,
-          role,
+          name: fullName,
+          full_name: fullName,
+          email: email || `${cleanPhone || 'farmer'}@gmail.com`,
+          phone: cleanPhone || '7855068089',
+          role: roleLower,
+          role_upper: roleUpper,
           state: body.state || 'Odisha',
-          district: body.district || 'Bhubaneswar',
-          farm_name: body.farm_name || (role === 'expert' ? 'Leaf Disease Specialist' : 'My Farm'),
-          land_acres: Number(body.land_acres || 0),
-          crops: body.crops || '',
-          language: body.language || 'en'
+          district: body.district || 'Khordha',
+          farm_name: specOrEst || (roleUpper === 'AGRICULTURAL_EXPERT' ? 'Crop Leaf Disease Specialist' : `${fullName}'s Farm`),
+          land_acres: Number(body.land_acres || 5.0),
+          crops: body.crops || 'Rice, Tomato, Potato',
+          language: body.preferred_language || body.language || 'en'
         };
         db.users.push(user);
       }
       saveDB(db);
+      const tokenStr = 'netlify-jwt-' + user.id;
       return jsonResponse({
         status: 'success',
-        message: 'Account authenticated on Netlify',
-        token: 'netlify-jwt-' + user.id,
+        access_token: tokenStr,
+        token: tokenStr,
+        token_type: 'bearer',
+        user_id: user.id,
+        email: user.email,
+        phone_number: user.phone ? `+91${user.phone}` : '+917855068089',
+        role: roleUpper,
+        full_name: user.full_name || user.name,
+        preferred_language: user.language || 'en',
+        specialization: roleUpper === 'AGRICULTURAL_EXPERT' ? (specOrEst || user.farm_name || 'Crop Leaf Disease Specialist') : null,
+        farm_name: user.farm_name || `${user.full_name || user.name}'s Farm`,
         user
       });
     }
 
     if (path === '/api/auth/login' && method === 'POST') {
       const body = await parseBody(options);
-      const phone = String(body.phone || '').trim();
-      const requestedRole = body.role ? String(body.role).trim().toLowerCase() : null;
-      let user = db.users.find(u => u.phone === phone);
+      const email = String(body.email || '').trim().toLowerCase();
+      const rawPhone = String(body.phone || body.phone_number || '').trim();
+      const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+      const roleUpper = String(body.role || 'FARMER').trim().toUpperCase();
+      const roleLower = roleUpper === 'AGRICULTURAL_EXPERT' ? 'expert' : roleUpper.toLowerCase();
+      const enteredName = String(body.full_name || body.name || '').trim();
+      const specOrEst = String(body.leaf_disease_expert || body.farm_name || '').trim();
+
+      let user = db.users.find(u =>
+        (email && u.email && u.email.toLowerCase() === email) ||
+        (cleanPhone && u.phone === cleanPhone)
+      );
+
       if (!user) {
-        return jsonResponse({ detail: 'Phone number not registered yet. Please fill your Name and click Sign In.' }, 404);
+        const derivedName = enteredName || (email ? email.split('@')[0].replace(/[._0-9]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase()).trim() : '') || 'Lokanath Bala';
+        user = {
+          id: Date.now(),
+          name: derivedName,
+          full_name: derivedName,
+          email: email || `${cleanPhone || 'farmer'}@gmail.com`,
+          phone: cleanPhone || '7855068089',
+          role: roleLower,
+          role_upper: roleUpper,
+          state: 'Odisha',
+          district: 'Khordha',
+          farm_name: specOrEst || (roleUpper === 'AGRICULTURAL_EXPERT' ? 'Crop Leaf Disease Specialist' : `${derivedName}'s Farm`),
+          land_acres: 5.0,
+          crops: 'Rice, Tomato, Potato',
+          language: 'en'
+        };
+        db.users.push(user);
+      } else {
+        user.role = roleLower;
+        user.role_upper = roleUpper;
+        if (enteredName) {
+          user.name = enteredName;
+          user.full_name = enteredName;
+        }
+        if (!user.full_name) {
+          user.full_name = user.name || 'Lokanath Bala';
+        }
+        if (specOrEst) {
+          user.farm_name = specOrEst;
+        }
       }
-      if (requestedRole && user.role !== requestedRole) {
-        user.role = requestedRole;
-        saveDB(db);
-      }
+      saveDB(db);
+      const tokenStr = 'netlify-jwt-' + user.id;
       return jsonResponse({
         status: 'success',
-        token: 'netlify-jwt-' + user.id,
+        access_token: tokenStr,
+        token: tokenStr,
+        token_type: 'bearer',
+        user_id: user.id,
+        email: user.email || email || 'farmer@gmail.com',
+        phone_number: user.phone ? `+91${user.phone}` : '+917855068089',
+        role: roleUpper,
+        full_name: user.full_name || user.name || 'Lokanath Bala',
+        preferred_language: user.language || 'en',
+        specialization: roleUpper === 'AGRICULTURAL_EXPERT' ? (specOrEst || user.farm_name || 'Crop Leaf Disease Specialist') : null,
+        farm_name: user.farm_name || `${user.full_name || user.name}'s Farm`,
         user
       });
     }
 
     if (path === '/api/auth/otp/send' && method === 'POST') {
       const body = await parseBody(options);
+      const rawPhone = String(body.phone || body.phone_number || '').trim();
       return jsonResponse({
+        success: true,
         status: 'success',
-        phone: body.phone,
-        demo_otp: '1234',
-        expires_in_seconds: 300
+        phone: rawPhone,
+        phone_number: rawPhone,
+        demo_otp: '123456',
+        simulated_otp: '123456',
+        expires_in_seconds: 600
       });
     }
 
     if (path === '/api/auth/otp/verify' && method === 'POST') {
       const body = await parseBody(options);
-      const phone = String(body.phone || '').trim();
-      let user = db.users.find(u => u.phone === phone) || db.users[0];
+      const rawPhone = String(body.phone || body.phone_number || '').trim();
+      const cleanPhone = rawPhone.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+      const roleUpper = String(body.role || 'FARMER').trim().toUpperCase();
+      const fullName = String(body.full_name || '').trim();
+      let user = db.users.find(u => u.phone === cleanPhone) || db.users[0];
+      const resolvedName = fullName || user?.full_name || user?.name || 'Lokanath Bala';
+      const tokenStr = 'netlify-jwt-' + (user?.id || Date.now());
       return jsonResponse({
         status: 'success',
-        token: 'netlify-jwt-' + user.id,
+        access_token: tokenStr,
+        token: tokenStr,
+        token_type: 'bearer',
+        user_id: user?.id || 9,
+        email: user?.email || `${cleanPhone || 'farmer'}@aifarm.org`,
+        phone_number: rawPhone || '+917855068089',
+        role: roleUpper,
+        full_name: resolvedName,
+        preferred_language: 'en',
+        farm_name: `${resolvedName}'s Farm`,
         user
       });
     }
@@ -7046,84 +7146,69 @@ async function adminInitiateRefund(paymentId, amount) {
       const cropFilter = (urlObj.searchParams.get('crop') || '').toLowerCase();
       const diseaseFilter = (urlObj.searchParams.get('disease') || '').toLowerCase();
       const experts = db.users
-        .filter(u => u.role === 'expert')
+        .filter(u => u.role === 'expert' || u.role_upper === 'AGRICULTURAL_EXPERT')
         .map(u => {
           const specText = (u.farm_name || u.crops || 'All Crop Leaf Diseases').toLowerCase();
           const isMatch = (!cropFilter && !diseaseFilter) ||
             (cropFilter && specText.includes(cropFilter)) ||
             (diseaseFilter && specText.includes(diseaseFilter));
           return {
+            expert_id: u.id,
             id: u.id,
-            name: u.name,
+            expert_name: u.full_name || u.name,
+            name: u.full_name || u.name,
+            expert_phone: u.phone,
             phone: u.phone,
+            specialization: u.farm_name || 'Crop Leaf Disease Specialist',
             specialist_in: u.farm_name || 'Crop Leaf Disease Specialist',
-            crops: u.crops || 'All Crops',
-            district: u.district || 'Bhubaneswar',
-            state: u.state || 'Odisha',
-            is_recommended_match: Boolean(isMatch)
+            institution: `${u.district || 'Bhubaneswar'}, ${u.state || 'Odisha'}`,
+            is_specialist_match: Boolean(isMatch)
           };
         });
-      return jsonResponse({ status: 'success', experts });
+      return jsonResponse(experts);
     }
 
     if (path === '/api/experts/consultations/create' && method === 'POST') {
       const body = await parseBody(options);
+      const matchedExp = db.users.find(u => String(u.id) === String(body.expert_id)) ||
+        db.users.find(u => u.role === 'expert');
       const newCase = {
+        consultation_id: Date.now(),
         id: Date.now(),
+        prediction_id: Date.now(),
         farmer_id: body.farmer_id || 9,
         farmer_name: body.farmer_name || 'Farmer',
         farmer_phone: body.farmer_phone || '',
-        district: body.district || 'Bhubaneswar',
-        state: body.state || 'Odisha',
         crop: body.crop || 'Rice',
-        ai_diagnosis: body.ai_diagnosis || 'Leaf Blight',
-        confidence: Number(body.confidence || 92.4),
+        ai_disease: body.disease || body.ai_diagnosis || 'Leaf Blight',
+        ai_confidence: Number(body.confidence || 0.94),
         severity: body.severity || 'Moderate',
-        urgency: body.urgency || 'High',
-        farmer_note: body.farmer_note || '',
-        expert_id: body.expert_id ? Number(body.expert_id) : null,
-        expert_name: body.expert_name || 'Leaf Disease Expert',
-        expert_specialty: body.expert_specialty || 'Crop Leaf Disease Specialist',
-        status: 'pending_review',
-        expert_notes: null,
-        recommended_chemical: null,
-        created_at: new Date().toLocaleString()
+        farmer_query: body.farmer_query || body.farmer_note || 'Leaf disease consultation request',
+        expert_id: matchedExp ? matchedExp.id : (body.expert_id ? Number(body.expert_id) : 11),
+        expert_name: matchedExp ? (matchedExp.full_name || matchedExp.name) : (body.expert_name || 'Himanshu Pratihari'),
+        expert_specialization: matchedExp ? (matchedExp.farm_name || 'Crop Leaf Disease Specialist') : 'Crop Leaf Disease Specialist',
+        status: 'PENDING',
+        expert_prescription: null,
+        created_at: new Date().toISOString()
       };
       db.consultations.unshift(newCase);
       saveDB(db);
-      return jsonResponse({ status: 'success', consultation: newCase });
+      return jsonResponse(newCase);
     }
 
     if (path === '/api/experts/queue' && method === 'GET') {
-      const statusFilter = urlObj.searchParams.get('status');
-      const expertId = urlObj.searchParams.get('expert_id');
-      let list = db.consultations.slice();
-      if (expertId) {
-        list = list.filter(c => !c.expert_id || String(c.expert_id) === String(expertId));
-      }
-      const pendingCount = list.filter(c => c.status === 'pending_review').length;
-      const resolvedCount = list.filter(c => c.status === 'resolved').length;
-      if (statusFilter) {
-        list = list.filter(c => c.status === statusFilter);
-      }
-      return jsonResponse({
-        status: 'success',
-        pending_count: pendingCount,
-        resolved_count: resolvedCount,
-        consultations: list
-      });
+      return jsonResponse(db.consultations || []);
     }
 
     if (path.startsWith('/api/experts/consultations/') && path.endsWith('/prescribe') && method === 'POST') {
       const parts = path.split('/');
       const caseId = parts[4];
       const body = await parseBody(options);
-      const item = db.consultations.find(c => String(c.id) === String(caseId));
+      const prescriptionParam = urlObj.searchParams.get('prescription');
+      const item = db.consultations.find(c => String(c.consultation_id || c.id) === String(caseId));
       if (item) {
-        item.status = 'resolved';
-        item.expert_notes = body.expert_notes || '';
-        item.recommended_chemical = body.recommended_chemical || '';
-        item.verified_by = body.expert_name || item.expert_name || 'Verified Agronomist';
+        item.status = 'COMPLETED';
+        item.expert_prescription = prescriptionParam || body.expert_notes || body.prescription || 'Apply recommended fungicide spray.';
         saveDB(db);
       }
       return jsonResponse({ status: 'success', consultation: item || {} });
@@ -7132,21 +7217,22 @@ async function adminInitiateRefund(paymentId, amount) {
     // 3. BUYERS & DIRECT PRODUCE MARKETPLACE (WITH BANK DETAILS)
     if (path === '/api/buyers/listings' && method === 'GET') {
       const crop = urlObj.searchParams.get('crop');
-      let list = db.listings.filter(l => l.status !== 'sold');
+      let list = (db.listings || []).filter(l => l.status !== 'sold').map(l => ({
+        ...l,
+        grade: l.grade || l.quality_grade || 'Grade A',
+        expected_price_per_quintal: l.expected_price_per_quintal || l.expected_price_per_qtl || 2350,
+        farm_location: l.farm_location || l.location || 'Bhubaneswar, Odisha'
+      }));
       if (crop) {
         list = list.filter(l => (l.crop || '').toLowerCase() === crop.toLowerCase());
       }
-      return jsonResponse({
-        status: 'success',
-        total_available: list.length,
-        listings: list
-      });
+      return jsonResponse(list);
     }
 
     if ((path === '/api/buyers/listings/from-profile' || path === '/api/buyers/listings') && method === 'POST') {
       const body = await parseBody(options);
       const cropName = body.crop || 'Rice';
-      const priceNum = Number(body.expected_price_per_qtl || 2250);
+      const priceNum = Number(body.expected_price_per_quintal || body.expected_price_per_qtl || 2350);
       const newListing = {
         id: Date.now(),
         farmer_id: body.farmer_id || 9,
@@ -7154,15 +7240,13 @@ async function adminInitiateRefund(paymentId, amount) {
         farmer_phone: body.farmer_phone || '7855068089',
         crop: cropName,
         variety: body.variety || (cropName + ' (Farm Fresh Grade A)'),
+        grade: body.grade || 'Grade A',
         quantity_quintals: Number(body.quantity_quintals || 25),
+        expected_price_per_quintal: priceNum,
         expected_price_per_qtl: priceNum,
-        mandi_reference_price: Math.round(priceNum * 0.96),
-        harvest_date: body.harvest_date || new Date().toISOString().split('T')[0],
-        location: `${body.district || 'Bhubaneswar'}, ${body.state || 'Odisha'}`,
-        district: body.district || 'Bhubaneswar',
-        state: body.state || 'Odisha',
-        quality_grade: body.quality_grade || 'A+',
-        organic: body.organic !== undefined ? Boolean(body.organic) : true,
+        farm_location: body.farm_location || `${body.district || 'Bhubaneswar'}, ${body.state || 'Odisha'}`,
+        location: body.farm_location || `${body.district || 'Bhubaneswar'}, ${body.state || 'Odisha'}`,
+        description: body.description || 'Direct farm harvest ready for immediate wholesale dispatch.',
         status: 'available',
         bank_name: body.bank_name || '',
         account_holder_name: body.account_holder_name || body.farmer_name || 'Farmer',
@@ -7181,33 +7265,19 @@ async function adminInitiateRefund(paymentId, amount) {
     if (path === '/api/buyers/orders' && method === 'POST') {
       const body = await parseBody(options);
       const listing = db.listings.find(l => String(l.id) === String(body.listing_id));
-      const qty = Number(body.quantity_quintals || (listing ? listing.quantity_quintals : 10));
-      const price = Number(body.agreed_price_per_qtl || (listing ? listing.expected_price_per_qtl : 2200));
+      const qty = Number(body.quantity_requested || body.quantity_quintals || (listing ? listing.quantity_quintals : 10));
+      const price = Number(body.offered_price_per_quintal || body.agreed_price_per_qtl || (listing ? (listing.expected_price_per_quintal || listing.expected_price_per_qtl) : 2200));
       const order = {
         order_id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
         listing_id: body.listing_id,
         buyer_name: body.buyer_name || 'Buyer',
         buyer_phone: body.buyer_phone || '',
-        buyer_company: body.buyer_company || 'Direct Buyer',
         crop: listing ? listing.crop : 'Rice',
         quantity_quintals: qty,
         agreed_price_per_qtl: price,
         total_order_value_inr: Math.round(qty * price),
-        farmer_name: listing ? listing.farmer_name : 'Farmer',
-        farmer_phone: listing ? listing.farmer_phone : '',
-        farmer_payment_details: {
-          account_holder_name: (listing && listing.account_holder_name) ? listing.account_holder_name : (listing ? listing.farmer_name : 'Farmer'),
-          account_number: (listing && listing.account_number) ? listing.account_number : 'Provided on Confirmation'
-        },
         created_at: new Date().toISOString()
       };
-      if (listing) {
-        if (qty >= listing.quantity_quintals) {
-          listing.status = 'sold';
-        } else {
-          listing.quantity_quintals = Math.max(0, listing.quantity_quintals - qty);
-        }
-      }
       db.orders.unshift(order);
       saveDB(db);
       return jsonResponse({ status: 'success', order });
@@ -7216,67 +7286,53 @@ async function adminInitiateRefund(paymentId, amount) {
     // 4. DISEASE PREDICTION (CHECK DISEASE SCANNER)
     if (path === '/api/disease/predict' && method === 'POST') {
       const body = await parseBody(options);
-      const crop = String(body.crop || 'Rice');
+      const crop = String(body.crop || 'Tomato');
       const diagnosesByCrop = {
         Rice: {
           disease: 'Bacterial Leaf Blight',
-          confidence: 95.8,
-          severity: 'Moderate to High',
+          confidence: 0.958,
+          severity: 'Moderate',
           symptoms: 'Water-soaked yellowish stripes on leaf margins drying from tip downward.',
-          chemical: 'Streptocycline (6g) + Copper Oxychloride (500g) in 200L water/acre',
-          organic: 'Neem Oil 1500 ppm (5ml/L) + Pseudomonas fluorescens foliar spray',
-          prevention: 'Avoid excess Urea top-dressing; maintain proper field drainage.'
+          causes: 'Xanthomonas oryzae pv. oryzae favored by high humidity and wind-driven rain.',
+          management: 'Avoid excess Urea top-dressing; maintain proper field drainage and apply Copper Oxychloride + Streptocycline.',
+          treatments: [
+            { medicine_name: 'Copper Oxychloride 50% WP + Streptocycline', type: 'Bactericide + Fungicide', dosage: '500g + 6g per Acre in 200L water', application_method: 'Foliar Spray', safety_precautions: 'Observe 14-day PHI and wear protective gloves.' }
+          ]
         },
         Tomato: {
-          disease: 'Early Leaf Blight (Alternaria solani)',
-          confidence: 94.6,
+          disease: 'Early Blight',
+          confidence: 0.946,
           severity: 'Moderate',
           symptoms: 'Concentric bullseye dark brown rings on older lower leaves with yellow halos.',
-          chemical: 'Mancozeb 75% WP (2.5g/L) or Azoxystrobin 23% SC (1ml/L)',
-          organic: 'Trichoderma viride (5g/L) foliar spray + remove infected lower leaves',
-          prevention: 'Practice stake pruning and avoid overhead sprinkler irrigation late in the evening.'
+          causes: 'Alternaria solani fungal spores germinating under warm humid microclimate.',
+          management: 'Practice stake pruning, remove infected lower leaves, and apply protective WG fungicide.',
+          treatments: [
+            { medicine_name: 'Best Agro Promos (Metiram 55% + Pyraclostrobin 5% WG)', type: 'Systemic & Contact Fungicide', dosage: '600g per Acre in 200L water (3g/L)', application_method: 'Foliar Spray', safety_precautions: '10-day Pre-Harvest Interval (PHI).' }
+          ]
         },
         Potato: {
-          disease: 'Late Blight (Phytophthora infestans)',
-          confidence: 96.2,
-          severity: 'High',
+          disease: 'Late Blight',
+          confidence: 0.962,
+          severity: 'Severe',
           symptoms: 'Dark water-soaked lesions on leaf tips with white powdery growth on underside.',
-          chemical: 'Cymoxanil 8% + Mancozeb 64% WP (2.5g/L water)',
-          organic: 'Copper Hydroxide biological spray + garlic-chili extract',
-          prevention: 'Ensure high earthing up of ridges and use disease-free seed tubers.'
-        },
-        Wheat: {
-          disease: 'Yellow Stripe Rust',
-          confidence: 93.9,
-          severity: 'Moderate',
-          symptoms: 'Parallel rows of yellowish-orange pustules along leaf veins.',
-          chemical: 'Propiconazole 25% EC (1ml/L water) spray immediately',
-          organic: 'Sulfur 80% WDG biological dust + sour buttermilk spray',
-          prevention: 'Avoid late sowing and balanced potash application.'
+          causes: 'Phytophthora infestans oomycete favored by cool moist conditions.',
+          management: 'Ensure high earthing up of ridges and spray Cymoxanil + Mancozeb immediately.',
+          treatments: [
+            { medicine_name: 'Cymoxanil 8% + Mancozeb 64% WP', type: 'Translaminar Fungicide', dosage: '500g per Acre in 200L water (2.5g/L)', application_method: 'Foliar Spray', safety_precautions: 'Do not spray before imminent heavy rain.' }
+          ]
         }
       };
-      const info = diagnosesByCrop[crop] || {
-        disease: `${crop} Leaf Spot & Blight`,
-        confidence: 93.4,
-        severity: 'Moderate',
-        symptoms: `Necrotic brown lesions with chlorotic yellow margins observed on ${crop} leaf surface.`,
-        chemical: 'Mancozeb 75% WP (2.5g/L) + Carbendazim (1g/L) foliar spray',
-        organic: 'Neem Oil 3000 ppm (3ml/L) + Trichoderma viride bio-fungicide',
-        prevention: 'Remove affected leaves immediately and ensure proper plant spacing.'
-      };
+      const info = diagnosesByCrop[crop] || diagnosesByCrop.Tomato;
       return jsonResponse({
-        status: 'success',
+        prediction_id: Date.now(),
         crop,
         disease: info.disease,
         confidence: info.confidence,
         severity: info.severity,
         symptoms: info.symptoms,
-        treatment: {
-          chemical: info.chemical,
-          organic: info.organic,
-          prevention: info.prevention
-        },
-        weather_risk_advisory: 'High humidity (78%) in next 48 hours favors fungal spread — spray in morning hours.'
+        possible_causes: info.causes,
+        management: info.management,
+        treatments: info.treatments
       });
     }
 
@@ -7320,15 +7376,15 @@ async function adminInitiateRefund(paymentId, amount) {
       return jsonResponse({
         status: 'success',
         location: { state: st, district: dist, block: blk, village: vil },
-        data_source: 'ICAR-NBSS&LUP & OUAT Block-Level Soil Survey',
+        data_source: `ICAR-NBSS&LUP & State Soil Survey (${st} — ${dist})`,
         data_source_type: 'REGIONAL_REFERENCE',
         reference_date: '2024-11',
         geographic_resolution: 'Block-level (1:50,000 scale)',
-        dominant_soil_type: 'Deltaic Alluvial / Sandy Loam',
-        ph_range: [5.6, 6.6],
-        ph_regional_estimate: 6.1,
+        dominant_soil_type: 'Deltaic Alluvial / Loamy Soil',
+        ph_range: [5.6, 6.8],
+        ph_regional_estimate: 6.2,
         oc_pct_range: [0.42, 0.65],
-        oc_pct_regional_estimate: 0.52,
+        oc_pct_regional_estimate: 0.54,
         ec_ds_m_regional_estimate: 0.25,
         missing_parameters: [
           'Plot-specific Available Nitrogen (N)',
@@ -7433,10 +7489,30 @@ async function adminInitiateRefund(paymentId, amount) {
         ],
         multilingual_summary: {
           en: `Source: ${srcName}. pH: ${ph ?? 'Missing'}, N: ${n ?? 'Missing'} kg/ha, P: ${p ?? 'Missing'} kg/ha, K: ${k ?? 'Missing'} kg/ha. Missing values are never fabricated.`,
-          od: `ଉତ୍ସ: ${srcName}। pH: ${ph ?? 'ଅଜଣା'}, N: ${n ?? 'ଅଜଣା'} kg/ha, P: ${p ?? 'ଅଜଣା'} kg/ha, K: ${k ?? 'ଅଜଣା'} kg/ha। ବିନା ମାटी ପରୀକ୍ଷାରେ ରାସାୟନିକ ସାର ମାତ୍ରା ଅନୁମାନ କରାଯାଏ ନାହିଁ।`,
+          od: `ଉତ୍ସ: ${srcName}। pH: ${ph ?? 'ଅଜଣା'}, N: ${n ?? 'ଅଜଣା'} kg/ha, P: ${p ?? 'ଅଜଣା'} kg/ha, K: ${k ?? 'ଅଜଣା'} kg/ha। ବିନା ମାଟି ପରୀକ୍ଷାରେ ରାସାୟନିକ ସାର ମାତ୍ରା ଅନୁମାନ କରାଯାଏ ନାହିଁ।`,
           hi: `स्रोत: ${srcName}। pH: ${ph ?? 'अज्ञात'}, N: ${n ?? 'अज्ञात'} kg/ha, P: ${p ?? 'अज्ञात'} kg/ha, K: ${k ?? 'अज्ञात'} kg/ha। बिना लैब रिपोर्ट के रासायनिक उर्वरक मात्रा का अनुमान नहीं लगाया जाता है।`
         }
       });
+    }
+
+    if (path === '/api/soil/assistant-query' && method === 'POST') {
+      const body = await parseBody(options);
+      const lang = body.lang || 'en';
+      const ctx = body.soil_context || {};
+      const hasNpk = ctx.nitrogen_kg_ha != null && ctx.phosphorus_kg_ha != null && ctx.potassium_kg_ha != null && ctx.data_source_type === 'MEASURED_LAB_VALUE';
+      let answer = hasNpk
+        ? `Based on your lab-measured Soil Health Card (pH=${ctx.ph ?? 6.2}, N=${ctx.nitrogen_kg_ha} kg/ha, P=${ctx.phosphorus_kg_ha} kg/ha, K=${ctx.potassium_kg_ha} kg/ha), Rice, Green Gram, and Tomato are highly suitable. Apply N in 3 split doses (basal, tillering, panicle initiation) as per ICAR/OUAT guidelines.`
+        : `Because plot-specific lab N, P, K measurements are missing (current source: ${ctx.data_source_type || 'Regional Reference'}), this DSS refuses to guess chemical fertilizer (Urea/DAP/MOP) dosages. Please apply 2–3 tonnes/acre well-decomposed FYM/compost and submit a Soil Health Card report.`;
+      if (lang === 'hi') {
+        answer = hasNpk
+          ? `आपकी लैब मृदा जांच रिपोर्ट (pH=${ctx.ph ?? 6.2}, N=${ctx.nitrogen_kg_ha}, P=${ctx.phosphorus_kg_ha}, K=${ctx.potassium_kg_ha} kg/ha) के अनुसार धान, मूंग और टमाटर उपयुक्त हैं। नाइट्रोजन को 3 भागों में विभाजित कर प्रयोग करें।`
+          : `चूंकि आपके खेत की प्रयोगशाला N-P-K रिपोर्ट उपलब्ध नहीं है, यह प्रणाली अनुमानित रासायनिक उर्वरक (यूरिया/डीएपी) मात्रा नहीं बताती है। कृपया 2–3 टन/एकड़ गोबर की खाद डालें और KVK/OUAT में मिट्टी की जांच कराएं।`;
+      } else if (lang === 'od') {
+        answer = hasNpk
+          ? `ଆପଣଙ୍କ ଲ୍ୟାବ୍ ମାଟି ପରୀକ୍ଷା ରିପୋର୍ଟ (pH=${ctx.ph ?? 6.2}, N=${ctx.nitrogen_kg_ha}, P=${ctx.phosphorus_kg_ha}, K=${ctx.potassium_kg_ha} kg/ha) ଅନୁଯାୟୀ ଧାନ, ମୁগ ଏବଂ ଟମାଟୋ ଉପଯୁକ୍ତ ଅଟେ। ଯବକ୍ଷାରଜାନକୁ ୩ ଭାଗରେ ପ୍ରୟୋଗ କରନ୍ତୁ।`
+          : `ଆପଣଙ୍କ ଜମିର ଲ୍ୟାବ୍ N-P-K ମାପ ଉପଲବ୍ଧ ନଥିବାରୁ, ଏହି ସିଷ୍ଟମ୍ ଅନୁମାନ କରି ରାସାୟନିକ ସାର ମାତ୍ରା କୁହେ ନାହିଁ। ଦୟାକରି ଏକର ପିଛା ୨-୩ ଟନ୍ ଗୋବର ଖତ ପ୍ରୟୋଗ କରନ୍ତୁ ଏବଂ KVK/OUAT ରେ ମାଟି ପରୀକ୍ଷା କରାନ୍ତୁ।`;
+      }
+      return jsonResponse({ status: 'success', lang, answer });
     }
 
     if (path === '/api/soil/trends' && method === 'GET') {
@@ -7469,125 +7545,152 @@ async function adminInitiateRefund(paymentId, amount) {
       });
     }
 
-    // 7. MARKET OPTIMIZER
+    // 7. MARKET OPTIMIZER (RETURNS ARRAY OF MANDIS)
     if (path === '/api/markets/optimize' && method === 'POST') {
       const body = await parseBody(options);
-      const crop = body.crop || 'Rice';
-      const qty = Number(body.quantity_quintals || 20);
+      const qty = Number(body.quantity_quintals || 50);
+      const rawMandis = [
+        { market_name: 'Bhubaneswar RMC (Unit-1 & Jatni APMC)', district: 'Khordha', state: 'Odisha', distance_km: 14, modal_price_per_quintal: 2520, source: 'e-NAM & OSAMB Live Feed' },
+        { market_name: 'Cuttack Malgodown & Banki RMC', district: 'Cuttack', state: 'Odisha', distance_km: 32, modal_price_per_quintal: 2560, source: 'e-NAM & OSAMB Live Feed' },
+        { market_name: 'Sakhigopal & Nimapara Regulated Mandi', district: 'Puri', state: 'Odisha', distance_km: 44, modal_price_per_quintal: 2480, source: 'OSAMB Agmarknet' },
+        { market_name: 'Berhampur Hinjilicut APMC Yard', district: 'Ganjam', state: 'Odisha', distance_km: 165, modal_price_per_quintal: 2610, source: 'OSAMB Agmarknet' },
+        { market_name: 'Bargarh Attabira e-NAM Principal Yard', district: 'Bargarh', state: 'Odisha', distance_km: 290, modal_price_per_quintal: 2640, source: 'e-NAM National Portal' },
+        { market_name: 'Balasore Jaleswar Regulated Market', district: 'Balasore', state: 'Odisha', distance_km: 195, modal_price_per_quintal: 2540, source: 'OSAMB Agmarknet' }
+      ];
+      const computed = rawMandis.map(m => {
+        const gross = qty * m.modal_price_per_quintal;
+        const transport = Math.round(m.distance_km * qty * 1.8);
+        const fee = Math.round(gross * 0.015);
+        const net = gross - transport - fee;
+        return {
+          ...m,
+          gross_revenue: gross,
+          total_transport_cost: transport,
+          transport_cost_per_qtl: Math.round(transport / qty),
+          total_mandi_fee: fee,
+          net_realization: net,
+          net_price_per_quintal: net / qty
+        };
+      }).sort((a, b) => b.net_realization - a.net_realization);
+      computed.forEach((m, i) => {
+        m.rank = i + 1;
+        m.is_recommended = i === 0;
+      });
+      return jsonResponse(computed);
+    }
+
+    // 8. WEATHER, FARMS, FIELDS, CROPS
+    if (path === '/api/crops' && method === 'GET') {
+      return jsonResponse([
+        { name: 'Tomato', scientific_name: 'Solanum lycopersicum' },
+        { name: 'Rice', scientific_name: 'Oryza sativa' },
+        { name: 'Potato', scientific_name: 'Solanum tuberosum' },
+        { name: 'Chilli', scientific_name: 'Capsicum annuum' },
+        { name: 'Cotton', scientific_name: 'Gossypium hirsutum' },
+        { name: 'Maize', scientific_name: 'Zea mays' },
+        { name: 'Groundnut', scientific_name: 'Arachis hypogaea' }
+      ]);
+    }
+
+    if (path === '/api/weather' && method === 'GET') {
       return jsonResponse({
-        status: 'success',
-        crop,
-        quantity_quintals: qty,
-        best_mandi: 'Bhubaneswar Central e-NAM Mandi',
-        markets: [
+        weather: {
+          temperature: 30.4,
+          apparent_temperature: 32.8,
+          humidity: 74,
+          wind_speed_kmh: 12,
+          rain_probability_pct: 25,
+          condition: 'Partly Cloudy ⛅'
+        },
+        smart_alerts: [
           {
-            mandi_name: 'Bhubaneswar Central e-NAM Mandi',
-            distance_km: 14,
-            price_per_qtl: 2450,
-            gross_revenue: qty * 2450,
-            transport_cost: Math.round(14 * qty * 2.5),
-            net_profit: (qty * 2450) - Math.round(14 * qty * 2.5),
-            trend: '+5.4% Rising',
-            recommended: true
+            type: 'disease_risk',
+            title: 'High Morning Humidity (74%) — Early Blight & Blast Watch',
+            message: 'Current warm-humid microclimate favors fungal spore germination on lower leaves.',
+            action: 'Inspect lower canopy and apply preventive fungicide spray between 6:30 AM – 10:00 AM.'
           },
           {
-            mandi_name: 'Cuttack Malgodown Regulated Market',
-            distance_km: 34,
-            price_per_qtl: 2490,
-            gross_revenue: qty * 2490,
-            transport_cost: Math.round(34 * qty * 2.5),
-            net_profit: (qty * 2490) - Math.round(34 * qty * 2.5),
-            trend: '+3.1% Stable',
-            recommended: false
-          },
-          {
-            mandi_name: 'Khordha Regional Krishi Mandi',
-            distance_km: 22,
-            price_per_qtl: 2380,
-            gross_revenue: qty * 2380,
-            transport_cost: Math.round(22 * qty * 2.5),
-            net_profit: (qty * 2380) - Math.round(22 * qty * 2.5),
-            trend: '+1.8% Steady',
-            recommended: false
+            type: 'market',
+            title: 'Bhubaneswar & Cuttack Mandi Realization Up +5.4%',
+            message: 'Strong wholesale demand for Grade-A harvest lots across coastal Odisha mandis.',
+            action: 'Compare net realization in Market Optimizer before harvesting.'
           }
         ]
       });
     }
 
-    // 8. WEATHER, FARMS, FIELDS, CROPS
-    if (path === '/api/crops' && method === 'GET') {
-      return jsonResponse({
-        crops: ['Rice', 'Wheat', 'Tomato', 'Potato', 'Cotton', 'Maize', 'Chili', 'Onion', 'Mustard', 'Sugarcane']
-      });
-    }
-
-    if (path === '/api/weather' && method === 'GET') {
-      return jsonResponse({
-        status: 'success',
-        location: 'Bhubaneswar, Odisha',
-        temperature_c: 30,
-        humidity_pct: 74,
-        wind_kph: 12,
-        condition: 'Partly Cloudy — Good for Foliar Spray',
-        spray_window: 'Safe to Spray (6:00 AM – 10:30 AM)'
-      });
-    }
-
     if (path === '/api/farms' && method === 'GET') {
-      return jsonResponse({
-        farms: [{
+      return jsonResponse([
+        {
           id: 1,
-          name: 'Main Integrated Smart Farm',
+          farm_name: 'Kishan Smart Farm',
           location: 'Bhubaneswar, Odisha',
-          total_acres: 5.0,
+          area: 5.0,
           soil_type: 'Alluvial Loam'
-        }]
-      });
+        }
+      ]);
     }
 
     if (path === '/api/fields' && method === 'GET') {
-      return jsonResponse({
-        fields: [
-          { id: 1, name: 'Plot A - North Paddy Block', crop: 'Rice', area_acres: 3.0, stage: 'Panicle Initiation', health_status: 'Healthy', ndvi: 0.78, soil_moisture: 68 },
-          { id: 2, name: 'Plot B - Vegetable Block', crop: 'Tomato', area_acres: 2.0, stage: 'Flowering & Fruiting', health_status: 'Monitor', ndvi: 0.71, soil_moisture: 62 }
-        ]
-      });
+      return jsonResponse([
+        { id: 1, field_name: 'Plot 1 - Tomato Block', crop: 'Tomato', variety: 'Arka Rakshak', area: 2.0, growth_stage: 'Flowering & Fruiting', current_health: 'healthy', irrigation: 'Drip Irrigation', soil_type: 'Alluvial Loam', notes: 'Strong vigour; preventive bio-fungicide applied.' },
+        { id: 2, field_name: 'Plot 2 - Paddy Block', crop: 'Rice', variety: 'Swarna Sub-1', area: 2.0, growth_stage: 'Panicle Initiation', current_health: 'healthy', irrigation: 'Canal + Borewell', soil_type: 'Deltaic Alluvial', notes: 'Standing water level optimal; split Potash applied.' },
+        { id: 3, field_name: 'Plot 3 - Potato Ridge Block', crop: 'Potato', variety: 'Kufri Jyoti', area: 1.0, growth_stage: 'Tuber Bulking', current_health: 'attention', irrigation: 'Furrow Irrigation', soil_type: 'Sandy Loam', notes: 'Monitor lower leaves for late blight lesions after morning dew.' }
+      ]);
     }
 
     // 9. EXPENSES & INCOME LEDGER
     if (path === '/api/expenses' && method === 'GET') {
-      return jsonResponse({ expenses: db.expenses });
+      const normalized = (db.expenses || []).map(e => ({
+        id: e.id,
+        date: e.date || e.expense_date || '2026-09-20',
+        category: e.category || 'Fertilizer',
+        amount: Number(e.amount || 0),
+        notes: e.notes || e.description || '-'
+      }));
+      return jsonResponse(normalized);
     }
     if (path === '/api/expenses' && method === 'POST') {
       const body = await parseBody(options);
       const item = {
         id: Date.now(),
         category: body.category || 'Fertilizer',
-        description: body.description || 'Farm Input',
+        notes: body.notes || body.description || 'Farm Input',
+        description: body.notes || body.description || 'Farm Input',
         amount: Number(body.amount || 0),
         crop: body.crop || 'Rice',
-        expense_date: body.expense_date || new Date().toISOString().split('T')[0]
+        date: body.date || body.expense_date || new Date().toISOString().split('T')[0],
+        expense_date: body.date || body.expense_date || new Date().toISOString().split('T')[0]
       };
       db.expenses.unshift(item);
       saveDB(db);
       return jsonResponse({ status: 'success', expense: item });
     }
     if (path === '/api/expenses/summary' && method === 'GET') {
-      const total = db.expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const total = (db.expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0);
       const byCategory = {};
-      db.expenses.forEach(e => {
+      (db.expenses || []).forEach(e => {
         byCategory[e.category] = (byCategory[e.category] || 0) + Number(e.amount || 0);
       });
-      return jsonResponse({ total_expenses: total, by_category: byCategory, count: db.expenses.length });
+      return jsonResponse({ total_expenses: total, by_category: byCategory, count: (db.expenses || []).length });
     }
     if (path === '/api/income' && method === 'GET') {
-      return jsonResponse({ income: db.income });
+      const normalized = (db.income || []).map(i => ({
+        id: i.id,
+        date: i.date || i.sale_date || '2026-09-28',
+        crop: i.crop || 'Rice',
+        quantity_quintals: Number(i.quantity_quintals || i.quantity_qtl || 25),
+        selling_price_per_quintal: Number(i.selling_price_per_quintal || i.price_per_qtl || 2350),
+        net_realization: Number(i.net_realization || i.total_amount || 58750)
+      }));
+      return jsonResponse(normalized);
     }
     if (path === '/api/income/summary' && method === 'GET') {
-      const totalIncome = db.income.reduce((s, i) => s + Number(i.total_amount || 0), 0);
-      const totalExpenses = db.expenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+      const totalIncome = (db.income || []).reduce((s, i) => s + Number(i.net_realization || i.total_amount || 0), 0);
+      const totalExpenses = (db.expenses || []).reduce((s, e) => s + Number(e.amount || 0), 0);
       return jsonResponse({
         total_income: totalIncome,
+        total_net_income: totalIncome,
         total_expenses: totalExpenses,
         net_profit: totalIncome - totalExpenses
       });
@@ -7596,34 +7699,32 @@ async function adminInitiateRefund(paymentId, amount) {
     // 10. ADMIN PORTAL
     if (path === '/api/admin/overview' && method === 'GET') {
       return jsonResponse({
-        status: 'success',
-        metrics: {
-          total_users: db.users.length,
-          total_farmers: db.users.filter(u => u.role === 'farmer').length,
-          total_experts: db.users.filter(u => u.role === 'expert').length,
-          total_buyers: db.users.filter(u => u.role === 'buyer').length,
-          total_consultations: db.consultations.length,
-          active_listings: db.listings.length,
-          total_orders: db.orders.length
+        users: {
+          total: db.users.length,
+          farmers: db.users.filter(u => u.role === 'farmer').length,
+          experts: db.users.filter(u => u.role === 'expert').length,
+          buyers: db.users.filter(u => u.role === 'buyer').length
         },
-        users: db.users
+        ai_telemetry: {
+          total_predictions: 142,
+          average_confidence: 95.4,
+          active_model_version: db.active_model_version || 'v2.4.0-prod'
+        }
       });
     }
 
     if (path === '/api/admin/models' && method === 'GET') {
-      return jsonResponse({
-        status: 'success',
-        active_version: db.active_model_version || 'v2.4.0-prod',
-        models: [
-          { version: 'v2.4.0-prod', architecture: 'MobileNetV3-Large + GradCAM', accuracy: '96.4%', latency_ms: 42, status: 'active' },
-          { version: 'v2.3.1-stable', architecture: 'EfficientNet-B0 Agro', accuracy: '94.8%', latency_ms: 58, status: 'standby' }
-        ]
-      });
+      const activeVer = db.active_model_version || 'v2.4.0-prod';
+      return jsonResponse([
+        { model_name: 'MobileNetV3-Large + GradCAM Ensemble', version: 'v2.4.0-prod', framework: 'PyTorch / ONNX', accuracy: 96.4, is_active: activeVer === 'v2.4.0-prod' },
+        { model_name: 'EfficientNet-B0 Agro Vision', version: 'v2.3.1-stable', framework: 'PyTorch', accuracy: 94.8, is_active: activeVer === 'v2.3.1-stable' }
+      ]);
     }
 
     if (path === '/api/admin/models/switch' && method === 'POST') {
       const body = await parseBody(options);
-      db.active_model_version = body.version || 'v2.4.0-prod';
+      const ver = urlObj.searchParams.get('model_version') || body.version || 'v2.4.0-prod';
+      db.active_model_version = ver;
       saveDB(db);
       return jsonResponse({ status: 'success', active_version: db.active_model_version });
     }
