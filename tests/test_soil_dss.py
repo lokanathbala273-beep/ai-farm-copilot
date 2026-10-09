@@ -11,9 +11,13 @@ class TestAISoilDecisionSupportSystem(unittest.TestCase):
         cls.client = TestClient(app)
 
     def test_module_1_location_based_soil_intelligence(self):
-        """Module 1: Verify State/District/Block/Village lookup, source metadata, missing-data status, and non-fabrication of plot N-P-K."""
+        """Module 1: Verify All-India State/District/Block/Village lookup, source metadata, missing-data status, and non-fabrication of plot N-P-K."""
         hierarchy = soil_service.get_location_hierarchy()
+        self.assertGreaterEqual(len(hierarchy), 36, "Expected all 36 Indian States & UTs")
+        total_districts = sum(len(dists) for dists in hierarchy.values())
+        self.assertGreaterEqual(total_districts, 750, "Expected 750+ Indian Districts")
         self.assertIn("Odisha", hierarchy)
+        self.assertEqual(len(hierarchy["Odisha"]), 30, "Expected all 30 Districts of Odisha")
         self.assertIn("Khordha", hierarchy["Odisha"])
         self.assertIn("Balianta", hierarchy["Odisha"]["Khordha"]["blocks"])
 
@@ -27,6 +31,12 @@ class TestAISoilDecisionSupportSystem(unittest.TestCase):
         self.assertTrue(rec["geographic_resolution"])
         self.assertIn("NOT AN INDIVIDUAL FARM MEASUREMENT", rec["disclaimer"])
         self.assertTrue(len(rec["missing_parameters"]) >= 3)
+
+        # Verify another state (e.g., Punjab -> Ludhiana)
+        rec_pb = soil_service.lookup_regional_soil(state="Punjab", district="Ludhiana")
+        self.assertEqual(rec_pb["location"]["state"], "Punjab")
+        self.assertEqual(rec_pb["location"]["district"], "Ludhiana")
+        self.assertEqual(rec_pb["data_source_type"], "REGIONAL_REFERENCE")
 
     def test_module_2_soil_report_ocr_and_unit_validation(self):
         """Module 2: Verify OCR extraction, kg/acre -> kg/ha conversion, physiological bounds check, and source/date preservation."""

@@ -1008,39 +1008,50 @@
 
         <!-- MODULE 1: LOCATION-BASED SOIL INTELLIGENCE -->
         <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-          <div class="flex items-center justify-between">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <span class="text-2xs font-extrabold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Module 1</span>
-              <h3 class="text-base font-extrabold text-slate-800 mt-1">📍 Location-Based Regional Soil Intelligence</h3>
-              <p class="text-xs text-slate-500">Select State, District, Block & Village to inspect verified regional soil baselines (ICAR-NBSS&LUP / OUAT).</p>
+              <div class="flex flex-wrap items-center gap-1.5">
+                <span class="text-2xs font-extrabold uppercase tracking-wider text-teal-700 bg-teal-50 px-2.5 py-0.5 rounded-full border border-teal-200">Module 1</span>
+                <span id="soilIndiaCoverageBadge" class="text-2xs font-extrabold text-emerald-800 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  🇮🇳 All-India: 36 States/UTs • 786 Districts • 3,172 Blocks • 13,609 Villages
+                </span>
+              </div>
+              <h3 class="text-base font-extrabold text-slate-800 mt-1">📍 Location-Based Regional Soil Intelligence (All India)</h3>
+              <p class="text-xs text-slate-500">Select any Indian State/UT, District, Block/Tehsil & Village to inspect verified regional soil baselines (ICAR-NBSS&LUP / SAU).</p>
             </div>
           </div>
 
           <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
-              <label class="block font-bold text-slate-600 mb-1">State</label>
+              <label class="block font-bold text-slate-600 mb-1">State / UT (36)</label>
               <select id="soilStateSelect" onchange="onSoilLocationChange('state')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
                 <option value="Odisha" selected>Odisha</option>
               </select>
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">District</label>
+              <label class="block font-bold text-slate-600 mb-1">District (786)</label>
               <select id="soilDistrictSelect" onchange="onSoilLocationChange('district')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
                 <option value="Khordha" selected>Khordha</option>
               </select>
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">Block</label>
+              <label class="block font-bold text-slate-600 mb-1">Block / Tehsil</label>
               <select id="soilBlockSelect" onchange="onSoilLocationChange('block')" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
                 <option value="Balianta" selected>Balianta</option>
               </select>
             </div>
             <div>
-              <label class="block font-bold text-slate-600 mb-1">Village</label>
-              <select id="soilVillageSelect" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
+              <label class="block font-bold text-slate-600 mb-1">Village / GP</label>
+              <select id="soilVillageSelect" onchange="lookupRegionalSoilBaseline(false)" class="w-full p-2.5 rounded-xl border border-slate-300 font-semibold bg-slate-50">
                 <option value="Balipatna" selected>Balipatna</option>
               </select>
             </div>
+          </div>
+
+          <!-- Optional Custom Block / Village Input for any specific hamlet in India -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs">
+            <input type="text" id="soilCustomBlockInput" oninput="lookupRegionalSoilBaseline(false)" class="w-full p-2 rounded-xl border border-slate-200 bg-slate-50/70 font-semibold" placeholder="Optional: Type custom Block / Tehsil / Mandal name...">
+            <input type="text" id="soilCustomVillageInput" oninput="lookupRegionalSoilBaseline(false)" class="w-full p-2 rounded-xl border border-slate-200 bg-slate-50/70 font-semibold" placeholder="Optional: Type custom Village / Gram Panchayat name...">
           </div>
 
           <div class="flex flex-wrap gap-2">
@@ -2935,7 +2946,7 @@
   </div>
 
   <!-- JAVASCRIPT CONTROLLER -->
-  <script src="/static/js/app.js?v=20261009_v12"></script>
+  <script src="/static/js/app.js?v=20261009_v13"></script>
 </body>
 </html>
 

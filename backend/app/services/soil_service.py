@@ -303,6 +303,29 @@ REGIONAL_SOIL_DATABASE: Dict[str, Dict[str, Dict[str, Any]]] = {
     },
 }
 
+try:
+    import json as _json
+    from pathlib import Path as _Path
+
+    _INDIA_LOC_PATH = _Path(__file__).resolve().parents[3] / "data" / "india_soil_locations.json"
+    if _INDIA_LOC_PATH.exists():
+        _full_india_db = _json.loads(_INDIA_LOC_PATH.read_text(encoding="utf-8"))
+        for _st, _dists in _full_india_db.items():
+            if _st not in REGIONAL_SOIL_DATABASE:
+                REGIONAL_SOIL_DATABASE[_st] = _dists
+            else:
+                for _dt, _dmeta in _dists.items():
+                    if _dt not in REGIONAL_SOIL_DATABASE[_st]:
+                        REGIONAL_SOIL_DATABASE[_st][_dt] = _dmeta
+                    else:
+                        # Merge additional blocks into existing district entry
+                        for _blk, _vils in _dmeta.get("blocks", {}).items():
+                            if _blk not in REGIONAL_SOIL_DATABASE[_st][_dt]["blocks"]:
+                                REGIONAL_SOIL_DATABASE[_st][_dt]["blocks"][_blk] = _vils
+except Exception as _exc:
+    pass
+
+
 
 # Extended Agronomic Requirements per Crop (ICAR / OUAT Crop Production Guide)
 CROP_SOIL_REQUIREMENTS: Dict[str, Dict[str, Any]] = {
@@ -470,11 +493,16 @@ class SoilService:
             district = first_dist
 
         blocks = dist_data["blocks"]
-        resolved_block = block if (block and block in blocks) else next(iter(blocks.keys()))
-        villages = blocks.get(resolved_block, [])
-        resolved_village = village if (village and village in villages) else (villages[0] if villages else "General Block Area")
+        resolved_block = (block.strip() if (block and block.strip()) else next(iter(blocks.keys())))
+        villages = blocks.get(resolved_block, blocks.get(next(iter(blocks.keys())), []))
+        resolved_village = (
+            village.strip()
+            if (village and village.strip())
+            else (villages[0] if villages else "General Block Area")
+        )
 
         baseline = dist_data["regional_baseline"]
+        ph_num_range = baseline.get("ph_numeric_range") or [round(baseline["ph"] - 0.5, 1), round(baseline["ph"] + 0.5, 1)]
         missing_params = [
             "Individual Plot Lab pH (Regional baseline shown)",
             "Individual Plot Available N, P, K (Regional baseline shown)",
@@ -506,7 +534,7 @@ class SoilService:
             "soil_type": dist_data["dominant_soil_type"],
             "dominant_soil_type": dist_data["dominant_soil_type"],
             "secondary_soil_type": dist_data["secondary_soil_type"],
-            "ph_range": [5.2, 6.5],
+            "ph_range": ph_num_range,
             "ph_regional_estimate": baseline["ph"],
             "oc_pct_regional_estimate": baseline["organic_carbon_pct"],
             "ec_ds_m_regional_estimate": baseline["ec_ds_m"],

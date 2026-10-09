@@ -3822,13 +3822,54 @@ async function loadSoilLocationsHierarchy() {
     const res = await apiFetch('/soil/locations');
     if (res.ok) {
       const data = await res.json();
-      if (data && data.hierarchy) {
+      if (data && data.hierarchy && Object.keys(data.hierarchy).length > 5) {
         window.soilDssState.hierarchy = data.hierarchy;
       }
     }
   } catch (e) {
-    console.warn('Using built-in location hierarchy fallback:', e);
+    console.warn('Primary /soil/locations fetch failed, trying static JSON:', e);
   }
+
+  // Fallback to static /static/data/india_soil_locations.json if needed (e.g. on Netlify)
+  if (!window.soilDssState.hierarchy || Object.keys(window.soilDssState.hierarchy).length <= 5) {
+    try {
+      const staticRes = await fetch('/static/data/india_soil_locations.json');
+      if (staticRes.ok) {
+        const fullDb = await staticRes.json();
+        if (fullDb && Object.keys(fullDb).length > 5) {
+          window.soilDssState.hierarchy = fullDb;
+        }
+      }
+    } catch (err) {
+      console.warn('Could not load static india_soil_locations.json:', err);
+    }
+  }
+
+  // Update coverage badge with exact counts
+  const h = window.soilDssState.hierarchy || {};
+  const stateCount = Object.keys(h).length;
+  let distCount = 0;
+  let blockCount = 0;
+  let villageCount = 0;
+  Object.values(h).forEach(dists => {
+    const dKeys = Object.keys(dists || {});
+    distCount += dKeys.length;
+    dKeys.forEach(dk => {
+      const entry = dists[dk] || {};
+      const blks = (entry && entry.blocks && typeof entry.blocks === 'object') ? entry.blocks : entry;
+      const bKeys = Object.keys(blks || {});
+      blockCount += bKeys.length;
+      bKeys.forEach(bk => {
+        if (Array.isArray(blks[bk])) villageCount += blks[bk].length;
+      });
+    });
+  });
+
+  const covBadge = document.getElementById('soilIndiaCoverageBadge');
+  if (covBadge && stateCount > 1) {
+    covBadge.innerText = `🇮🇳 All-India: ${stateCount} States/UTs • ${distCount.toLocaleString()} Districts • ${blockCount.toLocaleString()} Blocks • ${villageCount.toLocaleString()} Villages`;
+  }
+
   populateSoilLocationDropdowns('init');
 }
 
@@ -3841,15 +3882,20 @@ function populateSoilLocationDropdowns(changedLevel) {
   if (!stateSel || !distSel || !blockSel || !vilSel) return;
 
   if (changedLevel === 'init') {
-    const states = Object.keys(h);
-    stateSel.innerHTML = states.map(s => `<option value="${s}">${s}</option>`).join('');
+    const states = Object.keys(h).sort((a, b) => {
+      if (a === 'Odisha') return -1;
+      if (b === 'Odisha') return 1;
+      return a.localeCompare(b);
+    });
+    stateSel.innerHTML = states.map(s => `<option value="${s}" ${s === 'Odisha' ? 'selected' : ''}>${s}</option>`).join('');
   }
   const st = stateSel.value || Object.keys(h)[0] || 'Odisha';
   const districtsObj = h[st] || {};
 
   if (changedLevel === 'init' || changedLevel === 'state') {
-    const districts = Object.keys(districtsObj);
-    distSel.innerHTML = districts.map(d => `<option value="${d}">${d}</option>`).join('');
+    const districts = Object.keys(districtsObj).sort((a, b) => a.localeCompare(b));
+    const defaultDist = (changedLevel === 'init' && districts.includes('Khordha')) ? 'Khordha' : districts[0];
+    distSel.innerHTML = districts.map(d => `<option value="${d}" ${d === defaultDist ? 'selected' : ''}>${d}</option>`).join('');
   }
   const dist = distSel.value || Object.keys(districtsObj)[0] || 'Khordha';
   const rawDistEntry = districtsObj[dist] || {};
@@ -3858,18 +3904,24 @@ function populateSoilLocationDropdowns(changedLevel) {
     : rawDistEntry;
 
   if (changedLevel === 'init' || changedLevel === 'state' || changedLevel === 'district') {
-    const blocks = Object.keys(blocksObj);
-    blockSel.innerHTML = blocks.map(b => `<option value="${b}">${b}</option>`).join('');
+    const blocks = Object.keys(blocksObj).sort((a, b) => a.localeCompare(b));
+    const defaultBlk = (changedLevel === 'init' && blocks.includes('Balianta')) ? 'Balianta' : blocks[0];
+    blockSel.innerHTML = blocks.map(b => `<option value="${b}" ${b === defaultBlk ? 'selected' : ''}>${b}</option>`).join('');
   }
   const blk = blockSel.value || Object.keys(blocksObj)[0] || '';
-  const villages = Array.isArray(blocksObj[blk]) ? blocksObj[blk] : [];
+  const villages = Array.isArray(blocksObj[blk]) ? [...blocksObj[blk]].sort((a, b) => a.localeCompare(b)) : [];
 
   if (changedLevel === 'init' || changedLevel === 'state' || changedLevel === 'district' || changedLevel === 'block') {
-    vilSel.innerHTML = villages.map(v => `<option value="${v}">${v}</option>`).join('');
+    const defaultVil = (changedLevel === 'init' && villages.includes('Balipatna')) ? 'Balipatna' : villages[0];
+    vilSel.innerHTML = villages.map(v => `<option value="${v}" ${v === defaultVil ? 'selected' : ''}>${v}</option>`).join('');
   }
 }
 
 function onSoilLocationChange(level) {
+  const customBlk = document.getElementById('soilCustomBlockInput');
+  const customVil = document.getElementById('soilCustomVillageInput');
+  if (customBlk) customBlk.value = '';
+  if (customVil) customVil.value = '';
   populateSoilLocationDropdowns(level);
   lookupRegionalSoilBaseline(false);
 }
@@ -3877,8 +3929,10 @@ function onSoilLocationChange(level) {
 async function lookupRegionalSoilBaseline(applyAsRegionalEstimate = false) {
   const stateName = document.getElementById('soilStateSelect')?.value || 'Odisha';
   const district = document.getElementById('soilDistrictSelect')?.value || 'Khordha';
-  const block = document.getElementById('soilBlockSelect')?.value || '';
-  const village = document.getElementById('soilVillageSelect')?.value || '';
+  const customBlock = (document.getElementById('soilCustomBlockInput')?.value || '').trim();
+  const customVillage = (document.getElementById('soilCustomVillageInput')?.value || '').trim();
+  const block = customBlock || document.getElementById('soilBlockSelect')?.value || '';
+  const village = customVillage || document.getElementById('soilVillageSelect')?.value || '';
 
   try {
     const q = new URLSearchParams({ state: stateName, district, block, village });
@@ -3901,7 +3955,7 @@ async function lookupRegionalSoilBaseline(applyAsRegionalEstimate = false) {
       const rng = rec.ph_range ? `${rec.ph_range[0]} – ${rec.ph_range[1]}` : '--';
       phEl.innerText = `${rng} (Regional Est: ${rec.ph_regional_estimate ?? '--'})`;
     }
-    if (metaEl) metaEl.innerText = `${rec.reference_date || '2024'} • ${rec.data_source || 'ICAR-NBSS&LUP / OUAT'}`;
+    if (metaEl) metaEl.innerText = `${rec.reference_date || '2024'} • ${rec.data_source || 'ICAR-NBSS&LUP / SAU'}`;
     if (discEl) discEl.innerText = rec.disclaimer || '⚠️ REGIONAL BASELINE ONLY — Never treated as an exact individual-farm lab measurement.';
     if (missEl) {
       const mList = (rec.missing_parameters || []).join(', ');
