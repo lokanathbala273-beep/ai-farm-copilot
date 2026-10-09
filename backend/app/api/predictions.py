@@ -165,6 +165,10 @@ async def predict_plant_disease(
         "needs_expert_review": prediction.needs_expert_review,
         "model_version": prediction.model_version,
         "is_reviewed_by_expert": prediction.is_reviewed_by_expert,
+        "top_candidates": pred_res.top_candidates,
+        "low_confidence_warning": pred_res.low_confidence_warning,
+        "unsupported_or_uncertain_warning": pred_res.unsupported_or_uncertain_warning,
+        "safe_next_steps": pred_res.safe_next_steps,
         "created_at": prediction.created_at.isoformat()
     }
 

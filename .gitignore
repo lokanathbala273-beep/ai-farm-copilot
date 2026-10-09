@@ -48,9 +48,28 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Environment files
+# Environment files & Kaggle Credentials (NEVER COMMIT SECRETS)
 .env
 .env.local
+kaggle.json
+.kaggle/
+**/kaggle.json
+
+# Datasets & Model Checkpoints (80,000+ images & binary weights)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/metadata/image_manifest.csv
+ai/models/weights/*.h5
+ai/models/weights/*.keras
+ai/models/weights/*.pt
+ai/models/weights/*.pth
+ai/models/weights/*.onnx
+ai/models/weights/*.pkl
+ai/models/checkpoints/*
+!ai/models/weights/.gitkeep
+!ai/models/checkpoints/.gitkeep
 
 # Logs & uploads
 *.log

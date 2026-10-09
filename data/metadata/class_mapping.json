@@ -1,0 +1,265 @@
+{
+  "schema_version": "1.0.0",
+  "description": "Canonical label normalization mapping for 80,000+ Multi-Source Kaggle Plant Disease Datasets. Equivalent classes are mapped ONLY when they represent the exact same verified botanical disease.",
+  "target_images": 80000,
+  "canonical_classes": {
+    "Apple___Apple_Scab": {
+      "crop": "Apple",
+      "disease": "Apple Scab",
+      "scientific_name": "Venturia inaequalis",
+      "aliases": ["Apple___Apple_scab", "Apple_scab", "apple_scab", "Apple Scab"]
+    },
+    "Apple___Black_Rot": {
+      "crop": "Apple",
+      "disease": "Black Rot",
+      "scientific_name": "Botryosphaeria obtusa",
+      "aliases": ["Apple___Black_rot", "Apple_black_rot", "Apple Black Rot"]
+    },
+    "Apple___Cedar_Apple_Rust": {
+      "crop": "Apple",
+      "disease": "Cedar Apple Rust",
+      "scientific_name": "Gymnosporangium juniperi-virginianae",
+      "aliases": ["Apple___Cedar_apple_rust", "Cedar_apple_rust", "Apple rust leaf"]
+    },
+    "Apple___Healthy": {
+      "crop": "Apple",
+      "disease": "Healthy",
+      "scientific_name": "Malus domestica (Healthy)",
+      "aliases": ["Apple___healthy", "Apple_healthy", "Apple leaf"]
+    },
+    "Corn_Maize___Cercospora_Gray_Leaf_Spot": {
+      "crop": "Maize",
+      "disease": "Gray Leaf Spot",
+      "scientific_name": "Cercospora zeae-maydis",
+      "aliases": ["Corn_(maize)___Cercospora_leaf_spot Gray_leaf_spot", "Corn_Gray_Leaf_Spot", "Gray_Leaf_Spot", "Corn gray leaf spot"]
+    },
+    "Corn_Maize___Common_Rust": {
+      "crop": "Maize",
+      "disease": "Common Rust",
+      "scientific_name": "Puccinia sorghi",
+      "aliases": ["Corn_(maize)___Common_rust_", "Corn_Common_Rust", "Common_Rust", "Corn rust leaf"]
+    },
+    "Corn_Maize___Northern_Leaf_Blight": {
+      "crop": "Maize",
+      "disease": "Northern Corn Leaf Blight",
+      "scientific_name": "Exserohilum turcicum",
+      "aliases": ["Corn_(maize)___Northern_Leaf_Blight", "Blight", "Northern_Leaf_Blight", "Corn leaf blight"]
+    },
+    "Corn_Maize___Healthy": {
+      "crop": "Maize",
+      "disease": "Healthy",
+      "scientific_name": "Zea mays (Healthy)",
+      "aliases": ["Corn_(maize)___healthy", "Corn_Healthy", "Maize_Healthy"]
+    },
+    "Cotton___Bacterial_Blight": {
+      "crop": "Cotton",
+      "disease": "Bacterial Blight (Angular Leaf Spot)",
+      "scientific_name": "Xanthomonas citri pv. malvacearum",
+      "aliases": ["bacterial_blight", "Cotton_Bacterial_Blight", "Bacterial Blight"]
+    },
+    "Cotton___Curl_Virus": {
+      "crop": "Cotton",
+      "disease": "Cotton Leaf Curl Virus",
+      "scientific_name": "Cotton leaf curl virus (CLCuV)",
+      "aliases": ["curl_virus", "Cotton_Curl_Virus"]
+    },
+    "Cotton___Fusarium_Wilt": {
+      "crop": "Cotton",
+      "disease": "Fusarium Wilt",
+      "scientific_name": "Fusarium oxysporum f. sp. vasinfectum",
+      "aliases": ["fussarium_wilt", "fusarium_wilt", "Cotton_Fusarium_Wilt"]
+    },
+    "Cotton___Healthy": {
+      "crop": "Cotton",
+      "disease": "Healthy",
+      "scientific_name": "Gossypium hirsutum (Healthy)",
+      "aliases": ["healthy cotton leaf", "fresh cotton leaf", "Cotton_Healthy"]
+    },
+    "Grape___Black_Rot": {
+      "crop": "Grape",
+      "disease": "Black Rot",
+      "scientific_name": "Guignardia bidwellii",
+      "aliases": ["Grape___Black_rot", "Grape_Black_rot", "grape leaf black rot"]
+    },
+    "Grape___Esca_Black_Measles": {
+      "crop": "Grape",
+      "disease": "Esca (Black Measles)",
+      "scientific_name": "Phaeomoniella chlamydospora",
+      "aliases": ["Grape___Esca_(Black_Measles)", "Grape_Esca"]
+    },
+    "Grape___Leaf_Blight_Isariopsis": {
+      "crop": "Grape",
+      "disease": "Leaf Blight (Isariopsis Leaf Spot)",
+      "scientific_name": "Pseudocercospora vitis",
+      "aliases": ["Grape___Leaf_blight_(Isariopsis_Leaf_Spot)", "Grape_Leaf_blight"]
+    },
+    "Grape___Healthy": {
+      "crop": "Grape",
+      "disease": "Healthy",
+      "scientific_name": "Vitis vinifera (Healthy)",
+      "aliases": ["Grape___healthy", "Grape_healthy", "grape leaf"]
+    },
+    "Mango___Anthracnose": {
+      "crop": "Mango",
+      "disease": "Anthracnose",
+      "scientific_name": "Colletotrichum gloeosporioides",
+      "aliases": ["Anthracnose", "Mango_Anthracnose"]
+    },
+    "Mango___Bacterial_Canker": {
+      "crop": "Mango",
+      "disease": "Bacterial Canker",
+      "scientific_name": "Xanthomonas campestris pv. mangiferaeindicae",
+      "aliases": ["Bacterial Canker", "Mango_Bacterial_Canker"]
+    },
+    "Mango___Powdery_Mildew": {
+      "crop": "Mango",
+      "disease": "Powdery Mildew",
+      "scientific_name": "Oidium mangiferae",
+      "aliases": ["Powdery Mildew", "Mango_Powdery_Mildew"]
+    },
+    "Mango___Healthy": {
+      "crop": "Mango",
+      "disease": "Healthy",
+      "scientific_name": "Mangifera indica (Healthy)",
+      "aliases": ["Healthy_Mango", "Mango_Healthy"]
+    },
+    "Pepper_Bell___Bacterial_Spot": {
+      "crop": "Chilli",
+      "disease": "Bacterial Spot",
+      "scientific_name": "Xanthomonas campestris pv. vesicatoria",
+      "aliases": ["Pepper,_bell___Bacterial_spot", "Pepper__bell___Bacterial_spot", "Bell_pepper leaf spot"]
+    },
+    "Pepper_Bell___Healthy": {
+      "crop": "Chilli",
+      "disease": "Healthy",
+      "scientific_name": "Capsicum annuum (Healthy)",
+      "aliases": ["Pepper,_bell___healthy", "Pepper__bell___healthy", "Bell_pepper leaf"]
+    },
+    "Potato___Early_Blight": {
+      "crop": "Potato",
+      "disease": "Early Blight",
+      "scientific_name": "Alternaria solani",
+      "aliases": ["Potato___Early_blight", "Potato_Early_blight", "Potato leaf early blight"]
+    },
+    "Potato___Late_Blight": {
+      "crop": "Potato",
+      "disease": "Late Blight",
+      "scientific_name": "Phytophthora infestans",
+      "aliases": ["Potato___Late_blight", "Potato_Late_blight", "Potato leaf late blight"]
+    },
+    "Potato___Healthy": {
+      "crop": "Potato",
+      "disease": "Healthy",
+      "scientific_name": "Solanum tuberosum (Healthy)",
+      "aliases": ["Potato___healthy", "Potato_healthy", "Potato leaf"]
+    },
+    "Rice___Bacterial_Leaf_Blight": {
+      "crop": "Rice",
+      "disease": "Bacterial Leaf Blight",
+      "scientific_name": "Xanthomonas oryzae pv. oryzae",
+      "aliases": ["Bacterial leaf blight", "Rice___Bacterial_leaf_blight", "Bacterial_Leaf_Blight"]
+    },
+    "Rice___Brown_Spot": {
+      "crop": "Rice",
+      "disease": "Brown Spot",
+      "scientific_name": "Bipolaris oryzae",
+      "aliases": ["Brown spot", "Rice___Brown_Spot", "BrownSpot"]
+    },
+    "Rice___Leaf_Blast": {
+      "crop": "Rice",
+      "disease": "Rice Blast",
+      "scientific_name": "Magnaporthe oryzae",
+      "aliases": ["Leaf blast", "Rice___Leaf_Blast", "Hispa_or_Blast", "Blast"]
+    },
+    "Rice___Healthy": {
+      "crop": "Rice",
+      "disease": "Healthy",
+      "scientific_name": "Oryza sativa (Healthy)",
+      "aliases": ["Rice___Healthy", "Healthy_Rice"]
+    },
+    "Soybean___Healthy": {
+      "crop": "Soybean",
+      "disease": "Healthy",
+      "scientific_name": "Glycine max (Healthy)",
+      "aliases": ["Soybean___healthy", "Soyabean leaf"]
+    },
+    "Tomato___Bacterial_Spot": {
+      "crop": "Tomato",
+      "disease": "Bacterial Spot",
+      "scientific_name": "Xanthomonas perforans",
+      "aliases": ["Tomato___Bacterial_spot", "Tomato_Bacterial_spot", "Tomato leaf bacterial spot"]
+    },
+    "Tomato___Early_Blight": {
+      "crop": "Tomato",
+      "disease": "Early Blight",
+      "scientific_name": "Alternaria solani",
+      "aliases": ["Tomato___Early_blight", "Tomato_Early_blight", "Tomato Early blight leaf"]
+    },
+    "Tomato___Late_Blight": {
+      "crop": "Tomato",
+      "disease": "Late Blight",
+      "scientific_name": "Phytophthora infestans",
+      "aliases": ["Tomato___Late_blight", "Tomato_Late_blight", "Tomato leaf late blight"]
+    },
+    "Tomato___Leaf_Mold": {
+      "crop": "Tomato",
+      "disease": "Leaf Mold",
+      "scientific_name": "Passalora fulva",
+      "aliases": ["Tomato___Leaf_Mold", "Tomato_Leaf_Mold", "Tomato mold leaf"]
+    },
+    "Tomato___Septoria_Leaf_Spot": {
+      "crop": "Tomato",
+      "disease": "Septoria Leaf Spot",
+      "scientific_name": "Septoria lycopersici",
+      "aliases": ["Tomato___Septoria_leaf_spot", "Tomato_Septoria_leaf_spot", "Tomato Septoria leaf spot"]
+    },
+    "Tomato___Spider_Mites_Two_Spotted": {
+      "crop": "Tomato",
+      "disease": "Two-Spotted Spider Mite",
+      "scientific_name": "Tetranychus urticae",
+      "aliases": ["Tomato___Spider_mites Two-spotted_spider_mite", "Tomato_Spider_mites_Two_spotted_spider_mite"]
+    },
+    "Tomato___Target_Spot": {
+      "crop": "Tomato",
+      "disease": "Target Spot",
+      "scientific_name": "Corynespora cassiicola",
+      "aliases": ["Tomato___Target_Spot", "Tomato__Target_Spot"]
+    },
+    "Tomato___Yellow_Leaf_Curl_Virus": {
+      "crop": "Tomato",
+      "disease": "Tomato Yellow Leaf Curl",
+      "scientific_name": "Tomato yellow leaf curl virus (TYLCV)",
+      "aliases": ["Tomato___Tomato_Yellow_Leaf_Curl_Virus", "Tomato__Tomato_YellowLeaf__Curl_Virus", "Tomato leaf yellow virus"]
+    },
+    "Tomato___Mosaic_Virus": {
+      "crop": "Tomato",
+      "disease": "Tomato Mosaic Virus",
+      "scientific_name": "Tomato mosaic virus (ToMV)",
+      "aliases": ["Tomato___Tomato_mosaic_virus", "Tomato__Tomato_mosaic_virus", "Tomato leaf mosaic virus"]
+    },
+    "Tomato___Healthy": {
+      "crop": "Tomato",
+      "disease": "Healthy",
+      "scientific_name": "Solanum lycopersicum (Healthy)",
+      "aliases": ["Tomato___healthy", "Tomato_healthy", "Tomato leaf"]
+    },
+    "Wheat___Yellow_Stripe_Rust": {
+      "crop": "Wheat",
+      "disease": "Yellow Rust",
+      "scientific_name": "Puccinia striiformis",
+      "aliases": ["Yellow_rust", "Stripe_rust", "Wheat_Yellow_Rust", "stripe_rust"]
+    },
+    "Wheat___Brown_Leaf_Rust": {
+      "crop": "Wheat",
+      "disease": "Brown / Leaf Rust",
+      "scientific_name": "Puccinia triticina",
+      "aliases": ["Brown_rust", "Leaf_rust", "Wheat_Leaf_Rust"]
+    },
+    "Wheat___Healthy": {
+      "crop": "Wheat",
+      "disease": "Healthy",
+      "scientific_name": "Triticum aestivum (Healthy)",
+      "aliases": ["Healthy_Wheat", "Wheat_Healthy"]
+    }
+  }
+}
